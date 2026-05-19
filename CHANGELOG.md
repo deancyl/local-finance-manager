@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.2] - 2026-05-20
+
+### Fixed
+- Removed `drift_sqlite_async` dependency due to Dart SDK compatibility issues
+  - The package requires Dart SDK >=3.10.0 but Flutter 3.27.1 uses Dart 3.6.0
+- Implemented custom `PowerSyncQueryExecutor` to wrap PowerSync's native query execution
+- This fixes GitHub Actions build failures for v0.3.1
+
+### Technical Details
+- `packages/sync/lib/src/sync_client.dart`: Replaced `SqliteAsyncDriftConnection` with custom implementation
+- `packages/sync/pubspec.yaml`: Removed `drift_sqlite_async: ^0.3.0` dependency
+
 ## [v0.3.0] - 2026-05-19
 
 ### Added - Phase 3: Sync System
