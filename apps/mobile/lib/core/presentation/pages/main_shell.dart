@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/sync/presentation/widgets/sync_status_indicator.dart';
+
 class MainShell extends StatelessWidget {
   final Widget child;
 
@@ -23,6 +25,11 @@ class MainShell extends StatelessWidget {
     final selectedIndex = _getSelectedIndex(context);
 
     return Scaffold(
+      appBar: AppBar(
+        actions: const [
+          SyncStatusIndicator(),
+        ],
+      ),
       body: child,
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedIndex,

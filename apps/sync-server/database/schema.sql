@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS sync_records (
     data TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     synced_at TIMESTAMP,
-    version INTEGER NOT NULL DEFAULT 1
+    version INTEGER NOT NULL DEFAULT 1,
+    UNIQUE(table_name, record_id)
 );
 
 -- Conflict records table
@@ -53,3 +54,17 @@ CREATE INDEX IF NOT EXISTS idx_sync_records_table ON sync_records(table_name);
 CREATE INDEX IF NOT EXISTS idx_sync_records_created ON sync_records(created_at);
 CREATE INDEX IF NOT EXISTS idx_devices_user ON devices(user_id);
 CREATE INDEX IF NOT EXISTS idx_conflicts_record ON conflicts(table_name, record_id);
+
+-- Pairing tokens for QR code device pairing
+CREATE TABLE IF NOT EXISTS pairing_tokens (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    device_id TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+    token TEXT UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pairing_tokens_user ON pairing_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_pairing_tokens_token ON pairing_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_pairing_tokens_expires ON pairing_tokens(expires_at);

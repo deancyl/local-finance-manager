@@ -12,6 +12,8 @@ class ImportSources extends Table {
   IntColumn get lastImportAt => integer().nullable()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   IntColumn get createdAt => integer()();
+  IntColumn get version => integer().withDefault(const Constant(1))();
+  DateTimeColumn get updatedAt => dateTime()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -31,6 +33,8 @@ class ImportBatches extends Table {
   TextColumn get status => text().withLength(min: 1, max: 20)();
   TextColumn get errorDetails => text().nullable()();
   IntColumn get createdAt => integer()();
+  IntColumn get version => integer().withDefault(const Constant(1))();
+  DateTimeColumn get updatedAt => dateTime()();
 
   @override
   Set<Column> get primaryKey => {id};

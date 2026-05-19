@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -30,7 +31,7 @@ class SettingsPage extends StatelessWidget {
             title: const Text('同步设置'),
             subtitle: const Text('多设备同步'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
+            onTap: () => context.go('/settings/sync'),
           ),
           ListTile(
             leading: const Icon(Icons.palette),

@@ -7,6 +7,10 @@ import '../../features/reports/presentation/pages/reports_page.dart';
 import '../../features/budgets/presentation/pages/budgets_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/import/presentation/pages/import_page.dart';
+import '../../features/sync/presentation/pages/sync_settings_page.dart';
+import '../../features/sync/presentation/pages/sync_login_page.dart';
+import '../../features/sync/presentation/pages/device_pairing_page.dart';
+import '../../features/sync/presentation/pages/offline_queue_page.dart';
 import '../presentation/pages/home_page.dart';
 import '../presentation/pages/main_shell.dart';
 
@@ -46,6 +50,23 @@ class AppRouter {
             path: '/settings',
             name: 'settings',
             builder: (context, state) => const SettingsPage(),
+            routes: [
+              GoRoute(
+                path: 'sync',
+                name: 'sync-settings',
+                builder: (context, state) => const SyncSettingsPage(),
+              ),
+              GoRoute(
+                path: 'sync/pairing',
+                name: 'sync-pairing',
+                builder: (context, state) => const DevicePairingPage(),
+              ),
+              GoRoute(
+                path: 'sync/queue',
+                name: 'sync-queue',
+                builder: (context, state) => const OfflineQueuePage(),
+              ),
+            ],
           ),
         ],
       ),
@@ -53,6 +74,11 @@ class AppRouter {
         path: '/import',
         name: 'import',
         builder: (context, state) => const ImportPage(),
+      ),
+      GoRoute(
+        path: '/settings/sync/login',
+        name: 'sync-login',
+        builder: (context, state) => const SyncLoginPage(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

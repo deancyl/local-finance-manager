@@ -40,7 +40,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final ImportSourcesDao importSourcesDao = ImportSourcesDao(this);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
@@ -55,7 +55,18 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
         await _insertDefaultCategories();
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        // Handle future migrations here
+        if (from < 2) {
+          await m.addColumn(categories, categories.version);
+          await m.addColumn(categories, categories.updatedAt);
+          await m.addColumn(categories, categories.deletedAt);
+          await m.addColumn(budgets, budgets.version);
+          await m.addColumn(budgets, budgets.updatedAt);
+          await m.addColumn(budgets, budgets.deletedAt);
+          await m.addColumn(importSources, importSources.version);
+          await m.addColumn(importSources, importSources.updatedAt);
+          await m.addColumn(importBatches, importBatches.version);
+          await m.addColumn(importBatches, importBatches.updatedAt);
+        }
       },
     );
   }

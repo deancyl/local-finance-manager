@@ -32,6 +32,7 @@ finance-app/
 │   ├── database/        # Drift数据库层
 │   ├── encryption/      # 加密模块
 │   ├── importers/       # 金融机构导入器
+│   ├── sync/            # 同步客户端
 │   └── ai/              # AI分析模块
 └── docs/                # 文档
 ```
@@ -59,14 +60,44 @@ finance-app/
 - [x] Import preview UI
 - [x] Duplicate detection
 
-### Phase 3: Sync System (待开始)
+### Phase 3: Sync System ✅ 完成
 
-- [ ] Sync server setup
-- [ ] PowerSync integration
-- [ ] E2E encryption for sync
-- [ ] Conflict resolution
+- [x] Sync server setup (Dart Frog + PostgreSQL)
+- [x] PowerSync integration
+- [x] E2E encryption for sync
+- [x] Conflict resolution (finance-specific rules)
+- [x] Mobile app sync UI
+- [x] Device management
+
+### v0.3.x Roadmap (进行中)
+
+- [ ] WebSocket real-time sync notifications
+- [ ] QR code device pairing
+- [ ] Sync status indicator in app bar
+- [ ] Offline queue visualization
+- [ ] Multi-device sync testing
+- [ ] Performance optimization
+
+### Phase 4: Double-Entry Bookkeeping (计划中)
+
+- [ ] Full double-entry transaction support
+- [ ] Account hierarchy management
+- [ ] Journal entry editor
+- [ ] Trial balance report
+- [ ] Balance sheet report
+- [ ] Income statement report
+
+### Phase 5: AI Integration (计划中)
+
+- [ ] Local AI setup (Ollama/llama.cpp)
+- [ ] Transaction categorization
+- [ ] Spending pattern analysis
+- [ ] Budget recommendations
+- [ ] Anomaly detection
 
 ## 快速开始
+
+### 移动应用
 
 ```bash
 # 安装依赖
@@ -79,6 +110,77 @@ flutter run
 # 运行测试
 flutter test
 ```
+
+### 同步服务器
+
+```bash
+# 安装依赖
+cd finance-app/apps/sync-server
+dart pub get
+
+# 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件
+
+# 运行服务器
+dart run server.dart
+
+# 或使用 Docker
+docker-compose up -d
+```
+
+## 同步功能使用
+
+### 1. 部署同步服务器
+
+```bash
+# 使用 Docker Compose
+cd apps/sync-server
+docker-compose up -d
+```
+
+服务包含：
+- PowerSync (端口 8080)
+- PostgreSQL (端口 5432)
+- API Server (端口 3000)
+
+### 2. 配置移动应用
+
+1. 打开应用 → 设置 → 同步设置
+2. 输入服务器地址 (如: `http://192.168.1.100:3000`)
+3. 注册账户或登录
+4. 设备自动注册
+5. 点击"同步"按钮开始同步
+
+### 3. 多设备同步
+
+- 每个设备自动获得唯一设备ID
+- 数据按时间戳同步
+- 冲突自动检测：
+  - 删除操作优先
+  - 已对账交易需手动解决
+  - 金额变更需手动确认
+  - 其他字段自动合并
+
+## 安全特性
+
+### 本地加密
+- SQLCipher 数据库加密
+- AES-256-GCM 数据加密
+- PBKDF2 密钥派生 (100,000 次迭代)
+- iOS Keychain / Android Keystore 密钥存储
+
+### 同步安全
+- JWT 令牌认证 (7天有效期)
+- 端到端加密 (E2E)
+- 服务器无法解密同步数据
+- 设备公钥验证
+
+### 隐私保护
+- 所有数据本地存储
+- 无云端依赖
+- 可选自托管同步
+- AI 功能完全本地运行
 
 ## GitHub
 

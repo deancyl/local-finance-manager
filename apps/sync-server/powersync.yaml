@@ -8,9 +8,10 @@ streams:
     queries:
       - |
         SELECT 
-          id, user_id, name, account_type, parent_id,
+          id, name, account_type, parent_id,
           commodity_id, code, description, 
-          created_at, updated_at
+          is_placeholder, is_hidden, sort_order,
+          created_at, updated_at, version
         FROM accounts 
         WHERE user_id = stream.user_id
 
@@ -33,28 +34,40 @@ streams:
 
       - |
         SELECT 
-          id, name, icon, color, parent_id,
-          is_income, budget_limit, created_at
+          id, name, parent_id, icon, color,
+          is_income, sort_order, version, 
+          created_at, updated_at, deleted_at
         FROM categories
         WHERE user_id = stream.user_id
 
       - |
         SELECT 
+          id, name, category_id, amount_num, amount_denom,
+          currency_id, period, start_date, end_date,
+          is_active, version, created_at, updated_at, deleted_at
+        FROM budgets
+        WHERE user_id = stream.user_id
+
+      - |
+        SELECT 
           id, name, source_type, institution_id,
-          account_id, config, last_import_at, is_active, created_at
+          account_id, config, last_import_at, 
+          is_active, created_at, updated_at, version
         FROM import_sources
+        WHERE user_id = stream.user_id
+
+      - |
+        SELECT 
+          id, source_id, imported_at, filename,
+          record_count, success_count, duplicate_count,
+          error_count, status, error_details, created_at
+        FROM import_batches
         WHERE user_id = stream.user_id
 
   shared_data:
     queries:
       - |
-        SELECT id, namespace, mnemonic, full_name,
-               created_at, updated_at
+        SELECT 
+          id, namespace, mnemonic, full_name,
+          fraction, created_at, updated_at
         FROM commodities
-
-      - |
-        SELECT id, name, start_date, end_date,
-               amount, currency_id, category_id,
-               created_at, updated_at
-        FROM budgets
-        WHERE user_id = request.user_id()

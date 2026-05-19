@@ -5,6 +5,132 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.0] - 2026-05-19
+
+### Added - Phase 3: Sync System
+
+#### Sync Server (Dart Frog + PostgreSQL)
+- REST API with JWT authentication (7-day tokens)
+- Endpoints:
+  - `POST /api/v1/auth/register` - User registration
+  - `POST /api/v1/auth/login` - JWT token issuance
+  - `POST /api/v1/sync/upload` - Upload encrypted records
+  - `GET /api/v1/sync/download` - Download since timestamp
+  - `GET /api/v1/sync/conflicts` - List conflicts
+  - `POST /api/v1/sync/conflicts/{id}/resolve` - Resolve conflict
+  - `GET /api/v1/devices` - List devices
+  - `POST /api/v1/devices/register` - Register device
+  - `DELETE /api/v1/devices/{id}` - Delete device
+- PostgreSQL schema with proper indexes
+- Docker Compose configuration (PowerSync + PostgreSQL + API)
+- AES-256-GCM encryption (replaced XOR placeholder)
+
+#### Flutter Sync Package
+- `SyncClient` - PowerSync database wrapper with Drift integration
+- `SyncConfig` - Server URL, credentials, device ID management
+- `SyncEncryption` - Password-derived encryption keys (PBKDF2, 100k iterations)
+- `FinanceAppConnector` - PowerSyncBackendConnector implementation
+- `FinanceConflictResolver` - Finance-specific conflict resolution:
+  - Delete conflicts: delete wins
+  - Reconciled transactions: manual resolution required
+  - Amount changes: manual resolution required
+  - Timestamp-based: newer wins
+  - Default: field merge
+
+#### Database Schema Updates
+- Added sync fields to 4 tables:
+  - `categories`: version, updatedAt, deletedAt
+  - `budgets`: version, updatedAt, deletedAt
+  - `import_sources`: version, updatedAt
+  - `import_batches`: version, updatedAt
+- Schema version bumped to 2
+- Migration logic for existing databases
+
+#### PowerSync Configuration
+- Fixed `powersync.yaml` with correct column names
+- 8 tables configured with user_id filtering:
+  - accounts, transactions, splits, categories, budgets
+  - import_sources, import_batches, commodities
+- `user_data` stream for user-owned data
+- `shared_data` stream for reference data (commodities)
+
+#### Mobile App Integration
+- `features/sync/` directory with Riverpod providers
+- Sync settings page with:
+  - Server URL configuration
+  - Login/Register forms
+  - Sync status indicator
+  - Device list with last sync time
+  - Manual sync button
+- Auth provider implementation with secure storage
+- Navigation from settings to sync configuration
+
+### Security Improvements
+- **CRITICAL**: Replaced XOR encryption placeholder with AES-256-GCM
+- Server encryption now uses `packages/encryption`
+- E2E encryption architecture for sync data
+- Password-derived keys with PBKDF2 (100k iterations, 32-byte output)
+
+### Technical Details
+
+**New Dependencies:**
+- powersync: ^1.9.0 (Sync protocol)
+- drift_sqlite_async: ^0.3.0 (Drift + PowerSync integration)
+- jwt: ^2.0.0 (JWT token handling)
+- postgres: ^3.5.5 (PostgreSQL client)
+
+**Sync Package Structure:**
+```
+packages/sync/
+├── lib/
+│   ├── sync.dart                    # Main export
+│   └── src/
+│       ├── sync_client.dart         # PowerSync wrapper
+│       ├── sync_config.dart         # Configuration + AuthProvider
+│       ├── encryption/
+│       │   └── encryption_service.dart  # PBKDF2 key derivation
+│       ├── conflict/
+│       │   └── conflict_resolver.dart   # Finance-specific rules
+│       ├── connector/
+│       │   └── backend_connector.dart   # PowerSync connector
+│       └── models/
+│           └── sync_models.dart     # SyncCredentials, SyncDevice
+└── test/                            # Unit tests
+```
+
+**Sync Server Structure:**
+```
+apps/sync-server/
+├── server.dart                      # Dart Frog entry point
+├── src/
+│   ├── services/
+│   │   ├── auth_service.dart        # JWT authentication
+│   │   ├── sync_service.dart        # Upload/download/conflict
+│   │   ├── device_service.dart      # Device management
+│   │   └── encryption_service.dart  # AES-256-GCM
+│   ├── middleware/
+│   │   └── auth_middleware.dart     # JWT validation
+│   ├── models/
+│   │   └── sync_models.dart         # SyncRecord, Device, User
+│   └── database/
+│       └── connection.dart          # PostgreSQL connection
+├── database/
+│   └── schema.sql                   # Database schema
+├── powersync.yaml                   # PowerSync stream config
+├── docker-compose.yml               # Docker orchestration
+└── test/                            # 70+ unit tests
+```
+
+### Next Steps - v0.3.x
+
+Planned improvements:
+- WebSocket real-time sync notifications
+- QR code device pairing
+- Sync status indicator in app bar
+- Offline queue visualization
+- Multi-device sync testing
+- Performance optimization
+
 ## [v0.2.0] - 2026-05-19
 
 ### Added - Phase 2: Import System
@@ -160,22 +286,16 @@ packages/importers/
 **Project Structure:**
 ```
 finance-app/
-├── apps/mobile/           # Flutter mobile application
+├── apps/
+│   ├── mobile/           # Flutter mobile application
+│   ├── desktop/          # Flutter desktop application (planned)
+│   └── sync-server/      # Sync server (Phase 3)
 ├── packages/
-│   ├── core/              # Domain models, repositories, use cases
-│   ├── database/          # Drift database layer
-│   ├── encryption/        # Encryption and keychain
-│   ├── importers/         # Financial institution importers (Phase 2)
-│   └── ai/                # Local AI integration (Phase 5)
-└── docs/                  # Documentation
+│   ├── core/             # Domain models, repositories, use cases
+│   ├── database/         # Drift database layer
+│   ├── encryption/       # Encryption and keychain
+│   ├── importers/        # Financial institution importers (Phase 2)
+│   ├── sync/             # Sync client package (Phase 3)
+│   └── ai/               # Local AI integration (Phase 5)
+└── docs/                 # Documentation
 ```
-
-### Next Steps - Phase 2: Import System
-
-Planned features:
-- Import pipeline architecture
-- Alipay CSV importer
-- WeChat Pay CSV importer
-- ICBC/CCB/BOC bank statement importers
-- Deduplication engine
-- Import preview and category mapping UI
