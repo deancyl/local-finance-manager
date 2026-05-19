@@ -29,25 +29,39 @@ finance-app/
 │   └── sync-server/     # 同步服务器
 ├── packages/
 │   ├── core/            # 核心业务逻辑
-│   ├── importers/       # 金融机构导入器
+│   ├── database/        # Drift数据库层
 │   ├── encryption/      # 加密模块
+│   ├── importers/       # 金融机构导入器
 │   └── ai/              # AI分析模块
 └── docs/                # 文档
 ```
 
 ## 开发进度
 
-- [x] Phase 1.1: 项目设置
-- [ ] Phase 1.2: 数据库schema
-- [ ] Phase 1.3: 核心models
-- [ ] Phase 1.4: 加密层
-- [ ] Phase 1.5: 基础UI
-- [ ] Phase 1.6-1.9: CRUD操作
+### Phase 1: Foundation ✅ 完成
+
+- [x] Phase 1.1: 项目设置（monorepo、Git、CI/CD）
+- [x] Phase 1.2: 数据库schema + Drift设置
+- [x] Phase 1.3: 核心models + repositories
+- [x] Phase 1.4: 加密层（SQLCipher + keychain）
+- [x] Phase 1.5: 基础UI shell（导航、主题）
+- [x] Phase 1.6: 账户管理CRUD
+- [x] Phase 1.7: 交易CRUD（单式记账）
+- [x] Phase 1.8: 分类管理
+- [x] Phase 1.9: 基础报表（收支）
+
+### Phase 2: Import System (待开始)
+
+- [ ] Import pipeline architecture
+- [ ] Alipay importer
+- [ ] WeChat Pay importer
+- [ ] ICBC/CCB/BOC importers
 
 ## 快速开始
 
 ```bash
 # 安装依赖
+cd finance-app/apps/mobile
 flutter pub get
 
 # 运行应用
@@ -56,6 +70,10 @@ flutter run
 # 运行测试
 flutter test
 ```
+
+## GitHub
+
+https://github.com/deancyl/local-finance-manager
 
 ## 许可证
 
