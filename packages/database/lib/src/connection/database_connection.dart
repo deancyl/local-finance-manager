@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 
-import 'connection/native.dart'
-    if (dart.library.js_interop) 'connection/web.dart';
+import 'native.dart'
+    if (dart.library.js_interop) 'web.dart';
 
 QueryExecutor getDatabaseConnection() => connectToDatabase();
