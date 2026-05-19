@@ -42,7 +42,7 @@ jobs:
         run: dart pub global activate melos
       
       - name: Clear pub cache (workaround for pub cache bug)
-        run: dart pub cache clean
+        run: dart pub cache clean --force
       
       - name: Bootstrap workspace
         run: melos bootstrap
@@ -76,7 +76,7 @@ jobs:
         run: dart pub global activate melos
       
       - name: Clear pub cache (workaround for pub cache bug)
-        run: dart pub cache clean
+        run: dart pub cache clean --force
       
       - name: Bootstrap workspace
         run: melos bootstrap
@@ -125,7 +125,7 @@ jobs:
         run: dart pub global activate melos
       
       - name: Clear pub cache (workaround for pub cache bug)
-        run: dart pub cache clean
+        run: dart pub cache clean --force
       
       - name: Bootstrap workspace
         run: melos bootstrap
