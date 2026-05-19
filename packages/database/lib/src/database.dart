@@ -13,6 +13,11 @@ import 'tables/transactions.dart';
 import 'tables/categories.dart';
 import 'tables/budgets.dart';
 import 'tables/imports.dart';
+import 'daos/accounts_dao.dart';
+import 'daos/transactions_dao.dart';
+import 'daos/categories_dao.dart';
+import 'daos/budgets_dao.dart';
+import 'daos/import_sources_dao.dart';
 
 part 'database.g.dart';
 
@@ -28,18 +33,17 @@ part 'database.g.dart';
     ImportSources,
     ImportBatches,
   ],
-  daos: [
-    AccountsDao,
-    TransactionsDao,
-    CategoriesDao,
-    BudgetsDao,
-    ImportSourcesDao,
-  ],
 )
 class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   LocalFinanceDatabase() : super(_openConnection());
 
   LocalFinanceDatabase.connect(DatabaseConnection connection) : super.connect(connection);
+
+  late final AccountsDao accountsDao = AccountsDao(this);
+  late final TransactionsDao transactionsDao = TransactionsDao(this);
+  late final CategoriesDao categoriesDao = CategoriesDao(this);
+  late final BudgetsDao budgetsDao = BudgetsDao(this);
+  late final ImportSourcesDao importSourcesDao = ImportSourcesDao(this);
 
   @override
   int get schemaVersion => 1;
