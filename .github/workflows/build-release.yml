@@ -75,6 +75,9 @@ jobs:
       - name: Bootstrap workspace
         run: melos bootstrap
       
+      - name: Generate code (Drift)
+        run: melos run generate
+      
       - name: Build Android APK (debug)
         if: ${{ github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == '' }}
         working-directory: apps/mobile
@@ -117,6 +120,9 @@ jobs:
       
       - name: Bootstrap workspace
         run: melos bootstrap
+      
+      - name: Generate code (Drift)
+        run: melos run generate
       
       - name: Build Windows (debug)
         if: ${{ github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == '' }}
