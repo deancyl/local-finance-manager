@@ -16,7 +16,7 @@ on:
           - release
 
 env:
-  FLUTTER_VERSION: '3.24.3'
+  FLUTTER_VERSION: '3.27.1'
 
 jobs:
   # Quality gates - run before all builds (continue on error for now)
@@ -40,9 +40,6 @@ jobs:
       
       - name: Setup Melos
         run: dart pub global activate melos
-      
-      - name: Clear pub cache (workaround for pub cache bug)
-        run: dart pub cache clean --force
       
       - name: Bootstrap workspace
         run: melos bootstrap
@@ -74,9 +71,6 @@ jobs:
       
       - name: Setup Melos
         run: dart pub global activate melos
-      
-      - name: Clear pub cache (workaround for pub cache bug)
-        run: dart pub cache clean --force
       
       - name: Bootstrap workspace
         run: melos bootstrap
@@ -123,9 +117,6 @@ jobs:
       
       - name: Setup Melos
         run: dart pub global activate melos
-      
-      - name: Clear pub cache (workaround for pub cache bug)
-        run: dart pub cache clean --force
       
       - name: Bootstrap workspace
         run: melos bootstrap
