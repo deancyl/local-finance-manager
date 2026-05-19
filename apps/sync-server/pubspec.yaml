@@ -7,7 +7,7 @@ environment:
   sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
-  dart_frog: ^1.1.0
+  dart_frog: ^1.2.0
   dart_frog_web_socket: ^1.0.3
   postgres: ^3.5.5
   shelf: ^1.4.2
@@ -24,7 +24,7 @@ dependencies:
 dev_dependencies:
   test: ^1.25.7
   mocktail: ^1.0.4
-  dart_frog_test: ^1.0.0
+  dart_frog_test: ^0.1.0
   build_runner: ^2.4.13
   json_serializable: ^6.8.0
   lints: ^4.0.0
