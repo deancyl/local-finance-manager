@@ -3,6 +3,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
 
 import 'package:database/database.dart';
+import 'package:finance_app/features/accounts/data/account_provider.dart';
 
 final categoriesProvider = StreamProvider<List<Category>>((ref) {
   final db = ref.watch(databaseProvider);

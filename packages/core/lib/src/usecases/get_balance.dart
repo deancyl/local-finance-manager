@@ -1,3 +1,4 @@
+import '../models/account.dart';
 import '../repositories/account_repository.dart';
 import '../repositories/transaction_repository.dart';
 
