@@ -1,12 +1,6 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:sqlite3/sqlite3.dart';
-import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 
+import 'connection/database_connection.dart';
 import 'tables/commodities.dart';
 import 'tables/accounts.dart';
 import 'tables/transactions.dart';
@@ -35,7 +29,7 @@ part 'daos/import_sources_dao.dart';
   ],
 )
 class LocalFinanceDatabase extends _$LocalFinanceDatabase {
-  LocalFinanceDatabase() : super(_openConnection());
+  LocalFinanceDatabase() : super(getDatabaseConnection());
 
   LocalFinanceDatabase.forTesting(QueryExecutor executor) : super(executor);
 
@@ -184,33 +178,4 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
       );
     });
   }
-}
-
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    // Put the database file in the app's documents directory
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'finance.db'));
-
-    // Also work around limitations on old Android versions
-    if (Platform.isAndroid) {
-      await applyWorkaroundToOpenSqlCipherOnOldAndroidVersions();
-    }
-
-    // Open the database
-    return NativeDatabase.createInBackground(file);
-  });
-}
-
-/// Workaround for SQLCipher on old Android versions.
-Future<void> applyWorkaroundToOpenSqlCipherOnOldAndroidVersions() async {
-  if (Platform.isAndroid) {
-    await ensureSqlCipherIsLoadedOnAndroid();
-  }
-}
-
-/// Ensures SQLCipher is loaded on Android.
-Future<void> ensureSqlCipherIsLoadedOnAndroid() async {
-  final db = sqlite3.openInMemory();
-  db.dispose();
 }
