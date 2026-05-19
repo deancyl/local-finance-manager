@@ -29,6 +29,14 @@ scripts:
     run: |
       melos exec --scope="mobile" -- "flutter build web --release"
   
+  build:windows:
+    run: |
+      melos exec --scope="mobile" -- "flutter build windows --debug"
+  
+  build:macos:
+    run: |
+      melos exec --scope="mobile" -- "flutter build macos --debug"
+  
   clean:
     run: |
       melos exec -- "flutter clean"

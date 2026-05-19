@@ -1,0 +1,182 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type (debug or release)'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+
+env:
+  FLUTTER_VERSION: '3.24.3'
+
+jobs:
+  # Quality gates - run before all builds
+  quality:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+          pub-cache: true
+      
+      - name: Setup Melos
+        run: dart pub global activate melos
+      
+      - name: Bootstrap workspace
+        run: melos bootstrap
+      
+      - name: Run analysis
+        run: melos run analyze
+      
+      - name: Run tests
+        run: melos run test
+
+  # Android build
+  build-android:
+    name: Build Android APK
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+          pub-cache: true
+      
+      - name: Setup Melos
+        run: dart pub global activate melos
+      
+      - name: Bootstrap workspace
+        run: melos bootstrap
+      
+      - name: Build Android APK (debug)
+        if: ${{ github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == '' }}
+        working-directory: apps/mobile
+        run: flutter build apk --debug
+      
+      - name: Build Android APK (release)
+        if: ${{ github.event.inputs.build_type == 'release' }}
+        working-directory: apps/mobile
+        run: flutter build apk --release --split-per-abi
+      
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ github.event.inputs.build_type || 'debug' }}
+          path: |
+            apps/mobile/build/app/outputs/flutter-apk/*.apk
+          retention-days: 30
+          if-no-files-found: error
+
+  # Windows build
+  build-windows:
+    name: Build Windows EXE
+    needs: quality
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+          pub-cache: true
+          architecture: x64
+      
+      - name: Setup Melos
+        run: dart pub global activate melos
+      
+      - name: Bootstrap workspace
+        run: melos bootstrap
+      
+      - name: Build Windows (debug)
+        if: ${{ github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == '' }}
+        working-directory: apps/mobile
+        run: flutter build windows --debug
+      
+      - name: Build Windows (release)
+        if: ${{ github.event.inputs.build_type == 'release' }}
+        working-directory: apps/mobile
+        run: flutter build windows --release
+      
+      - name: Package Windows build
+        run: |
+          $buildType = "${{ github.event.inputs.build_type || 'debug' }}"
+          $sourcePath = "apps\mobile\build\windows\x64\runner\$buildType"
+          $zipPath = "finance-app-windows-$buildType.zip"
+          Compress-Archive -Path "$sourcePath\*" -DestinationPath "$zipPath"
+          Write-Host "Created: $zipPath"
+      
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ github.event.inputs.build_type || 'debug' }}
+          path: finance-app-windows-${{ github.event.inputs.build_type || 'debug' }}.zip
+          retention-days: 30
+          if-no-files-found: error
+
+  # Create GitHub Release (only on tag push)
+  create-release:
+    name: Create GitHub Release
+    needs: [build-android, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Download Android artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-debug
+          path: artifacts/android
+      
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-debug
+          path: artifacts/windows
+      
+      - name: Prepare release files
+        run: |
+          mkdir -p release-files
+          cp artifacts/android/*.apk release-files/
+          cp artifacts/windows/*.zip release-files/
+          ls -la release-files/
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-files/*
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
