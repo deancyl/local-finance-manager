@@ -1,9 +1,4 @@
-import 'package:drift/drift.dart';
-
-import '../tables/imports.dart';
-import '../database.dart';
-
-part 'import_sources_dao.g.dart';
+part of '../database.dart';
 
 /// Data Access Object for import sources.
 @DriftAccessor(tables: [ImportSources, ImportBatches])

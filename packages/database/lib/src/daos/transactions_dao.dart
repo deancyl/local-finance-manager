@@ -1,9 +1,4 @@
-import 'package:drift/drift.dart';
-
-import '../tables/transactions.dart';
-import '../database.dart';
-
-part 'transactions_dao.g.dart';
+part of '../database.dart';
 
 /// Data Access Object for transactions.
 @DriftAccessor(tables: [Transactions, Splits])

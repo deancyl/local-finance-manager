@@ -1,9 +1,4 @@
-import 'package:drift/drift.dart';
-
-import '../tables/budgets.dart';
-import '../database.dart';
-
-part 'budgets_dao.g.dart';
+part of '../database.dart';
 
 /// Data Access Object for budgets.
 @DriftAccessor(tables: [Budgets])

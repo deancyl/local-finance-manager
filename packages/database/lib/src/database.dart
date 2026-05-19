@@ -13,13 +13,13 @@ import 'tables/transactions.dart';
 import 'tables/categories.dart';
 import 'tables/budgets.dart';
 import 'tables/imports.dart';
-import 'daos/accounts_dao.dart';
-import 'daos/transactions_dao.dart';
-import 'daos/categories_dao.dart';
-import 'daos/budgets_dao.dart';
-import 'daos/import_sources_dao.dart';
 
 part 'database.g.dart';
+part 'daos/accounts_dao.dart';
+part 'daos/transactions_dao.dart';
+part 'daos/categories_dao.dart';
+part 'daos/budgets_dao.dart';
+part 'daos/import_sources_dao.dart';
 
 /// Local finance database with all tables.
 @DriftDatabase(

@@ -1,10 +1,4 @@
-import 'package:drift/drift.dart';
-
-import '../tables/accounts.dart';
-import '../tables/commodities.dart';
-import '../database.dart';
-
-part 'accounts_dao.g.dart';
+part of '../database.dart';
 
 /// Data Access Object for accounts.
 @DriftAccessor(tables: [Accounts, Commodities])

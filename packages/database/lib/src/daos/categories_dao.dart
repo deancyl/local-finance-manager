@@ -1,9 +1,4 @@
-import 'package:drift/drift.dart';
-
-import '../tables/categories.dart';
-import '../database.dart';
-
-part 'categories_dao.g.dart';
+part of '../database.dart';
 
 /// Data Access Object for categories.
 @DriftAccessor(tables: [Categories])
