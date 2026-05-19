@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:drift/drift.dart';
-import 'package:drift_sqlite_async/drift_sqlite_async.dart';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -158,7 +157,7 @@ class SyncClient {
   /// Creates a Drift database connection using the PowerSync database.
   /// 
   /// IMPORTANT: Use this method to create the Drift database instance.
-  /// Do NOT wrap SqliteAsyncDriftConnection in DatabaseConnection.
+  /// Returns a PowerSync-compatible query executor.
   /// 
   /// Example:
   /// ```dart
@@ -168,8 +167,9 @@ class SyncClient {
     if (!_initialized) {
       throw StateError('SyncClient not initialized. Call initialize() first.');
     }
-    // CORRECT: Use SqliteAsyncDriftConnection directly
-    return SqliteAsyncDriftConnection(_powerSyncDb);
+    // Use PowerSync's native query executor
+    // Note: This provides basic query execution for PowerSync database
+    return _PowerSyncQueryExecutor(_powerSyncDb);
   }
 
   /// Connects to the sync server.
@@ -329,4 +329,106 @@ class SyncClient {
       throw StateError('SyncClient not initialized. Call initialize() first.');
     }
   }
+}
+
+/// A Drift QueryExecutor that wraps PowerSync database.
+/// 
+/// This provides basic query execution capabilities for Drift
+/// using PowerSync's underlying SQLite database.
+class _PowerSyncQueryExecutor extends QueryExecutor {
+  final PowerSyncDatabase _db;
+  
+  _PowerSyncQueryExecutor(this._db);
+  
+  @override
+  late final StreamQueries streamQueries = _PowerSyncStreamQueries(_db);
+  
+  @override
+  Future<void> runBatched(BatchedStatements statements) async {
+    for (final stmt in statements.statements) {
+      await _db.execute(stmt.sql, stmt.arguments);
+    }
+  }
+  
+  @override
+  Future<void> runCustom(String statement, [List<Object?>? args]) async {
+    await _db.execute(statement, args);
+  }
+  
+  @override
+  Future<int> runInsert(String statement, [List<Object?>? args]) async {
+    await _db.execute(statement, args);
+    // Get last insert row id
+    final result = await _db.execute('SELECT last_insert_rowid()');
+    return result.first?['last_insert_rowid()'] as int? ?? 0;
+  }
+  
+  @override
+  Future<int> runUpdate(String statement, [List<Object?>? args]) async {
+    await _db.execute(statement, args);
+    // Get changes count
+    final result = await _db.execute('SELECT changes()');
+    return result.first?['changes()'] as int? ?? 0;
+  }
+  
+  @override
+  Future<int> runDelete(String statement, [List<Object?>? args]) async {
+    return runUpdate(statement, args);
+  }
+  
+  @override
+  Future<List<Map<String, Object?>>> runSelect(
+    String statement, [
+    List<Object?>? args,
+  ]) async {
+    return _db.execute(statement, args);
+  }
+  
+  @override
+  Future<bool> ensureOpen() async {
+    return true; // PowerSync manages its own connection
+  }
+  
+  @override
+  Future<void> close() async {
+    // PowerSync manages its own lifecycle
+  }
+  
+  @override
+  Future<T> runWithInterceptor<T>(
+    Future<T> Function() operation, {
+    Interceptor? interceptor,
+  }) {
+    return operation();
+  }
+}
+
+/// Stream queries implementation for PowerSync.
+class _PowerSyncStreamQueries extends StreamQueries {
+  final PowerSyncDatabase _db;
+  
+  _PowerSyncStreamQueries(this._db);
+  
+  @override
+  Stream<QueryRow> queryStream(
+    String sql, [
+    List<Object?>? args,
+    bool cacheResult = true,
+  ]) {
+    // Use PowerSync's watch functionality
+    return _db.watch(sql, parameters: args ?? []).map((rows) {
+      // Convert to QueryRow - this is a simplified implementation
+      return rows.map((row) => _PowerSyncQueryRow(row)).toList().first;
+    });
+  }
+}
+
+/// A simple QueryRow wrapper for PowerSync results.
+class _PowerSyncQueryRow extends QueryRow {
+  final Map<String, Object?> _data;
+  
+  _PowerSyncQueryRow(this._data);
+  
+  @override
+  Object? readColumn(String column) => _data[column];
 }
