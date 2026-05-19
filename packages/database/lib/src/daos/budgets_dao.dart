@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../tables/budgets.dart';
 import '../database.dart';
 
 part 'budgets_dao.g.dart';
