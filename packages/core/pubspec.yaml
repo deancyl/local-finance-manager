@@ -1,0 +1,19 @@
+name: core
+description: Core domain models, repositories, and business logic for the finance app.
+version: 0.1.0
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  uuid: ^4.5.1
+  collection: ^1.18.0
+  meta: ^1.15.0
+  equatable: ^2.0.5
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  test: ^1.25.8
+  build_runner: ^2.4.13
+  json_serializable: ^6.8.0
+  mocktail: ^1.0.4

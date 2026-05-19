@@ -1,0 +1,20 @@
+name: ai
+description: Local AI integration with graceful degradation for transaction categorization and insights.
+version: 0.1.0
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  core:
+    path: ../core
+  flutter:
+    sdk: flutter
+  http: ^1.2.2
+  logging: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  test: ^1.25.8
+  mocktail: ^1.0.4

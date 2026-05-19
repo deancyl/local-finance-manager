@@ -1,0 +1,37 @@
+name: finance_app_monorepo
+
+packages:
+  - apps/**
+  - packages/**
+
+command:
+  bootstrap:
+    runPubGetInParallel: false
+    usePubspecOverrides: true
+
+scripts:
+  analyze:
+    exec: dart analyze .
+  
+  test:
+    run: |
+      melos exec --dir-exists=test -- "flutter test --coverage"
+  
+  build:android:
+    run: |
+      melos exec --scope="mobile" -- "flutter build apk --release"
+  
+  build:ios:
+    run: |
+      melos exec --scope="mobile" -- "flutter build ios --release"
+  
+  build:web:
+    run: |
+      melos exec --scope="mobile" -- "flutter build web --release"
+  
+  clean:
+    run: |
+      melos exec -- "flutter clean"
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
