@@ -50,12 +50,21 @@ finance-app/
 - [x] Phase 1.8: 分类管理
 - [x] Phase 1.9: 基础报表（收支）
 
-### Phase 2: Import System (待开始)
+### Phase 2: Import System ✅ 完成
 
-- [ ] Import pipeline architecture
-- [ ] Alipay importer
-- [ ] WeChat Pay importer
-- [ ] ICBC/CCB/BOC importers
+- [x] Import pipeline architecture
+- [x] Alipay importer (支付宝)
+- [x] WeChat Pay importer (微信支付)
+- [x] ICBC/CCB/BOC importers (工商银行/建设银行/中国银行)
+- [x] Import preview UI
+- [x] Duplicate detection
+
+### Phase 3: Sync System (待开始)
+
+- [ ] Sync server setup
+- [ ] PowerSync integration
+- [ ] E2E encryption for sync
+- [ ] Conflict resolution
 
 ## 快速开始
 

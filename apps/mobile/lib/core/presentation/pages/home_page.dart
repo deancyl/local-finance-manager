@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -136,11 +137,11 @@ class HomePage extends StatelessWidget {
         const SizedBox(height: 12),
         Row(
           children: [
-            _buildActionButton(context, '导入账单', Icons.file_upload, () {}),
+            _buildActionButton(context, '导入账单', Icons.file_upload, () => context.push('/import')),
             const SizedBox(width: 12),
-            _buildActionButton(context, '账户管理', Icons.account_balance, () {}),
+            _buildActionButton(context, '账户管理', Icons.account_balance, () => context.push('/accounts')),
             const SizedBox(width: 12),
-            _buildActionButton(context, '预算设置', Icons.savings, () {}),
+            _buildActionButton(context, '预算设置', Icons.savings, () => context.push('/budgets')),
           ],
         ),
       ],
@@ -230,8 +231,4 @@ class HomePage extends StatelessWidget {
       ],
     );
   }
-}
-
-extension on BuildContext {
-  void push(String s) {}
 }

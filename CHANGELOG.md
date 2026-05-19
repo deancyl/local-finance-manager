@@ -5,6 +5,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.2.0] - 2026-05-19
+
+### Added - Phase 2: Import System
+
+#### Import Pipeline Architecture
+- `ImporterBase` abstract class for all financial institution importers
+- `ImportResult` and `ImportStats` models for parse results
+- `ImportConfig` for customizable import settings
+- `ImportPreview` for pre-import verification
+
+#### Utility Classes
+- `CsvParser` - CSV parsing with encoding detection
+- `EncodingDetector` - Auto-detect GBK/UTF-8/UTF-16 encodings
+- `DateParser` - Parse Chinese date formats (2026年5月19日, 今天, 昨天, etc.)
+- `AmountParser` - Parse Chinese amount formats (¥1.23万, +¥100, (100))
+- `DuplicateDetector` - Detect duplicate transactions by external ID or fuzzy match
+
+#### Alipay Importer
+- Parse Alipay CSV export files
+- Support for 余额, 余额宝, 花呗, 银行卡 accounts
+- Category mapping for 30+ Alipay categories
+- Transaction type detection (收入/支出)
+- External ID extraction from transaction order numbers
+
+#### WeChat Pay Importer
+- Parse WeChat Pay CSV export files
+- Handle backtick prefix (common in WeChat exports)
+- Support for 零钱, 零钱通, 银行卡 accounts
+- Category mapping for WeChat transaction types
+- Red packet (红包) and transfer (转账) support
+
+#### Bank Importers
+- **ICBC (工商银行)** - GBK/UTF-8 encoding, standard bank format
+- **CCB (建设银行)** - Separate income/expense columns
+- **BOC (中国银行)** - Debit/credit columns, reference numbers
+
+#### Import UI
+- Import page with file picker
+- Preview table for parsed transactions
+- Source detection display
+- Import statistics summary
+
+### Documentation
+- `PRIVACY_POLICY.md` - Privacy policy for app store submission (English/Chinese)
+
+### Technical Details
+
+**New Dependencies:**
+- csv: ^6.0.0 (CSV parsing)
+- file_picker: ^8.1.4 (File selection)
+
+**Importers Package Structure:**
+```
+packages/importers/
+├── lib/
+│   ├── importers.dart          # Main export file
+│   └── src/
+│       ├── base/               # Base classes
+│       │   ├── importer_base.dart
+│       │   ├── import_result.dart
+│       │   └── import_config.dart
+│       ├── utils/              # Utility classes
+│       │   ├── csv_parser.dart
+│       │   ├── encoding_detector.dart
+│       │   ├── date_parser.dart
+│       │   ├── amount_parser.dart
+│       │   └── duplicate_detector.dart
+│       ├── alipay/             # Alipay importer
+│       ├── wechat/             # WeChat Pay importer
+│       └── banks/              # Bank importers
+│           ├── icbc_importer.dart
+│           ├── ccb_importer.dart
+│           └── boc_importer.dart
+└── test/                       # Unit tests
+```
+
 ## [v0.1.0] - 2026-05-19
 
 ### Added - Phase 1: Foundation

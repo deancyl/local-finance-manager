@@ -6,6 +6,7 @@ import '../../features/transactions/presentation/pages/transactions_page.dart';
 import '../../features/reports/presentation/pages/reports_page.dart';
 import '../../features/budgets/presentation/pages/budgets_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
+import '../../features/import/presentation/pages/import_page.dart';
 import '../presentation/pages/home_page.dart';
 import '../presentation/pages/main_shell.dart';
 
@@ -47,6 +48,11 @@ class AppRouter {
             builder: (context, state) => const SettingsPage(),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/import',
+        name: 'import',
+        builder: (context, state) => const ImportPage(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
