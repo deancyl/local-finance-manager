@@ -150,10 +150,55 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
+  # Web build
+  build-web:
+    name: Build Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+          pub-cache: true
+      
+      - name: Setup Melos
+        run: dart pub global activate melos
+      
+      - name: Bootstrap workspace
+        run: melos bootstrap
+      
+      - name: Generate code (Drift)
+        run: melos run generate
+      
+      - name: Build Web
+        working-directory: apps/mobile
+        run: flutter build web --release
+      
+      - name: Package Web build
+        run: |
+          cd apps/mobile/build/web
+          zip -r ../../../finance-app-web.zip .
+          cd ../../..
+          ls -la finance-app-web.zip
+      
+      - name: Upload Web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: finance-app-web.zip
+          retention-days: 30
+          if-no-files-found: error
+
   # Create GitHub Release (only on tag push)
   create-release:
     name: Create GitHub Release
-    needs: [build-android, build-windows]
+    needs: [build-android, build-windows, build-web]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
@@ -171,11 +216,18 @@ jobs:
           name: windows-debug
           path: artifacts/windows
       
+      - name: Download Web artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web
+          path: artifacts/web
+      
       - name: Prepare release files
         run: |
           mkdir -p release-files
           cp artifacts/android/*.apk release-files/
           cp artifacts/windows/*.zip release-files/
+          cp artifacts/web/*.zip release-files/
           ls -la release-files/
       
       - name: Create GitHub Release
