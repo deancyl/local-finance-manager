@@ -1,4 +1,7 @@
 import 'package:drift/drift.dart';
+import 'accounts.dart';
+import 'commodities.dart';
+import 'imports.dart';
 
 /// Transactions table - journal entry headers.
 class Transactions extends Table {
@@ -37,25 +40,6 @@ class Splits extends Table {
   IntColumn get version => integer().withDefault(const Constant(1))();
   IntColumn get createdAt => integer()();
 
-  @override
-  Set<Column> get primaryKey => {id};
-}
-
-/// Reference tables for foreign keys.
-class Commodities extends Table {
-  TextColumn get id => text()();
-  @override
-  Set<Column> get primaryKey => {id};
-}
-
-class Accounts extends Table {
-  TextColumn get id => text()();
-  @override
-  Set<Column> get primaryKey => {id};
-}
-
-class ImportBatches extends Table {
-  TextColumn get id => text()();
   @override
   Set<Column> get primaryKey => {id};
 }

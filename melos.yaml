@@ -20,7 +20,7 @@ scripts:
   # Code generation for Drift and other code generators
   generate:
     run: |
-      melos exec --dir-exists=pubspec.yaml -- "dart run build_runner build --delete-conflicting-outputs"
+      melos exec --scope="database" -- "dart run build_runner build --delete-conflicting-outputs"
   
   build:android:
     run: |

@@ -1,4 +1,6 @@
 import 'package:drift/drift.dart';
+import 'categories.dart';
+import 'commodities.dart';
 
 /// Budgets table - spending limits per category.
 class Budgets extends Table {
@@ -14,19 +16,6 @@ class Budgets extends Table {
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   IntColumn get createdAt => integer()();
 
-  @override
-  Set<Column> get primaryKey => {id};
-}
-
-/// Reference tables for foreign keys.
-class Categories extends Table {
-  TextColumn get id => text()();
-  @override
-  Set<Column> get primaryKey => {id};
-}
-
-class Commodities extends Table {
-  TextColumn get id => text()();
   @override
   Set<Column> get primaryKey => {id};
 }

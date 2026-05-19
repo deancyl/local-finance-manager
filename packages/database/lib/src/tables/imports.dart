@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'accounts.dart';
 
 /// Import sources table - financial institutions and data sources.
 class ImportSources extends Table {
@@ -30,13 +31,6 @@ class ImportBatches extends Table {
   TextColumn get errorDetails => text().nullable()();
   IntColumn get createdAt => integer()();
 
-  @override
-  Set<Column> get primaryKey => {id};
-}
-
-/// Reference table for foreign key.
-class Accounts extends Table {
-  TextColumn get id => text()();
   @override
   Set<Column> get primaryKey => {id};
 }
