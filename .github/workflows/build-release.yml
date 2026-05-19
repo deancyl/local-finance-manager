@@ -177,6 +177,7 @@ jobs:
         run: melos run generate
       
       - name: Build Web
+        working-directory: apps/mobile
         run: flutter build web --release
       
       - name: Package Web build
