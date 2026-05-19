@@ -177,15 +177,13 @@ jobs:
         run: melos run generate
       
       - name: Build Web
-        working-directory: apps/mobile
         run: flutter build web --release
       
       - name: Package Web build
         run: |
           cd apps/mobile/build/web
-          zip -r ../../../finance-app-web.zip .
-          cd ../../..
-          ls -la finance-app-web.zip
+          zip -r $GITHUB_WORKSPACE/finance-app-web.zip .
+          ls -la $GITHUB_WORKSPACE/finance-app-web.zip
       
       - name: Upload Web artifact
         uses: actions/upload-artifact@v4
