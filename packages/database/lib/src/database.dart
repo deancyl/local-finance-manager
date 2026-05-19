@@ -109,6 +109,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             icon: const Value('restaurant'),
             color: const Value('#FF5722'),
             createdAt: DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now(),
           ),
           CategoriesCompanion.insert(
             id: 'transport',
@@ -116,6 +117,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             icon: const Value('directions_car'),
             color: const Value('#2196F3'),
             createdAt: DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now(),
           ),
           CategoriesCompanion.insert(
             id: 'shopping',
@@ -123,6 +125,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             icon: const Value('shopping_cart'),
             color: const Value('#E91E63'),
             createdAt: DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now(),
           ),
           CategoriesCompanion.insert(
             id: 'entertainment',
@@ -130,6 +133,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             icon: const Value('movie'),
             color: const Value('#9C27B0'),
             createdAt: DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now(),
           ),
           CategoriesCompanion.insert(
             id: 'health',
@@ -137,6 +141,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             icon: const Value('local_hospital'),
             color: const Value('#4CAF50'),
             createdAt: DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now(),
           ),
           CategoriesCompanion.insert(
             id: 'education',
@@ -144,6 +149,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             icon: const Value('school'),
             color: const Value('#FF9800'),
             createdAt: DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now(),
           ),
           CategoriesCompanion.insert(
             id: 'other_expense',
@@ -151,6 +157,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             icon: const Value('more_horiz'),
             color: const Value('#607D8B'),
             createdAt: DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now(),
           ),
           // Income categories
           CategoriesCompanion.insert(
@@ -160,6 +167,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             color: const Value('#4CAF50'),
             isIncome: const Value(true),
             createdAt: DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now(),
           ),
           CategoriesCompanion.insert(
             id: 'bonus',
@@ -168,6 +176,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             color: const Value('#8BC34A'),
             isIncome: const Value(true),
             createdAt: DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now(),
           ),
           CategoriesCompanion.insert(
             id: 'investment',
@@ -176,6 +185,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             color: const Value('#CDDC39'),
             isIncome: const Value(true),
             createdAt: DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now(),
           ),
           CategoriesCompanion.insert(
             id: 'other_income',
@@ -184,6 +194,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             color: const Value('#00BCD4'),
             isIncome: const Value(true),
             createdAt: DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now(),
           ),
         ],
       );

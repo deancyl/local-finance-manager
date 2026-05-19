@@ -26,13 +26,14 @@ class SettingsPage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () {},
           ),
-          ListTile(
-            leading: const Icon(Icons.sync),
-            title: const Text('同步设置'),
-            subtitle: const Text('多设备同步'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.go('/settings/sync'),
-          ),
+          // Sync temporarily disabled - PowerSync compatibility issues
+          // ListTile(
+          //   leading: const Icon(Icons.sync),
+          //   title: const Text('同步设置'),
+          //   subtitle: const Text('多设备同步'),
+          //   trailing: const Icon(Icons.chevron_right),
+          //   onTap: () => context.go('/settings/sync'),
+          // ),
           ListTile(
             leading: const Icon(Icons.palette),
             title: const Text('主题设置'),
