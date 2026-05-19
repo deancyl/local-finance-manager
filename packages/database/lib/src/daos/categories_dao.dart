@@ -2,6 +2,8 @@ import 'package:drift/drift.dart';
 
 import '../database.dart';
 
+part 'categories_dao.g.dart';
+
 /// Data Access Object for categories.
 @DriftAccessor(tables: [Categories])
 class CategoriesDao extends DatabaseAccessor<LocalFinanceDatabase> with _$CategoriesDaoMixin {

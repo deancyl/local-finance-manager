@@ -2,6 +2,8 @@ import 'package:drift/drift.dart';
 
 import '../database.dart';
 
+part 'transactions_dao.g.dart';
+
 /// Data Access Object for transactions.
 @DriftAccessor(tables: [Transactions, Splits])
 class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TransactionsDaoMixin {

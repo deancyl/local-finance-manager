@@ -2,6 +2,8 @@ import 'package:drift/drift.dart';
 
 import '../database.dart';
 
+part 'import_sources_dao.g.dart';
+
 /// Data Access Object for import sources.
 @DriftAccessor(tables: [ImportSources, ImportBatches])
 class ImportSourcesDao extends DatabaseAccessor<LocalFinanceDatabase> with _$ImportSourcesDaoMixin {
