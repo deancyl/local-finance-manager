@@ -7,15 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v0.3.2] - 2026-05-20
 
+### Changed
+- **Sync feature temporarily disabled** due to PowerSync API compatibility issues
+  - PowerSync package requires Dart SDK >=3.10.0 but Flutter 3.27.1 uses Dart 3.6.0
+  - Sync UI components and routes removed from mobile app
+  - Sync server code remains in repository for future development
+
 ### Fixed
-- Removed `drift_sqlite_async` dependency due to Dart SDK compatibility issues
-  - The package requires Dart SDK >=3.10.0 but Flutter 3.27.1 uses Dart 3.6.0
-- Implemented custom `PowerSyncQueryExecutor` to wrap PowerSync's native query execution
-- This fixes GitHub Actions build failures for v0.3.1
+- Added missing `dart:math` import for `Random` in encryption services
+- Added missing `updatedAt` field to default categories in database
+- Fixed dependency version constraints for `dart_jsonwebtoken`, `postgres`, `dart_frog_test`
 
 ### Technical Details
-- `packages/sync/lib/src/sync_client.dart`: Replaced `SqliteAsyncDriftConnection` with custom implementation
-- `packages/sync/pubspec.yaml`: Removed `drift_sqlite_async: ^0.3.0` dependency
+- `apps/mobile/pubspec.yaml`: Disabled sync package dependency
+- `apps/mobile/lib/core/router/app_router.dart`: Removed sync routes
+- `apps/mobile/lib/core/presentation/pages/main_shell.dart`: Removed sync status indicator
+- `apps/mobile/lib/features/settings/presentation/pages/settings_page.dart`: Removed sync settings
+- `packages/encryption/lib/src/crypto/encryption_service.dart`: Added dart:math import
+- `packages/sync/lib/src/encryption/encryption_service.dart`: Added dart:math import
+- `packages/database/lib/src/database.dart`: Added updatedAt to default categories
+
+### Build Artifacts
+- Android APK (debug): `app-debug.apk`
+- Web build: `finance-app-web.zip`
+- Windows build: `finance-app-windows-debug.zip`
 
 ## [v0.3.0] - 2026-05-19
 
