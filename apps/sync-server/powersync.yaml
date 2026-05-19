@@ -1,0 +1,60 @@
+config:
+  edition: 3
+
+streams:
+  user_data:
+    params:
+      - SELECT request.user_id() as user_id
+    queries:
+      - |
+        SELECT 
+          id, user_id, name, account_type, parent_id,
+          commodity_id, code, description, 
+          created_at, updated_at
+        FROM accounts 
+        WHERE user_id = stream.user_id
+
+      - |
+        SELECT 
+          id, description, post_date, enter_date,
+          currency_id, reference_num, notes,
+          import_batch_id, external_id, is_double_entry,
+          idempotency_key, version, created_at, updated_at, deleted_at
+        FROM transactions
+        WHERE user_id = stream.user_id
+
+      - |
+        SELECT 
+          id, transaction_id, account_id, memo,
+          value_num, value_denom, quantity_num, quantity_denom,
+          reconcile_state, reconcile_date, version, created_at
+        FROM splits
+        WHERE user_id = stream.user_id
+
+      - |
+        SELECT 
+          id, name, icon, color, parent_id,
+          is_income, budget_limit, created_at
+        FROM categories
+        WHERE user_id = stream.user_id
+
+      - |
+        SELECT 
+          id, name, source_type, institution_id,
+          account_id, config, last_import_at, is_active, created_at
+        FROM import_sources
+        WHERE user_id = stream.user_id
+
+  shared_data:
+    queries:
+      - |
+        SELECT id, namespace, mnemonic, full_name,
+               created_at, updated_at
+        FROM commodities
+
+      - |
+        SELECT id, name, start_date, end_date,
+               amount, currency_id, category_id,
+               created_at, updated_at
+        FROM budgets
+        WHERE user_id = request.user_id()
