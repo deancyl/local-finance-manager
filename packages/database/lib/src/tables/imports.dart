@@ -18,6 +18,7 @@ class ImportSources extends Table {
 }
 
 /// Import batches table - tracking import operations.
+@DataClassName('ImportBatch')
 class ImportBatches extends Table {
   TextColumn get id => text()();
   TextColumn get sourceId => text().references(ImportSources, #id)();
