@@ -48,7 +48,7 @@ class EncodingDetector {
     try {
       switch (enc.toLowerCase()) {
         case utf8:
-          return utf8Codec.decode(bytes);
+          return utf8.decode(bytes);
         case gbk:
         case gb2312:
           return gbkCodec.decode(bytes);
@@ -60,14 +60,14 @@ class EncodingDetector {
         default:
           // Try UTF-8 first, then GBK
           try {
-            return utf8Codec.decode(bytes);
+            return utf8.decode(bytes);
           } catch (_) {
             return gbkCodec.decode(bytes);
           }
       }
     } catch (e) {
       // Fallback: try all encodings
-      for (final codec in [utf8Codec, gbkCodec, latin1Codec]) {
+      for (final codec in [utf8, gbkCodec, latin1]) {
         try {
           return codec.decode(bytes);
         } catch (_) {
@@ -75,7 +75,7 @@ class EncodingDetector {
         }
       }
       // Last resort: decode as Latin-1 (always succeeds)
-      return latin1Codec.decode(bytes);
+      return latin1.decode(bytes);
     }
   }
 

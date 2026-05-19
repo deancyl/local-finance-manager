@@ -1,6 +1,6 @@
 import 'dart:typed_data';
-import '../import_result.dart';
-import '../import_config.dart';
+import 'import_result.dart';
+import 'import_config.dart';
 import 'package:core/core.dart';
 
 /// Base class for all financial institution importers.
