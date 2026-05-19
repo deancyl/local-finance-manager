@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
 
-import '../../../../database/database.dart';
-import '../../../../core/models/account.dart' as domain;
+import 'package:database/database.dart';
+import 'package:core/core.dart' as domain;
 
 final databaseProvider = Provider<LocalFinanceDatabase>((ref) {
   return LocalFinanceDatabase();

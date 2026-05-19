@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../database/database.dart';
-import '../../../accounts/data/account_provider.dart';
+import 'package:database/database.dart';
+import 'package:mobile/features/accounts/data/account_provider.dart';
 import '../../data/transaction_provider.dart';
 
 class AddTransactionDialog extends ConsumerStatefulWidget {

@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
 
-import '../../../../database/database.dart';
+import 'package:database/database.dart';
 
 final transactionsProvider = StreamProvider<List<Transaction>>((ref) {
   final db = ref.watch(databaseProvider);

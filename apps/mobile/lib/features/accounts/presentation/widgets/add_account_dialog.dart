@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 
-import '../../../../database/database.dart';
+import 'package:database/database.dart';
 import '../../data/account_provider.dart';
 
 class AddAccountDialog extends ConsumerStatefulWidget {

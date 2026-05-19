@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../database/database.dart';
+import 'package:database/database.dart';
 
 class AccountCard extends StatelessWidget {
   final Account account;

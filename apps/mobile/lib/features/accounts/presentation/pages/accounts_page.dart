@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../database/database.dart';
+import 'package:database/database.dart';
 import '../../data/account_provider.dart';
 import '../widgets/account_card.dart';
 import '../widgets/add_account_dialog.dart';

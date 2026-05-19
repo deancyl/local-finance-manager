@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../database/database.dart';
+import 'package:database/database.dart';
 import '../../transactions/data/transaction_provider.dart';
 
 class ReportsPage extends ConsumerWidget {

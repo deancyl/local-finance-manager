@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../database/database.dart';
+import 'package:database/database.dart';
 import '../../data/transaction_provider.dart';
 
 class TransactionCard extends ConsumerWidget {
