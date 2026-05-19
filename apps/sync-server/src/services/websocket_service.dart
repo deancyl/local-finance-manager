@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:dart_frog_web_socket/dart_frog_web_socket.dart';
-import 'package:jwt/jwt.dart';
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import '../database/connection.dart';
 import 'auth_service.dart';
 

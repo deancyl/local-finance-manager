@@ -1,7 +1,7 @@
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:postgres/postgres.dart';
-import 'package:jwt/jwt.dart';
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:sync_server/src/services/auth_service.dart';
 import 'package:sync_server/src/services/encryption_service.dart';
 import 'package:sync_server/src/database/connection.dart';

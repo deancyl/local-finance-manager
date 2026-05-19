@@ -1,4 +1,4 @@
-import 'package:jwt/jwt.dart';
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:uuid/uuid.dart';
 import '../database/connection.dart';
 import '../models/sync_models.dart';
