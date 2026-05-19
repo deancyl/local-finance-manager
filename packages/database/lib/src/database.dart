@@ -37,7 +37,7 @@ part 'daos/import_sources_dao.dart';
 class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   LocalFinanceDatabase() : super(_openConnection());
 
-  LocalFinanceDatabase.connect(DatabaseConnection connection) : super.connect(connection);
+  LocalFinanceDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   late final AccountsDao accountsDao = AccountsDao(this);
   late final TransactionsDao transactionsDao = TransactionsDao(this);
