@@ -5,6 +5,76 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.16] - 2026-05-21
+
+### Added
+- **Dark Mode**: Full dark theme support with system/light/dark options
+  - Material 3 dark theme with proper color scheme
+  - Theme persistence via SharedPreferences
+  - Theme settings page with radio selection
+  - System theme mode follows device settings automatically
+
+### Technical Details
+- `apps/mobile/lib/core/theme/app_theme.dart` - Light and dark ThemeData definitions
+- `apps/mobile/lib/features/settings/data/theme_provider.dart` - ThemeNotifier with persistence
+- `apps/mobile/lib/features/settings/presentation/pages/theme_settings_page.dart` - Theme selection UI
+
+## [v0.3.15] - 2026-05-20
+
+### Added
+- **Pagination**: Infinite scroll for transactions list
+  - PAGE_SIZE = 20 transactions per page
+  - Load more on scroll to bottom
+  - Pull-to-refresh resets pagination
+- **Database-Level Filtering**: Efficient SQL filtering for transactions
+  - Date range filtering at database level
+  - Category and account filtering
+  - Text search in description and notes
+- **Chart Interactions**: Click charts to drill down
+  - Bar chart click navigates to filtered transactions
+  - Pie chart click shows category transactions
+
+### Fixed
+- `distinct()` not supported in Drift selectOnly - changed to GROUP BY
+- fl_chart API: use `spot.x.toInt()` instead of `tappedBarGroup`
+
+### Technical Details
+- `packages/database/lib/src/daos/transactions_dao.dart` - `getTransactionsPaginated`, `getFilteredTransactionsPaginated`
+- `apps/mobile/lib/features/transactions/data/transaction_provider.dart` - PaginationState, PaginatedTransactionsNotifier
+- `apps/mobile/lib/features/reports/presentation/widgets/monthly_trend_chart.dart` - Chart touch callback
+
+## [v0.3.14] - 2026-05-20
+
+### Fixed
+- Split import conflict with Flutter's Split widget
+- Value<String?> type handling for nullable fields
+
+## [v0.3.13] - 2026-05-20
+
+### Added
+- Account balance calculation fix
+- GBK encoding support for Chinese bank imports
+- Transfer transaction support
+- Bank statement importers (ICBC, CCB, BOC)
+- Database Schema v5 with Tags, Attachments, RecurringTransactions tables
+
+## [v0.3.12] - 2026-05-20
+
+### Added
+- Data backup settings page
+- Export/import functionality
+
+## [v0.3.11] - 2026-05-20
+
+### Added
+- Language settings (zh_CN, zh_TW, en_US)
+- Locale persistence via SharedPreferences
+
+## [v0.3.10] - 2026-05-20
+
+### Added
+- Theme settings page foundation
+
 ## [v0.3.9] - 2026-05-20
 
 ### Added
