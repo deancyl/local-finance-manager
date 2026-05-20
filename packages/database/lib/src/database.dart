@@ -40,7 +40,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final ImportSourcesDao importSourcesDao = ImportSourcesDao(this);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -66,6 +66,10 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
           await m.addColumn(importSources, importSources.updatedAt);
           await m.addColumn(importBatches, importBatches.version);
           await m.addColumn(importBatches, importBatches.updatedAt);
+        }
+        if (from < 3) {
+          // Add categoryId to Splits table for category-based reporting
+          await m.addColumn(splits, splits.categoryId);
         }
       },
     );

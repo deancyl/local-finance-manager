@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.3] - 2026-05-20
+
+### Added
+- **Category support in transactions**: Added `categoryId` field to Splits table for category-based reporting and budget tracking
+- **Category selection in transaction dialog**: Users can now select a category when creating transactions
+- **All 5 account types exposed**: Account creation dialog now shows all account types (Asset, Liability, Equity, Income, Expense)
+
+### Fixed
+- **Report calculation bug**: Replaced placeholder data with real split-based income/expense calculation
+  - Reports now correctly calculate totals based on account types (INCOME/EXPENSE)
+  - Uses actual transaction splits instead of hardcoded values
+
+### Changed
+- Database schema version upgraded to 3 with migration for `categoryId` column in Splits table
+- Added `allSplitsWithAccountsProvider` for efficient report calculations
+
+### Technical Details
+- `packages/database/lib/src/tables/transactions.dart`: Added categoryId to Splits table
+- `packages/database/lib/src/database.dart`: Schema version 3, migration logic for categoryId
+- `apps/mobile/lib/features/reports/presentation/pages/reports_page.dart`: Real calculation logic
+- `apps/mobile/lib/features/transactions/data/transaction_provider.dart`: New provider, categoryId support
+- `apps/mobile/lib/features/transactions/presentation/widgets/add_transaction_dialog.dart`: Category dropdown
+- `apps/mobile/lib/features/accounts/presentation/widgets/add_account_dialog.dart`: All 5 account types
+
 ## [v0.3.2] - 2026-05-20
 
 ### Changed

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
+import 'package:finance_app/features/categories/data/category_provider.dart';
 import '../../data/transaction_provider.dart';
 
 class AddTransactionDialog extends ConsumerStatefulWidget {
@@ -23,6 +24,7 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
 
   DateTime _selectedDate = DateTime.now();
   String? _selectedAccountId;
+  String? _selectedCategoryId;
   String _selectedCurrency = 'CNY';
   bool _isIncome = false;
   bool _isLoading = false;
@@ -49,6 +51,7 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
   @override
   Widget build(BuildContext context) {
     final accountsAsync = ref.watch(accountsProvider);
+    final categoriesAsync = ref.watch(categoriesProvider);
 
     return Padding(
       padding: EdgeInsets.only(
@@ -115,6 +118,45 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 16),
+              
+              // 分类选择
+              categoriesAsync.when(
+                data: (categories) {
+                  final filteredCategories = _isIncome 
+                      ? categories.where((c) => c.isIncome).toList()
+                      : categories.where((c) => !c.isIncome).toList();
+                  
+                  if (filteredCategories.isEmpty) {
+                    return const Text('请先添加分类');
+                  }
+                  
+                  // Reset category if type changed and current category is invalid
+                  if (_selectedCategoryId != null && 
+                      !filteredCategories.any((c) => c.id == _selectedCategoryId)) {
+                    _selectedCategoryId = filteredCategories.first.id;
+                  }
+                  
+                  return DropdownButtonFormField<String>(
+                    value: _selectedCategoryId ?? filteredCategories.first.id,
+                    decoration: const InputDecoration(
+                      labelText: '分类',
+                      prefixIcon: Icon(Icons.category_outlined),
+                    ),
+                    items: filteredCategories.map((category) {
+                      return DropdownMenuItem(
+                        value: category.id,
+                        child: Text(category.name),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() => _selectedCategoryId = value);
+                    },
+                  );
+                },
+                loading: () => const CircularProgressIndicator(),
+                error: (_, __) => const Text('加载分类失败'),
               ),
               const SizedBox(height: 16),
               
@@ -266,6 +308,7 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
         currencyId: _selectedCurrency,
         description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
         notes: _notesController.text.isEmpty ? null : _notesController.text,
+        categoryId: _selectedCategoryId,
       );
 
       if (mounted) {

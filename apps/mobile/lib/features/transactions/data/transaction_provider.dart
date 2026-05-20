@@ -30,6 +30,25 @@ final splitsForTransactionProvider = FutureProvider.family<List<Split>, String>(
   return (db.select(db.splits)..where((s) => s.transactionId.equals(transactionId))).get();
 });
 
+/// Provider that returns all splits with their associated account info.
+/// Used for calculating income/expense totals in reports.
+final allSplitsWithAccountsProvider = FutureProvider<List<(Split, Account)>>((ref) async {
+  final db = ref.watch(databaseProvider);
+  
+  // Get all splits
+  final allSplits = await (db.select(db.splits)).get();
+  
+  // Get all accounts and create a map
+  final allAccounts = await (db.select(db.accounts)).get();
+  final accountMap = {for (var a in allAccounts) a.id: a};
+  
+  // Pair splits with their accounts
+  return allSplits
+      .where((s) => accountMap.containsKey(s.accountId))
+      .map((s) => (s, accountMap[s.accountId]!))
+      .toList();
+});
+
 class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
   final LocalFinanceDatabase _db;
 
@@ -71,6 +90,7 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
             id: splitId,
             transactionId: transactionId,
             accountId: accountId,
+            categoryId: drift.Value(categoryId),
             valueNum: amountNum,
             quantityNum: amountNum,
             createdAt: now,

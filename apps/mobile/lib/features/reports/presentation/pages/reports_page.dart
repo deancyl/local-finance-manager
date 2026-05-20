@@ -9,15 +9,15 @@ class ReportsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final transactionsAsync = ref.watch(transactionsProvider);
+    final splitsWithAccountsAsync = ref.watch(allSplitsWithAccountsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('报表分析'),
       ),
-      body: transactionsAsync.when(
-        data: (transactions) {
-          final summary = _calculateSummary(transactions);
+      body: splitsWithAccountsAsync.when(
+        data: (splitsWithAccounts) {
+          final summary = _calculateSummary(splitsWithAccounts);
           return _buildReportContent(context, summary);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -26,16 +26,36 @@ class ReportsPage extends ConsumerWidget {
     );
   }
 
-  Map<String, double> _calculateSummary(List<Transaction> transactions) {
+  Map<String, double> _calculateSummary(List<(Split, Account)> splitsWithAccounts) {
     double totalIncome = 0;
     double totalExpense = 0;
 
-    for (final transaction in transactions) {
-      // For now, use a simple heuristic based on description
-      // TODO: Implement proper split-based calculation with DAO
-      final description = transaction.description?.toLowerCase() ?? '';
-      // This is a placeholder - actual implementation should use splits via DAO
-      totalExpense += 100; // Placeholder value
+    for (final (split, account) in splitsWithAccounts) {
+      // Convert from cents to yuan (valueNum is stored in cents)
+      final amount = split.valueNum / 100.0;
+      
+      // In double-entry bookkeeping:
+      // - INCOME accounts: credit (negative) represents income
+      // - EXPENSE accounts: debit (positive) represents expense
+      // 
+      // For simplicity in single-entry view:
+      // - If account is INCOME type, positive value = income
+      // - If account is EXPENSE type, positive value = expense
+      // - ASSET/LIABILITY/EQUITY are balance sheet items, not income/expense
+      
+      switch (account.accountType) {
+        case 'INCOME':
+          // Income: positive value means money coming in
+          totalIncome += amount.abs();
+          break;
+        case 'EXPENSE':
+          // Expense: positive value means money going out
+          totalExpense += amount.abs();
+          break;
+        // ASSET, LIABILITY, EQUITY are not income/expense
+        default:
+          break;
+      }
     }
 
     return {

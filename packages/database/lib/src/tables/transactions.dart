@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'accounts.dart';
 import 'commodities.dart';
 import 'imports.dart';
+import 'categories.dart';
 
 /// Transactions table - journal entry headers.
 class Transactions extends Table {
@@ -30,6 +31,7 @@ class Splits extends Table {
   TextColumn get id => text()();
   TextColumn get transactionId => text().references(Transactions, #id)();
   TextColumn get accountId => text().references(Accounts, #id)();
+  TextColumn get categoryId => text().nullable().references(Categories, #id)();
   TextColumn get memo => text().nullable()();
   IntColumn get valueNum => integer()();
   IntColumn get valueDenom => integer().withDefault(const Constant(1))();

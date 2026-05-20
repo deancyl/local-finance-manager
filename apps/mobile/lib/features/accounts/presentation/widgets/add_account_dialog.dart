@@ -89,6 +89,9 @@ class _AddAccountDialogState extends ConsumerState<AddAccountDialog> {
                 items: const [
                   DropdownMenuItem(value: 'ASSET', child: Text('资产')),
                   DropdownMenuItem(value: 'LIABILITY', child: Text('负债')),
+                  DropdownMenuItem(value: 'EQUITY', child: Text('权益')),
+                  DropdownMenuItem(value: 'INCOME', child: Text('收入')),
+                  DropdownMenuItem(value: 'EXPENSE', child: Text('支出')),
                 ],
                 onChanged: (value) {
                   setState(() => _selectedType = value!);
