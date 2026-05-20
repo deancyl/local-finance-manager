@@ -202,6 +202,46 @@ class ImportNotifier extends StateNotifier<ImportState> {
       rethrow;
     }
   }
+  
+  /// Perform import with a custom ImportConfig (including field mapping).
+  Future<ImportBatch> performImportWithConfig({
+    required ImporterBase importer,
+    required Uint8List content,
+    required ImportConfig config,
+    required String filename,
+  }) async {
+    state = const ImportState(isLoading: true);
+
+    try {
+      // Merge default category mappings with provided config
+      final mergedConfig = config.copyWith(
+        categoryMapping: {
+          ...importer.getDefaultCategoryMappings(),
+          ...config.categoryMapping,
+        },
+      );
+
+      final result = await importer.parse(
+        content: content,
+        config: mergedConfig,
+      );
+
+      final useCase = _ref.read(importTransactionsProvider);
+      
+      final batch = await useCase.import(
+        sourceId: importer.sourceId,
+        transactions: result.transactions,
+        filename: filename,
+        skipDuplicates: mergedConfig.skipDuplicates,
+      );
+
+      state = ImportState(batch: batch);
+      return batch;
+    } catch (e) {
+      state = ImportState(error: e.toString());
+      rethrow;
+    }
+  }
 }
 
 final importNotifierProvider = StateNotifierProvider<ImportNotifier, ImportState>((ref) {

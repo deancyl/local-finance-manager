@@ -7,6 +7,9 @@ import 'tables/transactions.dart';
 import 'tables/categories.dart';
 import 'tables/budgets.dart';
 import 'tables/imports.dart';
+import 'tables/recurring.dart';
+import 'tables/attachments.dart';
+import 'tables/tags.dart';
 
 part 'database.g.dart';
 part 'daos/accounts_dao.dart';
@@ -26,6 +29,10 @@ part 'daos/import_sources_dao.dart';
     Budgets,
     ImportSources,
     ImportBatches,
+    RecurringTransactions,
+    Attachments,
+    Tags,
+    TransactionTags,
   ],
 )
 class LocalFinanceDatabase extends _$LocalFinanceDatabase {
@@ -40,7 +47,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final ImportSourcesDao importSourcesDao = ImportSourcesDao(this);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -86,6 +93,40 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             'CREATE INDEX IF NOT EXISTS idx_splits_category_date '
             'ON splits(category_id, transaction_id)',
           );
+        }
+        if (from < 5) {
+          // Version 5: Add recurring transactions, attachments, and tags support
+          
+          // Create recurring transactions table
+          await m.createTable(recurringTransactions);
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_recurring_next_date '
+            'ON recurring_transactions(next_date) WHERE is_active = 1',
+          );
+          
+          // Create attachments table
+          await m.createTable(attachments);
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_attachments_transaction '
+            'ON attachments(transaction_id)',
+          );
+          
+          // Create tags table
+          await m.createTable(tags);
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_tags_name '
+            'ON tags(name)',
+          );
+          
+          // Create transaction_tags junction table
+          await m.createTable(transactionTags);
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_transaction_tags_tag '
+            'ON transaction_tags(tag_id)',
+          );
+          
+          // Insert default system tags
+          await _insertDefaultTags();
         }
       },
     );
@@ -371,6 +412,52 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             sortOrder: const Value(4),
             createdAt: now,
             updatedAt: now,
+          ),
+        ],
+      );
+    });
+  }
+
+  Future<void> _insertDefaultTags() async {
+    await batch((batch) {
+      batch.insertAll(
+        tags,
+        [
+          TagsCompanion.insert(
+            id: 'tax-deductible',
+            name: 'tax-deductible',
+            color: const Value('#4CAF50'),
+            description: const Value('Tax deductible expenses'),
+            isSystem: const Value(true),
+            createdAt: DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now().millisecondsSinceEpoch,
+          ),
+          TagsCompanion.insert(
+            id: 'business',
+            name: 'business',
+            color: const Value('#2196F3'),
+            description: const Value('Business related transactions'),
+            isSystem: const Value(true),
+            createdAt: DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now().millisecondsSinceEpoch,
+          ),
+          TagsCompanion.insert(
+            id: 'reimbursable',
+            name: 'reimbursable',
+            color: const Value('#FF9800'),
+            description: const Value('Expenses eligible for reimbursement'),
+            isSystem: const Value(true),
+            createdAt: DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now().millisecondsSinceEpoch,
+          ),
+          TagsCompanion.insert(
+            id: 'pending',
+            name: 'pending',
+            color: const Value('#9E9E9E'),
+            description: const Value('Transactions pending review'),
+            isSystem: const Value(true),
+            createdAt: DateTime.now().millisecondsSinceEpoch,
+            updatedAt: DateTime.now().millisecondsSinceEpoch,
           ),
         ],
       );

@@ -8,6 +8,7 @@ import 'package:core/core.dart' show ImportBatchStatus;
 
 import '../../providers/import_providers.dart';
 import '../../../accounts/data/account_provider.dart';
+import '../widgets/field_mapping_dialog.dart';
 
 /// Import page for importing transactions from financial institutions.
 class ImportPage extends ConsumerStatefulWidget {
@@ -29,6 +30,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   ImporterBase? _importer;
   ImportPreview? _importPreview;
   String? _selectedAccountId;
+  Map<String, String> _fieldMapping = {};
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +38,11 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       appBar: AppBar(
         title: const Text('导入账单'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () => context.push('/import/history'),
+            tooltip: '导入历史',
+          ),
           if (_fileContent != null)
             IconButton(
               icon: const Icon(Icons.close),
@@ -94,13 +101,13 @@ class _ImportPageState extends ConsumerState<ImportPage> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
-            Text(
-              '支持支付宝、微信支付、工商银行、建设银行、中国银行等导出的CSV文件',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
+Text(
+               '支持支付宝、微信支付、工商银行、建设银行、中国银行等导出的CSV、XLS、XLSX文件',
+               textAlign: TextAlign.center,
+               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                     color: Theme.of(context).colorScheme.onSurfaceVariant,
+                   ),
+             ),
             const SizedBox(height: 24),
             
             // Account selector
@@ -235,6 +242,16 @@ class _ImportPageState extends ConsumerState<ImportPage> {
               label: Text(_detectedSource!),
               backgroundColor: Theme.of(context).colorScheme.surface,
             ),
+          // Add field mapping button
+          if (_fieldMapping.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Chip(
+                label: const Text('已映射'),
+                avatar: const Icon(Icons.map, size: 16),
+                backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+              ),
+            ),
         ],
       ),
     );
@@ -295,22 +312,41 @@ class _ImportPageState extends ConsumerState<ImportPage> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _pickFile,
-              icon: const Icon(Icons.refresh),
-              label: const Text('重新选择'),
+          // Field mapping button (show when auto-detection might have failed)
+          if (_previewRows.isNotEmpty && _importPreview?.headers.isNotEmpty == true)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: OutlinedButton.icon(
+                onPressed: _showFieldMappingDialog,
+                icon: Icon(
+                  _fieldMapping.isEmpty ? Icons.map_outlined : Icons.edit,
+                ),
+                label: Text(
+                  _fieldMapping.isEmpty ? '字段映射' : '编辑字段映射',
+                ),
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: FilledButton.icon(
-              onPressed: _importTransactions,
-              icon: const Icon(Icons.check),
-              label: Text('导入 ${_previewRows.length} 条'),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _pickFile,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重新选择'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _importTransactions,
+                  icon: const Icon(Icons.check),
+                  label: Text('导入 ${_previewRows.length} 条'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -385,10 +421,10 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       );
 
       if (importer == null) {
-        setState(() {
-          _error = '不支持的文件格式。\n支持：支付宝、微信支付、工商银行、建设银行、中国银行的CSV文件';
-          _isLoading = false;
-        });
+setState(() {
+           _error = '不支持的文件格式。\n支持：支付宝、微信支付、工商银行、建设银行、中国银行的CSV、XLS、XLSX文件';
+           _isLoading = false;
+         });
         return;
       }
 
@@ -434,7 +470,28 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       _error = null;
       _importer = null;
       _importPreview = null;
+      _fieldMapping = {};
     });
+  }
+  
+  /// Show field mapping dialog for manual column mapping.
+  Future<void> _showFieldMappingDialog() async {
+    if (_importPreview == null) return;
+    
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => FieldMappingDialog(
+        columns: _importPreview!.headers,
+        previewRows: _previewRows,
+        initialMapping: _fieldMapping,
+      ),
+    );
+    
+    if (result != null) {
+      setState(() {
+        _fieldMapping = result;
+      });
+    }
   }
 
   Future<void> _importTransactions() async {
@@ -458,10 +515,19 @@ class _ImportPageState extends ConsumerState<ImportPage> {
     try {
       final notifier = ref.read(importNotifierProvider.notifier);
       
-      final batch = await notifier.performImport(
+      // Build ImportConfig with field mapping if provided
+      final config = ImportConfig(
+        targetAccountId: accountId,
+        defaultCurrencyId: 'CNY',
+        fieldMapping: _fieldMapping,
+        skipDuplicates: true,
+        autoCategorize: true,
+      );
+      
+      final batch = await notifier.performImportWithConfig(
         importer: _importer!,
         content: _fileContent!,
-        targetAccountId: accountId,
+        config: config,
         filename: _fileName ?? 'unknown.csv',
       );
 

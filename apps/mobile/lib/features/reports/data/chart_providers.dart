@@ -3,6 +3,82 @@ import 'package:database/database.dart';
 import 'package:finance_app/features/transactions/data/transaction_provider.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 
+/// Date range filter for reports.
+class DateRangeFilter {
+  final DateTime startDate;
+  final DateTime endDate;
+  final String label; // "本月", "本年", "自定义"
+  
+  const DateRangeFilter({
+    required this.startDate,
+    required this.endDate,
+    required this.label,
+  });
+  
+  /// Create filter for current month.
+  factory DateRangeFilter.currentMonth() {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, 1);
+    final end = DateTime(now.year, now.month + 1, 0, 23, 59, 59, 999);
+    return DateRangeFilter(
+      startDate: start,
+      endDate: end,
+      label: '本月',
+    );
+  }
+  
+  /// Create filter for current year.
+  factory DateRangeFilter.currentYear() {
+    final now = DateTime.now();
+    final start = DateTime(now.year, 1, 1);
+    final end = DateTime(now.year, 12, 31, 23, 59, 59, 999);
+    return DateRangeFilter(
+      startDate: start,
+      endDate: end,
+      label: '本年',
+    );
+  }
+  
+  /// Create custom date range filter.
+  factory DateRangeFilter.custom(DateTime start, DateTime end) {
+    return DateRangeFilter(
+      startDate: start,
+      endDate: end,
+      label: '自定义',
+    );
+  }
+}
+
+/// Provider for date range filter state.
+final dateRangeFilterProvider = StateProvider<DateRangeFilter>((ref) {
+  return DateRangeFilter.currentMonth();
+});
+
+/// Provider that returns all splits with their associated account and transaction info.
+/// Used for calculating income/expense totals filtered by date range.
+final allSplitsWithAccountsAndTransactionsProvider = FutureProvider<List<(Split, Account, Transaction)>>((ref) async {
+  final db = ref.watch(databaseProvider);
+  
+  // Get all splits
+  final allSplits = await (db.select(db.splits)).get();
+  
+  // Get all accounts and create a map
+  final allAccounts = await (db.select(db.accounts)).get();
+  final accountMap = {for (var a in allAccounts) a.id: a};
+  
+  // Get all transactions and create a map
+  final allTransactions = await (db.select(db.transactions)
+    ..where((t) => t.deletedAt.isNull()))
+    .get();
+  final transactionMap = {for (var t in allTransactions) t.id: t};
+  
+  // Pair splits with their accounts and transactions
+  return allSplits
+      .where((s) => accountMap.containsKey(s.accountId) && transactionMap.containsKey(s.transactionId))
+      .map((s) => (s, accountMap[s.accountId]!, transactionMap[s.transactionId]!))
+      .toList();
+});
+
 /// Monthly data model for trend chart.
 class MonthlyData {
   final String monthLabel; // e.g., "2026-05"
@@ -33,10 +109,11 @@ class CategoryBreakdown {
   });
 }
 
-/// Provider for monthly trend data (last 6 months).
+/// Provider for monthly trend data based on selected date range.
 final monthlyTrendProvider = FutureProvider<List<MonthlyData>>((ref) async {
   final splitsWithAccounts = await ref.watch(allSplitsWithAccountsProvider.future);
   final db = ref.watch(databaseProvider);
+  final dateRange = ref.watch(dateRangeFilterProvider);
   
   // Get all categories for name lookup
   final categories = await (db.select(db.categories)
@@ -44,14 +121,16 @@ final monthlyTrendProvider = FutureProvider<List<MonthlyData>>((ref) async {
     .get();
   final categoryMap = {for (var c in categories) c.id: c};
   
-  // Calculate last 6 months boundaries
-  final now = DateTime.now();
-  final months = <MonthlyData>[];
+  // Calculate months within the date range
+  final startMonth = DateTime(dateRange.startDate.year, dateRange.startDate.month, 1);
+  final endMonth = DateTime(dateRange.endDate.year, dateRange.endDate.month, 1);
   
-  for (int i = 5; i >= 0; i--) {
-    final monthDate = DateTime(now.year, now.month - i, 1);
-    final monthStart = monthDate.millisecondsSinceEpoch;
-    final monthEnd = DateTime(now.year, now.month - i + 1, 0, 23, 59, 59, 999).millisecondsSinceEpoch;
+  final months = <MonthlyData>[];
+  var currentMonth = startMonth;
+  
+  while (currentMonth.isBefore(endMonth) || currentMonth.isAtSameMomentAs(endMonth)) {
+    final monthStart = currentMonth.millisecondsSinceEpoch;
+    final monthEnd = DateTime(currentMonth.year, currentMonth.month + 1, 0, 23, 59, 59, 999).millisecondsSinceEpoch;
     
     double monthIncome = 0;
     double monthExpense = 0;
@@ -79,25 +158,32 @@ final monthlyTrendProvider = FutureProvider<List<MonthlyData>>((ref) async {
     }
     
     months.add(MonthlyData(
-      monthLabel: '${monthDate.year}-${monthDate.month.toString().padLeft(2, '0')}',
+      monthLabel: '${currentMonth.year}-${currentMonth.month.toString().padLeft(2, '0')}',
       income: monthIncome,
       expense: monthExpense,
     ));
+    
+    currentMonth = DateTime(currentMonth.year, currentMonth.month + 1, 1);
   }
   
   return months;
 });
 
-/// Provider for category breakdown (expense only).
+/// Provider for category breakdown based on selected date range.
 final categoryBreakdownProvider = FutureProvider<List<CategoryBreakdown>>((ref) async {
   final splitsWithAccounts = await ref.watch(allSplitsWithAccountsProvider.future);
   final db = ref.watch(databaseProvider);
+  final dateRange = ref.watch(dateRangeFilterProvider);
   
   // Get all categories
   final categories = await (db.select(db.categories)
     ..where((c) => c.deletedAt.isNull()))
     .get();
   final categoryMap = {for (var c in categories) c.id: c};
+  
+  // Date range in milliseconds
+  final startMs = dateRange.startDate.millisecondsSinceEpoch;
+  final endMs = dateRange.endDate.millisecondsSinceEpoch;
   
   // Aggregate expenses by category
   final categoryTotals = <String, double>{};
@@ -107,8 +193,17 @@ final categoryBreakdownProvider = FutureProvider<List<CategoryBreakdown>>((ref) 
     if (account.accountType == 'EXPENSE' && split.valueNum != 0) {
       final categoryId = split.categoryId;
       if (categoryId != null && categoryMap.containsKey(categoryId)) {
-        final amount = split.valueNum.abs() / 100.0;
-        categoryTotals[categoryId] = (categoryTotals[categoryId] ?? 0) + amount;
+        // Get transaction date
+        final transaction = await (db.select(db.transactions)
+          ..where((t) => t.id.equals(split.transactionId)))
+          .getSingleOrNull();
+        
+        if (transaction != null && 
+            transaction.postDate >= startMs && 
+            transaction.postDate <= endMs) {
+          final amount = split.valueNum.abs() / 100.0;
+          categoryTotals[categoryId] = (categoryTotals[categoryId] ?? 0) + amount;
+        }
       }
     }
   }

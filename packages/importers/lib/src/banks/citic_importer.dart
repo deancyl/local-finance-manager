@@ -2,7 +2,6 @@ import 'dart:typed_data';
 import '../base/importer_base.dart';
 import '../base/import_config.dart';
 import '../base/import_result.dart';
-import '../utils/file_parser.dart';
 import '../utils/csv_parser.dart';
 import '../utils/encoding_detector.dart';
 import '../utils/date_parser.dart';
@@ -10,30 +9,30 @@ import '../utils/amount_parser.dart';
 import 'package:core/src/models/import_source.dart';
 import 'package:core/src/usecases/import_transactions.dart';
 
-/// BOC (中国银行) CSV importer.
+/// CITIC (中信银行) CSV importer.
 ///
-/// Supports BOC bank statement exports with:
-/// - UTF-8 or GBK encoding
-/// - Headers: 交易日期, 交易金额, 账户余额, 交易描述, etc.
+/// Supports CITIC bank statement exports with:
+/// - GBK or UTF-8 encoding
+/// - Headers: 交易日期, 交易金额, 账户余额, 交易摘要, etc.
 /// - Date format: 20260519 or 2026-05-19
 /// - Amount can be positive/negative
-class BocImporter extends ImporterBase {
+class CiticImporter extends ImporterBase {
   @override
-  String get name => '中国银行';
+  String get name => '中信银行';
 
   @override
-  String get sourceId => 'boc';
+  String get sourceId => 'citic';
 
   @override
-  List<String> get supportedExtensions => ['.csv', '.xls', '.xlsx'];
+  List<String> get supportedExtensions => ['.csv'];
 
   @override
   ImportSourceType get sourceType => ImportSourceType.bank;
 
   @override
-  String get description => '中国银行账户交易记录导入';
+  String get description => '中信银行账户交易记录导入';
 
-  /// BOC-specific header patterns for detection.
+  /// CITIC-specific header patterns for detection.
   static const List<String> _requiredHeaders = [
     '交易日期',
     '交易金额',
@@ -42,7 +41,6 @@ class BocImporter extends ImporterBase {
   /// Optional headers that may be present.
   static const List<String> _optionalHeaders = [
     '账户余额',
-    '交易描述',
     '交易摘要',
     '摘要',
     '对方户名',
@@ -52,10 +50,15 @@ class BocImporter extends ImporterBase {
     '币种',
     '收入',
     '支出',
-    '借方金额',
-    '贷方金额',
+    '存入',
+    '取出',
+    '交易场所',
+    '交易渠道',
     '交易流水号',
     '参考号',
+    '借贷标志',
+    '中信卡',
+    '理财宝',
   ];
 
   @override
@@ -70,33 +73,33 @@ class BocImporter extends ImporterBase {
       return false;
     }
 
-    // Parse file (CSV or Excel)
-    final fileResult = FileParser.parse(
-      filename: filename,
-      content: content,
-      encoding: encoding,
-      hasHeader: true,
-    );
+    // Decode content
+    final decoded = EncodingDetector.decode(content, encoding);
 
-    if (fileResult.header.isEmpty) {
-      return false;
-    }
+    // Check for CITIC-specific headers
+    final lines = decoded.split('\n');
+    if (lines.isEmpty) return false;
 
-    // Check for BOC-specific headers
-    final headerSet = fileResult.header.toSet();
-    var hasRequiredHeaders = true;
-    for (final header in _requiredHeaders) {
-      if (!headerSet.any((h) => h.contains(header))) {
-        hasRequiredHeaders = false;
-        break;
+    // Check first few lines for headers
+    for (var i = 0; i < lines.length && i < 5; i++) {
+      final line = lines[i].trim();
+      if (line.isEmpty) continue;
+
+      // Check for required headers
+      var hasRequiredHeaders = true;
+      for (final header in _requiredHeaders) {
+        if (!line.contains(header)) {
+          hasRequiredHeaders = false;
+          break;
+        }
       }
-    }
 
-    if (hasRequiredHeaders) return true;
+      if (hasRequiredHeaders) return true;
 
-    // Also check for BOC-specific patterns in content
-    if (fileResult.header.any((h) => h.contains('中国银行') || h.contains('BOC'))) {
-      return true;
+      // Also check for CITIC-specific patterns
+      if (line.contains('中信银行') || line.contains('CITIC') || line.contains('中信') || line.contains('理财宝')) {
+        return true;
+      }
     }
 
     return false;
@@ -112,31 +115,30 @@ class BocImporter extends ImporterBase {
     final warnings = <String>[];
     final transactions = <ParsedTransaction>[];
 
-    // Parse file (CSV or Excel)
-    final fileResult = FileParser.parse(
-      filename: 'boc_import',
+    // Parse CSV
+    final csvResult = CsvParser.parse(
       content: content,
       encoding: encoding,
       hasHeader: true,
     );
 
-    if (fileResult.header.isEmpty) {
+    if (csvResult.header.isEmpty) {
       return ImportResult(
         transactions: [],
         errors: [
           ParseError(
             rowNumber: 1,
-            message: '无法识别文件头',
+            message: '无法识别CSV文件头',
             type: ParseErrorType.format,
           ),
         ],
         stats: const ImportStats(totalRows: 0),
-        detectedEncoding: fileResult.detectedEncoding,
+        detectedEncoding: csvResult.detectedEncoding,
       );
     }
 
     // Find column indices
-    final headerMap = _buildHeaderMap(fileResult.header);
+    final headerMap = _buildHeaderMap(csvResult.header);
 
     // Validate required columns
     if (!headerMap.containsKey('date')) {
@@ -147,10 +149,8 @@ class BocImporter extends ImporterBase {
       ));
     }
 
-    if (!headerMap.containsKey('amount') && 
-        !headerMap.containsKey('debit') && 
-        !headerMap.containsKey('credit') &&
-        !headerMap.containsKey('income') && 
+    if (!headerMap.containsKey('amount') &&
+        !headerMap.containsKey('income') &&
         !headerMap.containsKey('expense')) {
       errors.add(ParseError(
         rowNumber: 1,
@@ -160,8 +160,8 @@ class BocImporter extends ImporterBase {
     }
 
     // Parse each row
-    for (var i = 0; i < fileResult.rows.length; i++) {
-      final row = fileResult.rows[i];
+    for (var i = 0; i < csvResult.rows.length; i++) {
+      final row = csvResult.rows[i];
       final rowNum = i + 2; // +1 for header, +1 for 1-indexing
 
       try {
@@ -174,20 +174,20 @@ class BocImporter extends ImporterBase {
           rowNumber: rowNum,
           message: e.toString(),
           type: ParseErrorType.parse,
-          rowData: _rowToMap(fileResult.header, row),
+          rowData: _rowToMap(csvResult.header, row),
         ));
       }
     }
 
     // Calculate statistics
-    final stats = _calculateStats(transactions, fileResult.rows.length);
+    final stats = _calculateStats(transactions, csvResult.rows.length);
 
     return ImportResult(
       transactions: transactions,
       errors: errors,
       warnings: warnings,
       stats: stats,
-      detectedEncoding: fileResult.detectedEncoding,
+      detectedEncoding: csvResult.detectedEncoding,
       detectedSource: sourceId,
     );
   }
@@ -198,29 +198,28 @@ class BocImporter extends ImporterBase {
     int maxRows = 10,
     String? encoding,
   }) async {
-    final fileResult = FileParser.parse(
-      filename: 'boc_preview',
+    final csvResult = CsvParser.parse(
       content: content,
       encoding: encoding,
       hasHeader: true,
     );
 
     final previewRows = <Map<String, dynamic>>[];
-    final rowsToShow = fileResult.rows.take(maxRows).toList();
+    final rowsToShow = csvResult.rows.take(maxRows).toList();
 
     for (final row in rowsToShow) {
       final map = <String, dynamic>{};
-      for (var i = 0; i < fileResult.header.length && i < row.length; i++) {
-        map[fileResult.header[i]] = row[i];
+      for (var i = 0; i < csvResult.header.length && i < row.length; i++) {
+        map[csvResult.header[i]] = row[i];
       }
       previewRows.add(map);
     }
 
     return ImportPreview(
       rows: previewRows,
-      headers: fileResult.header,
-      detectedEncoding: fileResult.detectedEncoding,
-      totalRowCount: fileResult.rows.length,
+      headers: csvResult.header,
+      detectedEncoding: csvResult.detectedEncoding,
+      totalRowCount: csvResult.rows.length,
       detectedSource: sourceId,
     );
   }
@@ -270,9 +269,9 @@ class BocImporter extends ImporterBase {
       'ATM存款': 'income',
       'POS消费': 'shopping',
       '网银转账': 'transfer',
-      '外币兑换': 'exchange',
-      '结汇': 'exchange',
-      '购汇': 'exchange',
+      '中信卡': 'shopping',
+      '理财宝': 'investment',
+      '银联': 'shopping',
     };
   }
 
@@ -293,16 +292,14 @@ class BocImporter extends ImporterBase {
         map['amount'] ??= i;
       }
 
-      // Debit column (支出)
-      if (header == '借方金额' || header == '支出金额' || header == '支出') {
-        map['debit'] ??= i;
-        map['expense'] ??= i;
+      // Income column
+      if (header == '收入' || header == '存入' || header == '存入金额') {
+        map['income'] ??= i;
       }
 
-      // Credit column (收入)
-      if (header == '贷方金额' || header == '收入金额' || header == '收入') {
-        map['credit'] ??= i;
-        map['income'] ??= i;
+      // Expense column
+      if (header == '支出' || header == '取出' || header == '取出金额') {
+        map['expense'] ??= i;
       }
 
       // Balance column
@@ -311,7 +308,7 @@ class BocImporter extends ImporterBase {
       }
 
       // Description column
-      if (header.contains('交易描述') || header == '摘要' || header.contains('交易摘要')) {
+      if (header.contains('交易摘要') || header == '摘要' || header.contains('交易描述')) {
         map['description'] ??= i;
       }
 
@@ -335,9 +332,19 @@ class BocImporter extends ImporterBase {
         map['currency'] ??= i;
       }
 
+      // Debit/Credit flag column
+      if (header.contains('借贷标志') || header == '借贷') {
+        map['debitCreditFlag'] ??= i;
+      }
+
       // Reference number column
       if (header.contains('交易流水号') || header == '参考号' || header == '流水号') {
         map['reference'] ??= i;
+      }
+
+      // Channel column
+      if (header.contains('交易渠道') || header.contains('交易场所')) {
+        map['channel'] ??= i;
       }
     }
 
@@ -370,11 +377,20 @@ class BocImporter extends ImporterBase {
     // Parse amount
     double? amount;
     final amountStr = getField('amount');
-    final incomeStr = getField('income') ?? getField('credit');
-    final expenseStr = getField('expense') ?? getField('debit');
+    final incomeStr = getField('income');
+    final expenseStr = getField('expense');
+    final debitCreditFlag = getField('debitCreditFlag');
 
     if (amountStr != null && amountStr.isNotEmpty) {
       amount = AmountParser.parse(amountStr);
+      // Check debit/credit flag if available
+      if (debitCreditFlag != null && amount != null) {
+        if (debitCreditFlag.contains('借') || debitCreditFlag.contains('支出')) {
+          amount = -amount.abs();
+        } else if (debitCreditFlag.contains('贷') || debitCreditFlag.contains('收入')) {
+          amount = amount.abs();
+        }
+      }
     } else if (incomeStr != null && incomeStr.isNotEmpty && incomeStr != '--') {
       amount = AmountParser.parse(incomeStr);
     } else if (expenseStr != null && expenseStr.isNotEmpty && expenseStr != '--') {
@@ -395,11 +411,11 @@ class BocImporter extends ImporterBase {
 
     // Use reference number if available
     final reference = getField('reference');
-    
+
     // Generate external ID
     final externalId = reference != null && reference.isNotEmpty
-        ? 'boc_$reference'
-        : 'boc_${date.millisecondsSinceEpoch}_${amount.abs()}_$rowNum';
+        ? 'citic_$reference'
+        : 'citic_${date.millisecondsSinceEpoch}_${amount.abs()}_$rowNum';
 
     return ParsedTransaction(
       accountId: config.targetAccountId,

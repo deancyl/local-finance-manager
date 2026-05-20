@@ -50,6 +50,14 @@ class SettingsPage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/backup'),
           ),
+          // Import history
+          ListTile(
+            leading: const Icon(Icons.history),
+            title: const Text('导入历史'),
+            subtitle: const Text('查看历史导入记录'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/import/history'),
+          ),
           const Divider(),
           // About
           ListTile(

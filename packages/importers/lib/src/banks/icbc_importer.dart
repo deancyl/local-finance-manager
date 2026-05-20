@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import '../base/importer_base.dart';
 import '../base/import_config.dart';
 import '../base/import_result.dart';
+import '../utils/file_parser.dart';
 import '../utils/csv_parser.dart';
 import '../utils/encoding_detector.dart';
 import '../utils/date_parser.dart';
@@ -24,7 +25,7 @@ class IcbcImporter extends ImporterBase {
   String get sourceId => 'icbc';
 
   @override
-  List<String> get supportedExtensions => ['.csv'];
+  List<String> get supportedExtensions => ['.csv', '.xls', '.xlsx'];
 
   @override
   ImportSourceType get sourceType => ImportSourceType.bank;
@@ -64,33 +65,33 @@ class IcbcImporter extends ImporterBase {
       return false;
     }
 
-    // Decode content
-    final decoded = EncodingDetector.decode(content, encoding);
+    // Parse file (CSV or Excel)
+    final fileResult = FileParser.parse(
+      filename: filename,
+      content: content,
+      encoding: encoding,
+      hasHeader: true,
+    );
+
+    if (fileResult.header.isEmpty) {
+      return false;
+    }
 
     // Check for ICBC-specific headers
-    final lines = decoded.split('\n');
-    if (lines.isEmpty) return false;
-
-    // Check first few lines for headers
-    for (var i = 0; i < lines.length && i < 5; i++) {
-      final line = lines[i].trim();
-      if (line.isEmpty) continue;
-
-      // Check for required headers
-      var hasRequiredHeaders = true;
-      for (final header in _requiredHeaders) {
-        if (!line.contains(header)) {
-          hasRequiredHeaders = false;
-          break;
-        }
+    final headerSet = fileResult.header.toSet();
+    var hasRequiredHeaders = true;
+    for (final header in _requiredHeaders) {
+      if (!headerSet.any((h) => h.contains(header))) {
+        hasRequiredHeaders = false;
+        break;
       }
+    }
 
-      if (hasRequiredHeaders) return true;
+    if (hasRequiredHeaders) return true;
 
-      // Also check for ICBC-specific patterns
-      if (line.contains('工商银行') || line.contains('ICBC')) {
-        return true;
-      }
+    // Also check for ICBC-specific patterns in content
+    if (fileResult.header.any((h) => h.contains('工商银行') || h.contains('ICBC'))) {
+      return true;
     }
 
     return false;
@@ -106,30 +107,31 @@ class IcbcImporter extends ImporterBase {
     final warnings = <String>[];
     final transactions = <ParsedTransaction>[];
 
-    // Parse CSV
-    final csvResult = CsvParser.parse(
+    // Parse file (CSV or Excel)
+    final fileResult = FileParser.parse(
+      filename: 'icbc_import',
       content: content,
       encoding: encoding,
       hasHeader: true,
     );
 
-    if (csvResult.header.isEmpty) {
+    if (fileResult.header.isEmpty) {
       return ImportResult(
         transactions: [],
         errors: [
           ParseError(
             rowNumber: 1,
-            message: '无法识别CSV文件头',
+            message: '无法识别文件头',
             type: ParseErrorType.format,
           ),
         ],
         stats: const ImportStats(totalRows: 0),
-        detectedEncoding: csvResult.detectedEncoding,
+        detectedEncoding: fileResult.detectedEncoding,
       );
     }
 
     // Find column indices
-    final headerMap = _buildHeaderMap(csvResult.header);
+    final headerMap = _buildHeaderMap(fileResult.header);
 
     // Validate required columns
     if (!headerMap.containsKey('date')) {
@@ -149,8 +151,8 @@ class IcbcImporter extends ImporterBase {
     }
 
     // Parse each row
-    for (var i = 0; i < csvResult.rows.length; i++) {
-      final row = csvResult.rows[i];
+    for (var i = 0; i < fileResult.rows.length; i++) {
+      final row = fileResult.rows[i];
       final rowNum = i + 2; // +1 for header, +1 for 1-indexing
 
       try {
@@ -163,20 +165,20 @@ class IcbcImporter extends ImporterBase {
           rowNumber: rowNum,
           message: e.toString(),
           type: ParseErrorType.parse,
-          rowData: _rowToMap(csvResult.header, row),
+          rowData: _rowToMap(fileResult.header, row),
         ));
       }
     }
 
     // Calculate statistics
-    final stats = _calculateStats(transactions, csvResult.rows.length);
+    final stats = _calculateStats(transactions, fileResult.rows.length);
 
     return ImportResult(
       transactions: transactions,
       errors: errors,
       warnings: warnings,
       stats: stats,
-      detectedEncoding: csvResult.detectedEncoding,
+      detectedEncoding: fileResult.detectedEncoding,
       detectedSource: sourceId,
     );
   }
@@ -187,28 +189,29 @@ class IcbcImporter extends ImporterBase {
     int maxRows = 10,
     String? encoding,
   }) async {
-    final csvResult = CsvParser.parse(
+    final fileResult = FileParser.parse(
+      filename: 'icbc_preview',
       content: content,
       encoding: encoding,
       hasHeader: true,
     );
 
     final previewRows = <Map<String, dynamic>>[];
-    final rowsToShow = csvResult.rows.take(maxRows).toList();
+    final rowsToShow = fileResult.rows.take(maxRows).toList();
 
     for (final row in rowsToShow) {
       final map = <String, dynamic>{};
-      for (var i = 0; i < csvResult.header.length && i < row.length; i++) {
-        map[csvResult.header[i]] = row[i];
+      for (var i = 0; i < fileResult.header.length && i < row.length; i++) {
+        map[fileResult.header[i]] = row[i];
       }
       previewRows.add(map);
     }
 
     return ImportPreview(
       rows: previewRows,
-      headers: csvResult.header,
-      detectedEncoding: csvResult.detectedEncoding,
-      totalRowCount: csvResult.rows.length,
+      headers: fileResult.header,
+      detectedEncoding: fileResult.detectedEncoding,
+      totalRowCount: fileResult.rows.length,
       detectedSource: sourceId,
     );
   }

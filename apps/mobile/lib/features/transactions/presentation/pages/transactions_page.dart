@@ -7,6 +7,7 @@ import '../../data/transaction_provider.dart';
 import '../../data/transaction_filter.dart';
 import '../widgets/transaction_card.dart';
 import '../widgets/add_transaction_dialog.dart';
+import '../widgets/transfer_dialog.dart';
 import '../widgets/transaction_filter_dialog.dart';
 
 class TransactionsPage extends ConsumerWidget {
@@ -39,7 +40,7 @@ class TransactionsPage extends ConsumerWidget {
         error: (error, _) => Center(child: Text('错误: $error')),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddDialog(context),
+        onPressed: () => _showAddOptions(context),
         icon: const Icon(Icons.add),
         label: const Text('记一笔'),
       ),
@@ -196,11 +197,50 @@ class TransactionsPage extends ConsumerWidget {
     return DateFormat('MM月dd日', 'zh_CN').format(date);
   }
 
+  void _showAddOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.receipt_long),
+              title: const Text('记一笔'),
+              subtitle: const Text('收入或支出'),
+              onTap: () {
+                Navigator.pop(context);
+                _showAddDialog(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.swap_horiz),
+              title: const Text('账户转账'),
+              subtitle: const Text('账户间转账'),
+              onTap: () {
+                Navigator.pop(context);
+                _showTransferDialog(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showAddDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) => const AddTransactionDialog(),
+    );
+  }
+
+  void _showTransferDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => const TransferDialog(),
     );
   }
 

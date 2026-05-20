@@ -11,6 +11,7 @@ import '../../features/settings/presentation/pages/language_settings_page.dart';
 import '../../features/settings/presentation/pages/backup_settings_page.dart';
 import '../../features/settings/presentation/pages/about_page.dart';
 import '../../features/import/presentation/pages/import_page.dart';
+import '../../features/import/presentation/pages/import_history_page.dart';
 // Sync temporarily disabled - PowerSync compatibility issues
 // import '../../features/sync/presentation/pages/sync_settings_page.dart';
 // import '../../features/sync/presentation/pages/sync_login_page.dart';
@@ -83,6 +84,11 @@ class AppRouter {
         path: '/import',
         name: 'import',
         builder: (context, state) => const ImportPage(),
+      ),
+      GoRoute(
+        path: '/import/history',
+        name: 'import-history',
+        builder: (context, state) => const ImportHistoryPage(),
       ),
       // Sync routes temporarily disabled
       // GoRoute(

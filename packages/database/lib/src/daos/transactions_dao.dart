@@ -110,4 +110,24 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
     final result = await query.getSingle();
     return result.read(transactions.id.count()) ?? 0;
   }
+
+  /// Gets all splits for non-deleted transactions.
+  Future<List<Split>> getAllSplits() {
+    final query = select(splits).join([
+      innerJoin(transactions, transactions.id.equalsExp(splits.transactionId)),
+    ])
+      ..where(transactions.deletedAt.isNull());
+    
+    return query.map((row) => row.readTable(splits)).get();
+  }
+
+  /// Watches all splits for non-deleted transactions.
+  Stream<List<Split>> watchAllSplits() {
+    final query = select(splits).join([
+      innerJoin(transactions, transactions.id.equalsExp(splits.transactionId)),
+    ])
+      ..where(transactions.deletedAt.isNull());
+    
+    return query.map((row) => row.readTable(splits)).watch();
+  }
 }

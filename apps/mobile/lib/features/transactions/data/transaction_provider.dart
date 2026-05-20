@@ -292,6 +292,78 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
       state = AsyncValue.error(e, st);
     }
   }
+
+  /// Creates a transfer transaction between two accounts.
+  /// 
+  /// This creates a single transaction with two splits:
+  /// - One split debiting (negative) from the source account
+  /// - One split crediting (positive) to the destination account
+  Future<void> createTransfer({
+    required String fromAccountId,
+    required String toAccountId,
+    required double amount,
+    required DateTime date,
+    required String currencyId,
+    String? description,
+    String? notes,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final transactionId = const Uuid().v4();
+      final fromSplitId = const Uuid().v4();
+      final toSplitId = const Uuid().v4();
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final postDate = date.millisecondsSinceEpoch;
+      final amountNum = (amount * 100).round();
+
+      // Create transaction with description like "转账: A -> B"
+      final transferDescription = description ?? '账户转账';
+
+      await _db.transaction(() async {
+        // Create the transaction record
+        await _db.into(_db.transactions).insert(
+          TransactionsCompanion.insert(
+            id: transactionId,
+            postDate: postDate,
+            enterDate: now,
+            currencyId: currencyId,
+            description: drift.Value(transferDescription),
+            notes: drift.Value(notes),
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+
+        // Create split for source account (debit/negative)
+        await _db.into(_db.splits).insert(
+          SplitsCompanion.insert(
+            id: fromSplitId,
+            transactionId: transactionId,
+            accountId: fromAccountId,
+            valueNum: -amountNum, // Negative for outgoing
+            quantityNum: -amountNum,
+            createdAt: now,
+          ),
+        );
+
+        // Create split for destination account (credit/positive)
+        await _db.into(_db.splits).insert(
+          SplitsCompanion.insert(
+            id: toSplitId,
+            transactionId: transactionId,
+            accountId: toAccountId,
+            valueNum: amountNum, // Positive for incoming
+            quantityNum: amountNum,
+            createdAt: now,
+          ),
+        );
+      });
+
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
 }
 
 final transactionNotifierProvider = StateNotifierProvider<TransactionNotifier, AsyncValue<void>>((ref) {

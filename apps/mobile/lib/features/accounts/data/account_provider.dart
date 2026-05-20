@@ -72,10 +72,17 @@ class AccountTreeNode {
 /// Provider for account hierarchy tree grouped by account type
 final accountHierarchyProvider = Provider<Map<String, List<AccountTreeNode>>>((ref) {
   final accounts = ref.watch(accountsProvider);
-  final balances = ref.watch(accountBalancesProvider);
+  final balancesAsync = ref.watch(accountBalancesProvider);
   
   return accounts.when(
     data: (list) {
+      // Get balances from async value, default to empty map if loading/error
+      final balances = balancesAsync.when(
+        data: (b) => b,
+        loading: () => <String, double>{},
+        error: (_, __) => <String, double>{},
+      );
+      
       final result = <String, List<AccountTreeNode>>{};
       
       for (final type in ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE']) {
@@ -126,12 +133,64 @@ AccountTreeNode _buildTreeNode(
 }
 
 /// Provider for account balances (computed from transactions)
-/// TODO: Integrate with actual transaction data when available
-final accountBalancesProvider = Provider<Map<String, double>>((ref) {
-  // Placeholder - returns empty map
-  // In production, this would query splits/transactions to compute balances
-  return {};
+/// Calculates balance from splits, considering account type (debit/credit nature)
+final accountBalancesProvider = StreamProvider<Map<String, double>>((ref) {
+  final db = ref.watch(databaseProvider);
+  final accountsAsync = ref.watch(accountsProvider);
+  
+  return accountsAsync.when(
+    data: (accountList) {
+      // Create account type lookup map
+      final accountTypes = <String, String>{
+        for (final acc in accountList) acc.id: acc.accountType,
+      };
+      
+      // Watch all splits and compute balances
+      return db.transactionsDao.watchAllSplits().map((splits) {
+        final balances = <String, double>{};
+        
+        for (final split in splits) {
+          final accountId = split.accountId;
+          final accountType = accountTypes[accountId] ?? 'ASSET';
+          
+          // Convert rational to double: valueNum / valueDenom
+          final value = split.valueNum.toDouble() / split.valueDenom.toDouble();
+          
+          // Apply accounting rules based on account type:
+          // ASSET/EXPENSE: Debit increases balance (positive value = increase)
+          // LIABILITY/EQUITY/INCOME: Credit increases balance (negative value = increase)
+          // In splits, positive = debit, negative = credit
+          final adjustedValue = _applyAccountTypeSign(accountType, value);
+          
+          balances[accountId] = (balances[accountId] ?? 0.0) + adjustedValue;
+        }
+        
+        return balances;
+      });
+    },
+    loading: () => Stream.value({}),
+    error: (_, __) => Stream.value({}),
+  );
 });
+
+/// Applies accounting sign convention based on account type.
+/// ASSET/EXPENSE: Debit increases (positive value = increase)
+/// LIABILITY/EQUITY/INCOME: Credit increases (negative value = increase)
+double _applyAccountTypeSign(String accountType, double value) {
+  switch (accountType.toUpperCase()) {
+    case 'ASSET':
+    case 'EXPENSE':
+      // Debit increases balance
+      return value;
+    case 'LIABILITY':
+    case 'EQUITY':
+    case 'INCOME':
+      // Credit increases balance (so debit decreases)
+      return -value;
+    default:
+      return value;
+  }
+}
 
 class AccountNotifier extends StateNotifier<AsyncValue<void>> {
   final LocalFinanceDatabase _db;

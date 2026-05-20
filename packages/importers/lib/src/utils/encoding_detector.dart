@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:gbk_codec/gbk_codec.dart';
 
 /// Detects and handles file encoding for Chinese financial institution exports.
 ///
@@ -119,62 +120,14 @@ class EncodingDetector {
     return gbkPatternCount > bytes.length * 0.1;
   }
 
-  /// GBK codec (requires external package or custom implementation).
-  ///
-  /// Note: Dart doesn't have built-in GBK support.
-  /// This uses a simplified approach that works for most cases.
-  static Codec<String, List<int>> get gbkCodec => _GbkCodec();
+  /// GBK codec using gbk_codec package.
+  static Codec<String, List<int>> get gbkCodec => gbk;
 
   /// UTF-16 LE codec.
   static Codec<String, List<int>> get utf16leCodec => const Utf16LeCodec();
 
   /// UTF-16 BE codec.
   static Codec<String, List<int>> get utf16beCodec => const Utf16BeCodec();
-}
-
-/// Simplified GBK codec.
-///
-/// Note: This is a placeholder. In production, use a proper GBK codec package
-/// like `gbk_codec` or `charset_converter`.
-class _GbkCodec extends Codec<String, List<int>> {
-  const _GbkCodec();
-
-  @override
-  Converter<List<int>, String> get decoder => const _GbkDecoder();
-
-  @override
-  Converter<String, List<int>> get encoder =>
-      throw UnimplementedError('GBK encoding not implemented');
-}
-
-class _GbkDecoder extends Converter<List<int>, String> {
-  const _GbkDecoder();
-
-  @override
-  String convert(List<int> input) {
-    // Simplified GBK to Unicode mapping
-    // In production, use a proper GBK codec package
-    final output = StringBuffer();
-
-    for (var i = 0; i < input.length; i++) {
-      final byte = input[i];
-
-      // ASCII range (0x00-0x7F)
-      if (byte < 0x80) {
-        output.writeCharCode(byte);
-      }
-      // GBK high byte range
-      else if (i + 1 < input.length) {
-        final byte2 = input[i + 1];
-        // Simplified: just skip the bytes and add a placeholder
-        // In production, use proper GBK to Unicode mapping
-        output.write('?');
-        i++; // Skip next byte
-      }
-    }
-
-    return output.toString();
-  }
 }
 
 /// UTF-16 LE codec.

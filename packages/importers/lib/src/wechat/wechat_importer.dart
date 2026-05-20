@@ -4,6 +4,7 @@ import '../base/importer_base.dart';
 import '../base/import_config.dart';
 import '../base/import_result.dart';
 import '../utils/csv_parser.dart';
+import '../utils/file_parser.dart';
 import '../utils/date_parser.dart';
 import '../utils/amount_parser.dart';
 
@@ -68,7 +69,7 @@ class WeChatPayImporter extends ImporterBase {
   String get sourceId => ImportSource.wechatPay;
 
   @override
-  List<String> get supportedExtensions => ['.csv'];
+  List<String> get supportedExtensions => ['.csv', '.xls', '.xlsx'];
 
   @override
   ImportSourceType get sourceType => ImportSourceType.paymentApp;
@@ -88,9 +89,10 @@ class WeChatPayImporter extends ImporterBase {
       return false;
     }
 
-    // Parse CSV and check headers
+    // Parse file (CSV or Excel) and check headers
     try {
-      final result = CsvParser.parse(
+      final result = FileParser.parse(
+        filename: filename,
         content: content,
         encoding: encoding,
         hasHeader: true,
@@ -125,32 +127,33 @@ class WeChatPayImporter extends ImporterBase {
     final warnings = <String>[];
     final transactions = <ParsedTransaction>[];
 
-    // Parse CSV
-    final csvResult = CsvParser.parse(
+    // Parse file (CSV or Excel)
+    final fileResult = FileParser.parse(
+      filename: 'wechat_import',
       content: content,
       encoding: encoding,
       hasHeader: true,
     );
 
-    if (csvResult.header.isEmpty) {
+    if (fileResult.header.isEmpty) {
       return ImportResult(
         transactions: [],
         errors: [
           ParseError(
             rowNumber: 0,
-            message: '无法识别CSV文件格式，缺少表头',
+            message: '无法识别文件格式，缺少表头',
             type: ParseErrorType.format,
           ),
         ],
         warnings: warnings,
         stats: const ImportStats(totalRows: 0),
-        detectedEncoding: csvResult.detectedEncoding,
+        detectedEncoding: fileResult.detectedEncoding,
         detectedSource: sourceId,
       );
     }
 
     // Build column index map
-    final columnMap = _buildColumnMap(csvResult.header);
+    final columnMap = _buildColumnMap(fileResult.header);
 
     // Validate required columns
     final missingColumns = _validateColumns(columnMap);
@@ -165,8 +168,8 @@ class WeChatPayImporter extends ImporterBase {
           ),
         ],
         warnings: warnings,
-        stats: ImportStats(totalRows: csvResult.dataRowCount),
-        detectedEncoding: csvResult.detectedEncoding,
+        stats: ImportStats(totalRows: fileResult.dataRowCount),
+        detectedEncoding: fileResult.detectedEncoding,
         detectedSource: sourceId,
       );
     }
@@ -177,8 +180,8 @@ class WeChatPayImporter extends ImporterBase {
     double totalAmount = 0;
     int skippedCount = 0;
 
-    for (var i = 0; i < csvResult.rows.length; i++) {
-      final row = csvResult.rows[i];
+    for (var i = 0; i < fileResult.rows.length; i++) {
+      final row = fileResult.rows[i];
       final rowNumber = i + 2; // 1-indexed + header row
 
       try {
@@ -211,7 +214,7 @@ class WeChatPayImporter extends ImporterBase {
       errors: errors,
       warnings: warnings,
       stats: ImportStats(
-        totalRows: csvResult.dataRowCount,
+        totalRows: fileResult.dataRowCount,
         successCount: transactions.length,
         errorCount: errors.length,
         skippedCount: skippedCount,
@@ -220,7 +223,7 @@ class WeChatPayImporter extends ImporterBase {
         totalAmount: totalAmount,
         detectedCurrency: 'CNY',
       ),
-      detectedEncoding: csvResult.detectedEncoding,
+      detectedEncoding: fileResult.detectedEncoding,
       detectedSource: sourceId,
     );
   }
@@ -231,22 +234,23 @@ class WeChatPayImporter extends ImporterBase {
     int maxRows = 10,
     String? encoding,
   }) async {
-    final csvResult = CsvParser.parse(
+    final fileResult = FileParser.parse(
+      filename: 'wechat_preview',
       content: content,
       encoding: encoding,
       hasHeader: true,
     );
 
     final previewRows = <Map<String, dynamic>>[];
-    final rowsToPreview = csvResult.rows.take(maxRows).toList();
+    final rowsToPreview = fileResult.rows.take(maxRows).toList();
 
-    final columnMap = _buildColumnMap(csvResult.header);
+    final columnMap = _buildColumnMap(fileResult.header);
 
     for (final row in rowsToPreview) {
       final rowData = <String, dynamic>{};
 
-      for (var i = 0; i < csvResult.header.length && i < row.length; i++) {
-        rowData[csvResult.header[i]] = row[i];
+      for (var i = 0; i < fileResult.header.length && i < row.length; i++) {
+        rowData[fileResult.header[i]] = row[i];
       }
 
       // Add parsed preview data
@@ -277,11 +281,11 @@ class WeChatPayImporter extends ImporterBase {
 
     return ImportPreview(
       rows: previewRows,
-      headers: csvResult.header,
-      detectedEncoding: csvResult.detectedEncoding,
-      totalRowCount: csvResult.dataRowCount,
+      headers: fileResult.header,
+      detectedEncoding: fileResult.detectedEncoding,
+      totalRowCount: fileResult.dataRowCount,
       detectedSource: sourceId,
-      warnings: csvResult.detectedEncoding == 'gbk'
+      warnings: fileResult.detectedEncoding == 'gbk'
           ? ['检测到GBK编码，已自动转换为UTF-8']
           : [],
     );

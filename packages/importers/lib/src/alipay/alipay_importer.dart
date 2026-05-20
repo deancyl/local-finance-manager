@@ -4,6 +4,7 @@ import '../base/importer_base.dart';
 import '../base/import_result.dart';
 import '../base/import_config.dart';
 import '../utils/csv_parser.dart';
+import '../utils/file_parser.dart';
 import '../utils/date_parser.dart';
 import '../utils/amount_parser.dart';
 
@@ -22,7 +23,7 @@ class AlipayImporter implements ImporterBase {
   String get sourceId => ImportSource.alipay;
 
   @override
-  List<String> get supportedExtensions => ['.csv'];
+  List<String> get supportedExtensions => ['.csv', '.xls', '.xlsx'];
 
   @override
   ImportSourceType get sourceType => ImportSourceType.paymentApp;
@@ -141,9 +142,10 @@ class AlipayImporter implements ImporterBase {
       return false;
     }
 
-    // Parse CSV and check headers
+    // Parse file (CSV or Excel)
     try {
-      final result = CsvParser.parse(
+      final result = FileParser.parse(
+        filename: filename,
         content: content,
         encoding: encoding,
         hasHeader: true,
@@ -170,31 +172,32 @@ class AlipayImporter implements ImporterBase {
     final errors = <ParseError>[];
     final warnings = <String>[];
 
-    // Parse CSV
-    final csvResult = CsvParser.parse(
+    // Parse file (CSV or Excel)
+    final fileResult = FileParser.parse(
+      filename: 'alipay_import',
       content: content,
       encoding: encoding,
       hasHeader: true,
     );
 
-    if (csvResult.header.isEmpty) {
+    if (fileResult.header.isEmpty) {
       return ImportResult(
         transactions: [],
         errors: [
           ParseError(
             rowNumber: 0,
-            message: '无法识别CSV文件格式，缺少表头',
+            message: '无法识别文件格式，缺少表头',
             type: ParseErrorType.format,
           ),
         ],
         stats: const ImportStats(totalRows: 0),
-        detectedEncoding: csvResult.detectedEncoding,
+        detectedEncoding: fileResult.detectedEncoding,
         detectedSource: sourceId,
       );
     }
 
     // Map header indices
-    final headerMap = _mapHeaders(csvResult.header);
+    final headerMap = _mapHeaders(fileResult.header);
 
     // Check for required fields
     if (headerMap['time'] == null) {
@@ -211,8 +214,8 @@ class AlipayImporter implements ImporterBase {
     double totalAmount = 0;
     int skippedCount = 0;
 
-    for (var i = 0; i < csvResult.rows.length; i++) {
-      final row = csvResult.rows[i];
+    for (var i = 0; i < fileResult.rows.length; i++) {
+      final row = fileResult.rows[i];
       final rowNum = i + 2; // 1-indexed + header row
 
       try {
@@ -235,7 +238,7 @@ class AlipayImporter implements ImporterBase {
         errors.add(ParseError(
           rowNumber: rowNum,
           message: e.toString(),
-          rowData: _rowToMap(csvResult.header, row),
+          rowData: _rowToMap(fileResult.header, row),
           type: ParseErrorType.parse,
         ));
       }
@@ -246,7 +249,7 @@ class AlipayImporter implements ImporterBase {
       errors: errors,
       warnings: warnings,
       stats: ImportStats(
-        totalRows: csvResult.rows.length,
+        totalRows: fileResult.rows.length,
         successCount: transactions.length,
         errorCount: errors.length,
         skippedCount: skippedCount,
@@ -255,7 +258,7 @@ class AlipayImporter implements ImporterBase {
         totalAmount: totalAmount,
         detectedCurrency: 'CNY',
       ),
-      detectedEncoding: csvResult.detectedEncoding,
+      detectedEncoding: fileResult.detectedEncoding,
       detectedSource: sourceId,
     );
   }
@@ -266,7 +269,8 @@ class AlipayImporter implements ImporterBase {
     int maxRows = 10,
     String? encoding,
   }) async {
-    final csvResult = CsvParser.parse(
+    final fileResult = FileParser.parse(
+      filename: 'alipay_preview',
       content: content,
       encoding: encoding,
       hasHeader: true,
@@ -276,23 +280,23 @@ class AlipayImporter implements ImporterBase {
     final warnings = <String>[];
 
     // Take first N rows
-    final rowsToPreview = csvResult.rows.take(maxRows).toList();
+    final rowsToPreview = fileResult.rows.take(maxRows).toList();
 
     for (final row in rowsToPreview) {
-      previewRows.add(_rowToMap(csvResult.header, row));
+      previewRows.add(_rowToMap(fileResult.header, row));
     }
 
     // Detect source account type
     String? detectedSource;
-    if (csvResult.header.contains('收/付款方式')) {
+    if (fileResult.header.contains('收/付款方式')) {
       detectedSource = sourceId;
     }
 
     return ImportPreview(
       rows: previewRows,
-      headers: csvResult.header,
-      detectedEncoding: csvResult.detectedEncoding,
-      totalRowCount: csvResult.rows.length,
+      headers: fileResult.header,
+      detectedEncoding: fileResult.detectedEncoding,
+      totalRowCount: fileResult.rows.length,
       detectedSource: detectedSource,
       warnings: warnings,
     );
