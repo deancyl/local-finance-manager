@@ -19,6 +19,7 @@ class TransactionsPage extends ConsumerStatefulWidget {
 
 class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   final ScrollController _scrollController = ScrollController();
+  TransactionFilter? _lastFilter;
 
   @override
   void initState() {
@@ -26,7 +27,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
     _scrollController.addListener(_onScroll);
     // Load initial data
     Future.microtask(() {
-      ref.read(paginatedTransactionsProvider.notifier).loadInitial();
+      ref.read(filteredPaginatedTransactionsProvider.notifier).loadInitial();
     });
   }
 
@@ -40,14 +41,22 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       // Load more when within 200 pixels of bottom
-      ref.read(paginatedTransactionsProvider.notifier).loadMore();
+      ref.read(filteredPaginatedTransactionsProvider.notifier).loadMore();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final paginationState = ref.watch(paginatedTransactionsProvider);
+    final paginationState = ref.watch(filteredPaginatedTransactionsProvider);
     final filter = ref.watch(transactionFilterProvider);
+
+    // Reset pagination when filter changes
+    if (_lastFilter != null && _lastFilter != filter) {
+      Future.microtask(() {
+        ref.read(filteredPaginatedTransactionsProvider.notifier).updateFilter(filter);
+      });
+    }
+    _lastFilter = filter;
 
     return Scaffold(
       appBar: AppBar(
@@ -58,7 +67,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await ref.read(paginatedTransactionsProvider.notifier).refresh();
+          await ref.read(filteredPaginatedTransactionsProvider.notifier).refresh();
         },
         child: _buildBody(context, paginationState, filter),
       ),

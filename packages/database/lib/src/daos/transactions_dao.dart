@@ -221,4 +221,201 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
       return (monthLabel: monthLabel, income: income, expense: expense);
     }).toList();
   }
+
+  /// Gets filtered and paginated transactions with their splits.
+  /// Applies all filters at the database level for performance.
+  /// 
+  /// Supported filters:
+  /// - startDate/endDate: Date range filter on transaction post_date
+  /// - categoryId: Filter by category via splits table
+  /// - accountId: Filter by account via splits table
+  /// - searchQuery: LIKE search on description and notes
+  /// - minAmount/maxAmount: Amount range filter via splits
+  Future<List<(Transaction, List<Split>)>> getFilteredTransactionsPaginated({
+    required int limit,
+    required int offset,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? categoryId,
+    String? accountId,
+    String? searchQuery,
+    double? minAmount,
+    double? maxAmount,
+  }) async {
+    // Build the base query with necessary joins
+    final query = selectOnly(transactions)
+      ..join([
+        innerJoin(splits, splits.transactionId.equalsExp(transactions.id)),
+      ]);
+
+    // Apply filters
+    final conditions = <Expression<bool>>[];
+    
+    // Always exclude deleted transactions
+    conditions.add(transactions.deletedAt.isNull());
+
+    // Date range filter
+    if (startDate != null) {
+      final startMs = DateTime(startDate.year, startDate.month, startDate.day).millisecondsSinceEpoch;
+      conditions.add(transactions.postDate.isBiggerOrEqualValue(startMs));
+    }
+    if (endDate != null) {
+      final endMs = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59, 999).millisecondsSinceEpoch;
+      conditions.add(transactions.postDate.isSmallerOrEqualValue(endMs));
+    }
+
+    // Category filter via splits
+    if (categoryId != null) {
+      conditions.add(splits.categoryId.equals(categoryId));
+    }
+
+    // Account filter via splits
+    if (accountId != null) {
+      conditions.add(splits.accountId.equals(accountId));
+    }
+
+    // Search query filter (LIKE on description or notes)
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      final searchPattern = '%${searchQuery.toLowerCase()}%';
+      conditions.add(
+        transactions.description.lower().like(searchPattern) |
+        transactions.notes.lower().like(searchPattern),
+      );
+    }
+
+    // Apply all conditions
+    if (conditions.isNotEmpty) {
+      query.where(conditions.reduce((a, b) => a & b));
+    }
+
+    // Add distinct to avoid duplicates from joins
+    query.distinct();
+
+    // Order by post date descending
+    query.orderBy([OrderingTerm.desc(transactions.postDate)]);
+
+    // Apply pagination
+    query.limit(limit, offset: offset);
+
+    // Get distinct transaction IDs
+    query.addColumns([transactions.id]);
+    
+    final transactionIds = (await query.get())
+        .map((row) => row.read(transactions.id))
+        .whereType<String>()
+        .toList();
+
+    if (transactionIds.isEmpty) {
+      return [];
+    }
+
+    // Fetch full transactions in order
+    final transactionList = await (select(transactions)
+          ..where((t) => t.id.isIn(transactionIds)))
+        .get();
+
+    // Create a map for quick lookup and maintain order
+    final transactionMap = {for (var t in transactionList) t.id: t};
+    final orderedTransactions = transactionIds
+        .where((id) => transactionMap.containsKey(id))
+        .map((id) => transactionMap[id]!)
+        .toList();
+
+    // Fetch all splits for these transactions
+    final allSplits = await (select(splits)
+          ..where((s) => s.transactionId.isIn(transactionIds)))
+        .get();
+
+    // Group splits by transaction ID
+    final splitsByTransaction = <String, List<Split>>{};
+    for (final split in allSplits) {
+      splitsByTransaction.putIfAbsent(split.transactionId, () => []).add(split);
+    }
+
+    // Build result with amount filter applied in Dart (complex aggregation)
+    final result = <(Transaction, List<Split>)>[];
+    for (final transaction in orderedTransactions) {
+      final splits = splitsByTransaction[transaction.id] ?? [];
+      
+      // Apply amount range filter (absolute value of total)
+      if (minAmount != null || maxAmount != null) {
+        final totalAmount = splits.fold<int>(0, (sum, s) => sum + s.valueNum.abs());
+        final amount = totalAmount / 100.0;
+        
+        if (minAmount != null && amount < minAmount) continue;
+        if (maxAmount != null && amount > maxAmount) continue;
+      }
+      
+      result.add((transaction, splits));
+      
+      // Stop if we have enough results (amount filter may reduce count)
+      if (result.length >= limit) break;
+    }
+
+    return result;
+  }
+
+  /// Gets count of filtered transactions (for pagination info).
+  Future<int> getFilteredTransactionsCount({
+    DateTime? startDate,
+    DateTime? endDate,
+    String? categoryId,
+    String? accountId,
+    String? searchQuery,
+    double? minAmount,
+    double? maxAmount,
+  }) async {
+    // Build the base query with necessary joins
+    final query = selectOnly(transactions)
+      ..join([
+        innerJoin(splits, splits.transactionId.equalsExp(transactions.id)),
+      ]);
+
+    // Apply filters
+    final conditions = <Expression<bool>>[];
+    
+    // Always exclude deleted transactions
+    conditions.add(transactions.deletedAt.isNull());
+
+    // Date range filter
+    if (startDate != null) {
+      final startMs = DateTime(startDate.year, startDate.month, startDate.day).millisecondsSinceEpoch;
+      conditions.add(transactions.postDate.isBiggerOrEqualValue(startMs));
+    }
+    if (endDate != null) {
+      final endMs = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59, 999).millisecondsSinceEpoch;
+      conditions.add(transactions.postDate.isSmallerOrEqualValue(endMs));
+    }
+
+    // Category filter via splits
+    if (categoryId != null) {
+      conditions.add(splits.categoryId.equals(categoryId));
+    }
+
+    // Account filter via splits
+    if (accountId != null) {
+      conditions.add(splits.accountId.equals(accountId));
+    }
+
+    // Search query filter
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      final searchPattern = '%${searchQuery.toLowerCase()}%';
+      conditions.add(
+        transactions.description.lower().like(searchPattern) |
+        transactions.notes.lower().like(searchPattern),
+      );
+    }
+
+    // Apply all conditions
+    if (conditions.isNotEmpty) {
+      query.where(conditions.reduce((a, b) => a & b));
+    }
+
+    // Add distinct count
+    query.distinct();
+    query.addColumns([transactions.id.count()]);
+
+    final result = await query.getSingle();
+    return result.read(transactions.id.count()) ?? 0;
+  }
 }

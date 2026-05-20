@@ -411,8 +411,24 @@ class PaginationState {
 class PaginatedTransactionsNotifier extends StateNotifier<PaginationState> {
   final LocalFinanceDatabase _db;
   final Ref _ref;
+  TransactionFilter _filter;
 
-  PaginatedTransactionsNotifier(this._db, this._ref) : super(const PaginationState());
+  PaginatedTransactionsNotifier(this._db, this._ref, {TransactionFilter? filter})
+      : _filter = filter ?? const TransactionFilter(),
+        super(const PaginationState());
+
+  /// Updates the filter and resets pagination
+  void updateFilter(TransactionFilter filter) {
+    if (_filter != filter) {
+      _filter = filter;
+      // Reset and reload with new filter
+      state = const PaginationState();
+      loadInitial();
+    }
+  }
+
+  /// Gets the current filter
+  TransactionFilter get filter => _filter;
 
   /// Loads the initial page (page 0)
   Future<void> loadInitial() async {
@@ -421,9 +437,16 @@ class PaginatedTransactionsNotifier extends StateNotifier<PaginationState> {
     state = state.copyWith(isLoading: true);
 
     try {
-      final items = await _db.transactionsDao.getTransactionsWithSplitsPaginated(
+      final items = await _db.transactionsDao.getFilteredTransactionsPaginated(
         limit: kPageSize,
         offset: 0,
+        startDate: _filter.startDate,
+        endDate: _filter.endDate,
+        categoryId: _filter.categoryId,
+        accountId: _filter.accountId,
+        searchQuery: _filter.searchQuery,
+        minAmount: _filter.minAmount,
+        maxAmount: _filter.maxAmount,
       );
 
       state = PaginationState(
@@ -447,9 +470,16 @@ class PaginatedTransactionsNotifier extends StateNotifier<PaginationState> {
       final nextPage = state.currentPage + 1;
       final offset = nextPage * kPageSize;
 
-      final newItems = await _db.transactionsDao.getTransactionsWithSplitsPaginated(
+      final newItems = await _db.transactionsDao.getFilteredTransactionsPaginated(
         limit: kPageSize,
         offset: offset,
+        startDate: _filter.startDate,
+        endDate: _filter.endDate,
+        categoryId: _filter.categoryId,
+        accountId: _filter.accountId,
+        searchQuery: _filter.searchQuery,
+        minAmount: _filter.minAmount,
+        maxAmount: _filter.maxAmount,
       );
 
       state = state.copyWith(
@@ -474,6 +504,21 @@ class PaginatedTransactionsNotifier extends StateNotifier<PaginationState> {
 final paginatedTransactionsProvider = StateNotifierProvider<PaginatedTransactionsNotifier, PaginationState>((ref) {
   final db = ref.watch(databaseProvider);
   return PaginatedTransactionsNotifier(db, ref);
+});
+
+/// Provider for filtered and paginated transactions.
+/// This combines the filter state with pagination for optimal performance.
+final filteredPaginatedTransactionsProvider = StateNotifierProvider.autoDispose
+    <PaginatedTransactionsNotifier, PaginationState>((ref) {
+  final db = ref.watch(databaseProvider);
+  final filter = ref.watch(transactionFilterProvider);
+  
+  final notifier = PaginatedTransactionsNotifier(db, ref, filter: filter);
+  
+  // Load initial data when provider is first created
+  Future.microtask(() => notifier.loadInitial());
+  
+  return notifier;
 });
 
 /// Provider for checking if more items can be loaded
