@@ -332,12 +332,12 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
         final updatedTransaction = widget.transaction!.copyWith(
           description: Value(_descriptionController.text.isEmpty ? null : _descriptionController.text),
           notes: Value(_notesController.text.isEmpty ? null : _notesController.text),
-          postDate: Value(_selectedDate.millisecondsSinceEpoch),
+          postDate: _selectedDate.millisecondsSinceEpoch,
         );
         
         final updatedSplit = _existingSplit!.copyWith(
           accountId: _selectedAccountId!,
-          categoryId: _selectedCategoryId,
+          categoryId: Value(_selectedCategoryId),
           valueNum: (finalAmount * 100).round(),
           quantityNum: (finalAmount * 100).round(),
         );
