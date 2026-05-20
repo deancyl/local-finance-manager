@@ -288,17 +288,15 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
       query.where(conditions.reduce((a, b) => a & b));
     }
 
-    // Add distinct to avoid duplicates from joins
-    query.distinct();
-
     // Order by post date descending
     query.orderBy([OrderingTerm.desc(transactions.postDate)]);
 
     // Apply pagination
     query.limit(limit, offset: offset);
 
-    // Get distinct transaction IDs
+    // Get distinct transaction IDs using GROUP BY to avoid duplicates from joins
     query.addColumns([transactions.id]);
+    query.groupBy([transactions.id]);
     
     final transactionIds = (await query.get())
         .map((row) => row.read(transactions.id))
