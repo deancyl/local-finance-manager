@@ -10,34 +10,57 @@ import '../widgets/add_transaction_dialog.dart';
 import '../widgets/transfer_dialog.dart';
 import '../widgets/transaction_filter_dialog.dart';
 
-class TransactionsPage extends ConsumerWidget {
+class TransactionsPage extends ConsumerStatefulWidget {
   const TransactionsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final transactionsAsync = ref.watch(filteredTransactionsWithSplitsProvider);
+  ConsumerState<TransactionsPage> createState() => _TransactionsPageState();
+}
+
+class _TransactionsPageState extends ConsumerState<TransactionsPage> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    // Load initial data
+    Future.microtask(() {
+      ref.read(paginatedTransactionsProvider.notifier).loadInitial();
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      // Load more when within 200 pixels of bottom
+      ref.read(paginatedTransactionsProvider.notifier).loadMore();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final paginationState = ref.watch(paginatedTransactionsProvider);
     final filter = ref.watch(transactionFilterProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('交易记录'),
         actions: [
-          _buildFilterButton(context, ref, filter),
+          _buildFilterButton(context, filter),
         ],
       ),
-      body: transactionsAsync.when(
-        data: (transactionsWithSplits) {
-          final transactions = transactionsWithSplits.map((t) => t.$1).toList();
-          if (transactions.isEmpty) {
-            if (filter.isNotEmpty) {
-              return _buildNoResultsState(context, ref);
-            }
-            return _buildEmptyState(context);
-          }
-          return _buildTransactionList(context, ref, transactions);
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(paginatedTransactionsProvider.notifier).refresh();
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('错误: $error')),
+        child: _buildBody(context, paginationState, filter),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddOptions(context),
@@ -47,7 +70,22 @@ class TransactionsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildFilterButton(BuildContext context, WidgetRef ref, TransactionFilter filter) {
+  Widget _buildBody(
+    BuildContext context,
+    PaginationState paginationState,
+    TransactionFilter filter,
+  ) {
+    if (paginationState.items.isEmpty && !paginationState.isLoading) {
+      if (filter.isNotEmpty) {
+        return _buildNoResultsState(context);
+      }
+      return _buildEmptyState(context);
+    }
+
+    return _buildTransactionList(context, paginationState);
+  }
+
+  Widget _buildFilterButton(BuildContext context, TransactionFilter filter) {
     return Stack(
       children: [
         IconButton(
@@ -100,7 +138,7 @@ class TransactionsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildNoResultsState(BuildContext context, WidgetRef ref) {
+  Widget _buildNoResultsState(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -144,13 +182,21 @@ class TransactionsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildTransactionList(BuildContext context, WidgetRef ref, List<Transaction> transactions) {
+  Widget _buildTransactionList(BuildContext context, PaginationState paginationState) {
+    final transactions = paginationState.items.map((t) => t.$1).toList();
     final grouped = _groupByDate(transactions);
+    final itemCount = grouped.length + (paginationState.hasMore || paginationState.isLoading ? 1 : 0);
 
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.all(16),
-      itemCount: grouped.length,
+      itemCount: itemCount,
       itemBuilder: (context, index) {
+        // Show loading indicator at the bottom
+        if (index == grouped.length) {
+          return _buildLoadingIndicator(paginationState.isLoading);
+        }
+
         final entry = grouped.entries.elementAt(index);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,12 +214,27 @@ class TransactionsPage extends ConsumerWidget {
             ...entry.value.map((transaction) => TransactionCard(
                   transaction: transaction,
                   onTap: () => _showEditDialog(context, transaction),
-                  onDelete: () => _deleteTransaction(context, ref, transaction),
+                  onDelete: () => _deleteTransaction(context, transaction),
                 )),
             const SizedBox(height: 8),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildLoadingIndicator(bool isLoading) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Center(
+        child: isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const SizedBox.shrink(),
+      ),
     );
   }
 
@@ -252,7 +313,7 @@ class TransactionsPage extends ConsumerWidget {
     );
   }
 
-  void _deleteTransaction(BuildContext context, WidgetRef ref, Transaction transaction) {
+  void _deleteTransaction(BuildContext context, Transaction transaction) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

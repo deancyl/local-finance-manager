@@ -6,6 +6,9 @@ import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import 'transaction_filter.dart';
 
+/// Page size for pagination
+const int kPageSize = 20;
+
 final transactionsProvider = StreamProvider<List<Transaction>>((ref) {
   final db = ref.watch(databaseProvider);
   return (db.select(db.transactions)
@@ -369,4 +372,116 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
 final transactionNotifierProvider = StateNotifierProvider<TransactionNotifier, AsyncValue<void>>((ref) {
   final db = ref.watch(databaseProvider);
   return TransactionNotifier(db);
+});
+
+// ============================================================
+// PAGINATION PROVIDERS - Infinite scroll support
+// ============================================================
+
+/// State for pagination tracking
+class PaginationState {
+  final int currentPage;
+  final bool hasMore;
+  final bool isLoading;
+  final List<(Transaction, List<Split>)> items;
+
+  const PaginationState({
+    this.currentPage = 0,
+    this.hasMore = true,
+    this.isLoading = false,
+    this.items = const [],
+  });
+
+  PaginationState copyWith({
+    int? currentPage,
+    bool? hasMore,
+    bool? isLoading,
+    List<(Transaction, List<Split>)>? items,
+  }) {
+    return PaginationState(
+      currentPage: currentPage ?? this.currentPage,
+      hasMore: hasMore ?? this.hasMore,
+      isLoading: isLoading ?? this.isLoading,
+      items: items ?? this.items,
+    );
+  }
+}
+
+/// Notifier for managing paginated transactions with infinite scroll
+class PaginatedTransactionsNotifier extends StateNotifier<PaginationState> {
+  final LocalFinanceDatabase _db;
+  final Ref _ref;
+
+  PaginatedTransactionsNotifier(this._db, this._ref) : super(const PaginationState());
+
+  /// Loads the initial page (page 0)
+  Future<void> loadInitial() async {
+    if (state.isLoading) return;
+
+    state = state.copyWith(isLoading: true);
+
+    try {
+      final items = await _db.transactionsDao.getTransactionsWithSplitsPaginated(
+        limit: kPageSize,
+        offset: 0,
+      );
+
+      state = PaginationState(
+        currentPage: 0,
+        hasMore: items.length == kPageSize,
+        isLoading: false,
+        items: items,
+      );
+    } catch (e) {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  /// Loads the next page of transactions
+  Future<void> loadMore() async {
+    if (state.isLoading || !state.hasMore) return;
+
+    state = state.copyWith(isLoading: true);
+
+    try {
+      final nextPage = state.currentPage + 1;
+      final offset = nextPage * kPageSize;
+
+      final newItems = await _db.transactionsDao.getTransactionsWithSplitsPaginated(
+        limit: kPageSize,
+        offset: offset,
+      );
+
+      state = state.copyWith(
+        currentPage: nextPage,
+        hasMore: newItems.length == kPageSize,
+        isLoading: false,
+        items: [...state.items, ...newItems],
+      );
+    } catch (e) {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  /// Refreshes the list (resets to page 0)
+  Future<void> refresh() async {
+    state = const PaginationState();
+    await loadInitial();
+  }
+}
+
+/// Provider for paginated transactions state
+final paginatedTransactionsProvider = StateNotifierProvider<PaginatedTransactionsNotifier, PaginationState>((ref) {
+  final db = ref.watch(databaseProvider);
+  return PaginatedTransactionsNotifier(db, ref);
+});
+
+/// Provider for checking if more items can be loaded
+final hasMoreTransactionsProvider = Provider<bool>((ref) {
+  return ref.watch(paginatedTransactionsProvider).hasMore;
+});
+
+/// Provider for checking if currently loading
+final isTransactionsLoadingProvider = Provider<bool>((ref) {
+  return ref.watch(paginatedTransactionsProvider).isLoading;
 });

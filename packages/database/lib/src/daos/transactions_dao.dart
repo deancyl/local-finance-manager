@@ -121,6 +121,56 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
     return query.map((row) => row.readTable(splits)).get();
   }
 
+  /// Gets paginated transactions ordered by postDate DESC.
+  /// Filters out deleted transactions.
+  Future<List<Transaction>> getTransactionsPaginated({
+    required int limit,
+    required int offset,
+  }) {
+    return (select(transactions)
+          ..where((t) => t.deletedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.postDate)])
+          ..limit(limit, offset: offset))
+        .get();
+  }
+
+  /// Gets paginated transactions with their splits using JOIN for efficiency.
+  /// Returns list of (Transaction, List<Split>) tuples.
+  Future<List<(Transaction, List<Split>)>> getTransactionsWithSplitsPaginated({
+    required int limit,
+    required int offset,
+  }) async {
+    // First get paginated transactions
+    final paginatedTransactions = await getTransactionsPaginated(
+      limit: limit,
+      offset: offset,
+    );
+
+    if (paginatedTransactions.isEmpty) {
+      return [];
+    }
+
+    // Get all transaction IDs
+    final transactionIds = paginatedTransactions.map((t) => t.id).toList();
+
+    // Fetch all splits for these transactions in a single query
+    final allSplits = await (select(splits)
+          ..where((s) => s.transactionId.isIn(transactionIds)))
+        .get();
+
+    // Group splits by transaction ID
+    final splitsByTransaction = <String, List<Split>>{};
+    for (final split in allSplits) {
+      splitsByTransaction.putIfAbsent(split.transactionId, () => []).add(split);
+    }
+
+    // Build result list maintaining order
+    return paginatedTransactions.map((t) {
+      final splits = splitsByTransaction[t.id] ?? [];
+      return (t, splits);
+    }).toList();
+  }
+
   /// Watches all splits for non-deleted transactions.
   Stream<List<Split>> watchAllSplits() {
     final query = select(splits).join([
