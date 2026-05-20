@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:database/database.dart';
 import 'package:finance_app/features/transactions/data/transaction_provider.dart';
+import 'package:finance_app/features/reports/data/chart_providers.dart';
+import 'package:finance_app/features/reports/presentation/widgets/monthly_trend_chart.dart';
+import 'package:finance_app/features/reports/presentation/widgets/category_breakdown_chart.dart';
 
 class ReportsPage extends ConsumerWidget {
   const ReportsPage({super.key});
@@ -10,6 +13,8 @@ class ReportsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final splitsWithAccountsAsync = ref.watch(allSplitsWithAccountsProvider);
+    final monthlyTrendAsync = ref.watch(monthlyTrendProvider);
+    final categoryBreakdownAsync = ref.watch(categoryBreakdownProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -18,7 +23,19 @@ class ReportsPage extends ConsumerWidget {
       body: splitsWithAccountsAsync.when(
         data: (splitsWithAccounts) {
           final summary = _calculateSummary(splitsWithAccounts);
-          return _buildReportContent(context, summary);
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSummaryCard(context, summary['income'] ?? 0, summary['expense'] ?? 0, summary['balance'] ?? 0),
+                const SizedBox(height: 24),
+                _buildMonthlyTrendSection(context, monthlyTrendAsync),
+                const SizedBox(height: 24),
+                _buildCategoryBreakdownSection(context, categoryBreakdownAsync),
+              ],
+            ),
+          );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('错误: $error')),
@@ -65,21 +82,72 @@ class ReportsPage extends ConsumerWidget {
     };
   }
 
-  Widget _buildReportContent(BuildContext context, Map<String, double> summary) {
-    final income = summary['income'] ?? 0;
-    final expense = summary['expense'] ?? 0;
-    final balance = summary['balance'] ?? 0;
+  Widget _buildMonthlyTrendSection(BuildContext context, AsyncValue<List<MonthlyData>> monthlyTrendAsync) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '月度趋势',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            Row(
+              children: [
+                Container(width: 12, height: 12, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
+                const SizedBox(width: 4),
+                const Text('收入', style: TextStyle(fontSize: 12)),
+                const SizedBox(width: 12),
+                Container(width: 12, height: 12, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
+                const SizedBox(width: 4),
+                const Text('支出', style: TextStyle(fontSize: 12)),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: monthlyTrendAsync.when(
+              data: (data) => MonthlyTrendChart(data: data),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Center(child: Text('加载失败: $error')),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSummaryCard(context, income, expense, balance),
-          const SizedBox(height: 24),
-          _buildMonthlySection(context),
-        ],
-      ),
+  Widget _buildCategoryBreakdownSection(BuildContext context, AsyncValue<List<CategoryBreakdown>> categoryBreakdownAsync) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '支出分类',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: categoryBreakdownAsync.when(
+              data: (data) => SizedBox(
+                height: 300,
+                child: CategoryBreakdownChart(data: data),
+              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Center(child: Text('加载失败: $error')),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -172,51 +240,6 @@ class ReportsPage extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildMonthlySection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '月度趋势',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.bar_chart_outlined,
-                    size: 48,
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '暂无足够数据',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.outline,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '记录更多交易后查看趋势分析',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.outline,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

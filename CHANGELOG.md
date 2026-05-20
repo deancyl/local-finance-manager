@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.7] - 2026-05-20
+
+### Added
+- **Report Visualizations**: Added interactive charts to reports page
+  - Monthly trend bar chart showing last 6 months income/expense
+  - Category breakdown pie chart showing expense distribution by category
+  - Legend with color indicators for income (green) and expense (red)
+  - Empty state handling when no data is available
+
+### Changed
+- **ReportsPage enhanced**: Replaced placeholder with real chart widgets
+  - Uses fl_chart for visualization
+  - Async loading states for chart data
+  - Responsive layout with scrollable content
+
+### Technical Details
+- `apps/mobile/lib/features/reports/data/chart_providers.dart` - Monthly aggregation and category breakdown providers
+- `apps/mobile/lib/features/reports/presentation/widgets/monthly_trend_chart.dart` - Bar chart widget
+- `apps/mobile/lib/features/reports/presentation/widgets/category_breakdown_chart.dart` - Pie chart widget
+- `apps/mobile/lib/features/reports/presentation/pages/reports_page.dart` - Integrated charts
+
 ## [v0.3.6] - 2026-05-20
 
 ### Added
