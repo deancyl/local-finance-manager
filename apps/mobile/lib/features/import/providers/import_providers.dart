@@ -3,7 +3,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:importers/importers.dart';
 import 'package:core/core.dart';
-import 'package:database/database.dart' hide Transaction, Split, Account, ImportBatch;
+import 'package:database/database.dart' hide Transaction, Split, Account, ImportBatch, TransactionRepository;
 
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import '../data/importer_registry.dart';
@@ -126,7 +126,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
       TransactionsCompanion.insert(
         id: transaction.id,
         postDate: transaction.postDate.millisecondsSinceEpoch,
-        commodityId: transaction.commodityId,
+        enterDate: transaction.enterDate.millisecondsSinceEpoch,
+        currencyId: transaction.commodityId,
         description: drift.Value(transaction.description),
         notes: drift.Value(transaction.notes),
         externalId: drift.Value(transaction.externalId),
@@ -138,9 +139,10 @@ class TransactionRepositoryImpl implements TransactionRepository {
         id: s.id,
         transactionId: s.transactionId,
         accountId: s.accountId,
-        categoryId: drift.Value(s.categoryId),
         valueNum: s.valueNum,
+        valueDenom: s.valueDenom,
         quantityNum: s.quantityNum,
+        quantityDenom: s.quantityDenom,
         createdAt: DateTime.now().millisecondsSinceEpoch,
       )).toList(),
     );
@@ -157,12 +159,14 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<List<Transaction>> getAll() async {
-    return await _db.transactionsDao.getAll();
+    final dbTransactions = await _db.transactionsDao.getAll();
+    return dbTransactions.map(_mapDbToTransaction).toList();
   }
 
   @override
   Future<Transaction?> getById(String id) async {
-    return await _db.transactionsDao.getById(id);
+    final dbTransaction = await _db.transactionsDao.getById(id);
+    return dbTransaction != null ? _mapDbToTransaction(dbTransaction) : null;
   }
 
   @override
@@ -184,7 +188,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<List<Transaction>> getByDateRange(DateTime start, DateTime end) async {
-    return await _db.transactionsDao.getByDateRange(start, end);
+    final dbTransactions = await _db.transactionsDao.getByDateRange(start, end);
+    return dbTransactions.map(_mapDbToTransaction).toList();
   }
 
   @override
@@ -194,21 +199,24 @@ class TransactionRepositoryImpl implements TransactionRepository {
     ).get();
     final transactionIds = splits.map((s) => s.transactionId).toSet();
     if (transactionIds.isEmpty) return [];
-    return await (_db.select(_db.transactions)
+    final dbTransactions = await (_db.select(_db.transactions)
       ..where((t) => t.id.isIn(transactionIds))
     ).get();
+    return dbTransactions.map(_mapDbToTransaction).toList();
   }
 
   @override
   Future<List<Transaction>> getByImportBatch(String batchId) async {
-    return await (_db.select(_db.transactions)
+    final dbTransactions = await (_db.select(_db.transactions)
       ..where((t) => t.importBatchId.equals(batchId))
     ).get();
+    return dbTransactions.map(_mapDbToTransaction).toList();
   }
 
   @override
   Future<List<Split>> getSplits(String transactionId) async {
-    return await _db.transactionsDao.getSplits(transactionId);
+    final dbSplits = await _db.transactionsDao.getSplits(transactionId);
+    return dbSplits.map(_mapDbToSplit).toList();
   }
 
   @override
@@ -231,7 +239,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
       results = results.take(query.limit!).toList();
     }
     
-    return results;
+    return results.map(_mapDbToTransaction).toList();
   }
 
   @override
@@ -248,5 +256,58 @@ class TransactionRepositoryImpl implements TransactionRepository {
     
     final result = await q.getSingle();
     return result.read(_db.transactions.id.count()) ?? 0;
+  }
+
+  // Mapper functions
+  Transaction _mapDbToTransaction(dynamic db) {
+    // Database Transaction has: id, description, postDate (int), enterDate (int), currencyId, etc.
+    return Transaction(
+      id: db.id as String,
+      description: db.description as String?,
+      postDate: DateTime.fromMillisecondsSinceEpoch(db.postDate as int),
+      enterDate: DateTime.fromMillisecondsSinceEpoch(db.enterDate as int),
+      commodityId: db.currencyId as String,
+      notes: db.notes as String?,
+      importBatchId: db.importBatchId as String?,
+      externalId: db.externalId as String?,
+      isDoubleEntry: db.isDoubleEntry as bool? ?? false,
+      version: db.version as int? ?? 1,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(db.createdAt as int),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(db.updatedAt as int),
+      deletedAt: db.deletedAt != null ? DateTime.fromMillisecondsSinceEpoch(db.deletedAt as int) : null,
+    );
+  }
+
+  Split _mapDbToSplit(dynamic db) {
+    // Database Split has: id, transactionId, accountId, memo, valueNum, valueDenom, quantityNum, quantityDenom, reconcileState, reconcileDate, version, createdAt
+    return Split(
+      id: db.id as String,
+      transactionId: db.transactionId as String,
+      accountId: db.accountId as String,
+      memo: db.memo as String?,
+      valueNum: db.valueNum as int,
+      valueDenom: db.valueDenom as int? ?? 1,
+      quantityNum: db.quantityNum as int,
+      quantityDenom: db.quantityDenom as int? ?? 1,
+      reconcileState: _parseReconcileState(db.reconcileState as String? ?? 'n'),
+      reconcileDate: db.reconcileDate != null ? DateTime.fromMillisecondsSinceEpoch(db.reconcileDate as int) : null,
+      version: db.version as int? ?? 1,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(db.createdAt as int),
+    );
+  }
+
+  ReconcileState _parseReconcileState(String code) {
+    switch (code) {
+      case 'n':
+        return ReconcileState.none;
+      case 'c':
+        return ReconcileState.cleared;
+      case 'y':
+        return ReconcileState.reconciled;
+      case 'v':
+        return ReconcileState.voided;
+      default:
+        return ReconcileState.none;
+    }
   }
 }

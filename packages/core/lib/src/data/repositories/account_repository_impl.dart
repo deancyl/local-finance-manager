@@ -1,4 +1,4 @@
-import 'package:database/database.dart';
+import 'package:database/database.dart' hide Account;
 import 'package:core/core.dart';
 import 'package:drift/drift.dart' as drift;
 
@@ -113,15 +113,21 @@ class AccountRepositoryImpl implements AccountRepository {
     return AccountNode(account: account, children: children);
   }
 
-  Account _mapToAccount(AccountTableData data) {
+  Account _mapToAccount(Account dbAccount) {
     return Account(
-      id: data.id,
-      name: data.name,
-      accountType: _stringToAccountType(data.accountType),
-      commodityId: data.commodityId,
-      parentId: data.parentId,
-      code: data.code,
-      description: data.description,
+      id: dbAccount.id,
+      name: dbAccount.name,
+      accountType: _stringToAccountType(dbAccount.accountType),
+      commodityId: dbAccount.commodityId,
+      parentId: dbAccount.parentId,
+      code: dbAccount.code,
+      description: dbAccount.description,
+      isPlaceholder: dbAccount.isPlaceholder,
+      isHidden: dbAccount.isHidden,
+      sortOrder: dbAccount.sortOrder,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(dbAccount.createdAt),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(dbAccount.updatedAt),
+      version: dbAccount.version,
     );
   }
 

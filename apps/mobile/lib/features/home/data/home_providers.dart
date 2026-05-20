@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:database/database.dart';
-import 'package:core/core.dart';
+import 'package:core/core.dart' hide Transaction, Split, Account;
 
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import 'package:finance_app/features/import/providers/import_providers.dart' show TransactionRepositoryImpl;
