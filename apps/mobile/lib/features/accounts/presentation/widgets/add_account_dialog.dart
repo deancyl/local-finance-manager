@@ -7,8 +7,9 @@ import '../../data/account_provider.dart';
 
 class AddAccountDialog extends ConsumerStatefulWidget {
   final Account? account;
+  final Account? parentAccount;
 
-  const AddAccountDialog({super.key, this.account});
+  const AddAccountDialog({super.key, this.account, this.parentAccount});
 
   @override
   ConsumerState<AddAccountDialog> createState() => _AddAccountDialogState();
@@ -22,6 +23,8 @@ class _AddAccountDialogState extends ConsumerState<AddAccountDialog> {
 
   String _selectedType = 'ASSET';
   String _selectedCurrency = 'CNY';
+  String? _selectedParentId;
+  bool _isPlaceholder = false;
   bool _isLoading = false;
 
   @override
@@ -33,6 +36,11 @@ class _AddAccountDialogState extends ConsumerState<AddAccountDialog> {
       _descriptionController.text = widget.account!.description ?? '';
       _selectedType = widget.account!.accountType;
       _selectedCurrency = widget.account!.commodityId;
+      _selectedParentId = widget.account!.parentId;
+      _isPlaceholder = widget.account!.isPlaceholder;
+    } else if (widget.parentAccount != null) {
+      _selectedParentId = widget.parentAccount!.id;
+      _selectedType = widget.parentAccount!.accountType;
     }
   }
 
@@ -133,6 +141,17 @@ class _AddAccountDialogState extends ConsumerState<AddAccountDialog> {
                 ),
                 maxLines: 2,
               ),
+              const SizedBox(height: 16),
+              _buildParentSelector(),
+              const SizedBox(height: 16),
+              SwitchListTile(
+                title: const Text('作为账户组'),
+                subtitle: const Text('账户组可用于归类其他账户'),
+                value: _isPlaceholder,
+                onChanged: (value) {
+                  setState(() => _isPlaceholder = value);
+                },
+              ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: _isLoading ? null : _save,
@@ -165,8 +184,10 @@ class _AddAccountDialogState extends ConsumerState<AddAccountDialog> {
           name: _nameController.text,
           accountType: _selectedType,
           commodityId: _selectedCurrency,
+          parentId: _selectedParentId,
           code: _codeController.text.isEmpty ? null : _codeController.text,
           description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+          isPlaceholder: _isPlaceholder,
         );
       } else {
         await notifier.updateAccount(
@@ -174,8 +195,10 @@ class _AddAccountDialogState extends ConsumerState<AddAccountDialog> {
             name: _nameController.text,
             accountType: _selectedType,
             commodityId: _selectedCurrency,
+            parentId: drift.Value(_selectedParentId),
             code: drift.Value(_codeController.text.isEmpty ? null : _codeController.text),
             description: drift.Value(_descriptionController.text.isEmpty ? null : _descriptionController.text),
+            isPlaceholder: drift.Value(_isPlaceholder),
           ),
         );
       }
@@ -196,6 +219,65 @@ class _AddAccountDialogState extends ConsumerState<AddAccountDialog> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Widget _buildParentSelector() {
+    final accountsAsync = ref.watch(accountsProvider);
+    
+    return accountsAsync.when(
+      data: (accounts) {
+        // Filter to show only placeholder accounts of same type (or all if creating new)
+        final eligibleParents = accounts
+            .where((a) => 
+                a.isPlaceholder && 
+                !a.isHidden &&
+                (widget.account == null || a.id != widget.account?.id))
+            .toList();
+        
+        if (eligibleParents.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        
+        return DropdownButtonFormField<String>(
+          value: _selectedParentId,
+          decoration: const InputDecoration(
+            labelText: '父账户 (可选)',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.folder_outlined),
+          ),
+          hint: const Text('选择父账户组'),
+          items: [
+            const DropdownMenuItem(value: null, child: Text('无 (根级账户)')),
+            ...eligibleParents.map((a) => DropdownMenuItem(
+              value: a.id,
+              child: Text('${a.name} (${_getTypeLabel(a.accountType)})'),
+            )),
+          ],
+          onChanged: (value) {
+            setState(() => _selectedParentId = value);
+          },
+        );
+      },
+      loading: () => const CircularProgressIndicator(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  String _getTypeLabel(String accountType) {
+    switch (accountType) {
+      case 'ASSET':
+        return '资产';
+      case 'LIABILITY':
+        return '负债';
+      case 'EQUITY':
+        return '权益';
+      case 'INCOME':
+        return '收入';
+      case 'EXPENSE':
+        return '支出';
+      default:
+        return accountType;
     }
   }
 }

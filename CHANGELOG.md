@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.8] - 2026-05-20
+
+### Added
+- **Account Hierarchy**: Full support for account grouping and tree structure
+  - Account groups (placeholders) for organizing accounts
+  - Parent-child relationships with unlimited depth
+  - Tree view with expand/collapse for groups
+  - Subtotal calculation for groups (hybrid model: own balance + children)
+  - Default account groups seeded on first launch (银行账户, 现金, 投资账户, etc.)
+  - Parent account selector in add/edit dialog
+  - "作为账户组" toggle for creating group accounts
+
+### Changed
+- **AccountsPage refactored**: Replaced flat list with tree view
+  - Uses AccountTreeCard widget with ExpansionTile
+  - Shows subtotals per account type section
+  - Add child button for group accounts
+- **AccountNotifier enhanced**: Added validation
+  - Circular reference prevention
+  - Delete protection for accounts with children
+- **AccountsDao extended**: Added hierarchy methods
+  - getRootAccountsByType(), watchRootAccountsByType()
+  - getDescendantIds(), hasChildren()
+
+### Technical Details
+- `apps/mobile/lib/features/accounts/data/account_provider.dart` - Hierarchy providers (rootAccountsProvider, childAccountsProvider, accountHierarchyProvider, AccountTreeNode)
+- `apps/mobile/lib/features/accounts/presentation/widgets/account_tree_card.dart` - Tree card widget with ExpansionTile
+- `apps/mobile/lib/features/accounts/presentation/widgets/add_account_dialog.dart` - Parent selector and isPlaceholder toggle
+- `apps/mobile/lib/features/accounts/presentation/pages/accounts_page.dart` - Tree view integration
+- `packages/database/lib/src/database.dart` - Default account groups seeder
+- `packages/database/lib/src/daos/accounts_dao.dart` - Hierarchy extension methods
+
 ## [v0.3.7] - 2026-05-20
 
 ### Added

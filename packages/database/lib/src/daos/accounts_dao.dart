@@ -64,3 +64,51 @@ class AccountWithCommodity {
 
   AccountWithCommodity({required this.account, required this.commodity});
 }
+
+// ============================================================
+// HIERARCHY METHODS
+// ============================================================
+
+extension AccountsDaoHierarchy on AccountsDao {
+  /// Gets root accounts (no parent) by type.
+  Future<List<Account>> getRootAccountsByType(String accountType) {
+    return (select(accounts)
+      ..where((a) => 
+          a.accountType.equals(accountType) & 
+          a.parentId.isNull()))
+      .get();
+  }
+
+  /// Watches root accounts by type.
+  Stream<List<Account>> watchRootAccountsByType(String accountType) {
+    return (select(accounts)
+      ..where((a) => 
+          a.accountType.equals(accountType) & 
+          a.parentId.isNull()))
+      .watch();
+  }
+
+  /// Gets all descendant account IDs (recursive).
+  Future<Set<String>> getDescendantIds(String accountId) async {
+    final descendants = <String>{};
+    await _collectDescendants(accountId, descendants);
+    return descendants;
+  }
+
+  Future<void> _collectDescendants(String parentId, Set<String> descendants) async {
+    final children = await getChildren(parentId);
+    for (final child in children) {
+      descendants.add(child.id);
+      await _collectDescendants(child.id, descendants);
+    }
+  }
+
+  /// Checks if an account has children.
+  Future<bool> hasChildren(String accountId) async {
+    final count = await (select(accounts)
+      ..where((a) => a.parentId.equals(accountId)))
+      .get()
+      .then((list) => list.length);
+    return count > 0;
+  }
+}

@@ -54,6 +54,9 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
         // Insert default categories
         await _insertDefaultCategories();
         
+        // Insert default account groups
+        await _insertDefaultAccountGroups();
+        
         // Performance: Composite index for budget queries
         await customStatement(
           'CREATE INDEX IF NOT EXISTS idx_splits_category_date '
@@ -212,6 +215,162 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             isIncome: const Value(true),
             createdAt: DateTime.now().millisecondsSinceEpoch,
             updatedAt: DateTime.now(),
+          ),
+        ],
+      );
+    });
+  }
+
+  Future<void> _insertDefaultAccountGroups() async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    
+    await batch((batch) {
+      batch.insertAll(
+        accounts,
+        [
+          // ASSET groups
+          AccountsCompanion.insert(
+            id: 'asset_bank_accounts',
+            name: '银行账户',
+            accountType: 'ASSET',
+            commodityId: 'CNY',
+            isPlaceholder: const Value(true),
+            sortOrder: const Value(1),
+            createdAt: now,
+            updatedAt: now,
+          ),
+          AccountsCompanion.insert(
+            id: 'asset_cash',
+            name: '现金',
+            accountType: 'ASSET',
+            commodityId: 'CNY',
+            isPlaceholder: const Value(true),
+            sortOrder: const Value(2),
+            createdAt: now,
+            updatedAt: now,
+          ),
+          AccountsCompanion.insert(
+            id: 'asset_investments',
+            name: '投资账户',
+            accountType: 'ASSET',
+            commodityId: 'CNY',
+            isPlaceholder: const Value(true),
+            sortOrder: const Value(3),
+            createdAt: now,
+            updatedAt: now,
+          ),
+          AccountsCompanion.insert(
+            id: 'asset_receivables',
+            name: '应收款项',
+            accountType: 'ASSET',
+            commodityId: 'CNY',
+            isPlaceholder: const Value(true),
+            sortOrder: const Value(4),
+            createdAt: now,
+            updatedAt: now,
+          ),
+          // LIABILITY groups
+          AccountsCompanion.insert(
+            id: 'liability_credit_cards',
+            name: '信用卡',
+            accountType: 'LIABILITY',
+            commodityId: 'CNY',
+            isPlaceholder: const Value(true),
+            sortOrder: const Value(1),
+            createdAt: now,
+            updatedAt: now,
+          ),
+          AccountsCompanion.insert(
+            id: 'liability_loans',
+            name: '贷款',
+            accountType: 'LIABILITY',
+            commodityId: 'CNY',
+            isPlaceholder: const Value(true),
+            sortOrder: const Value(2),
+            createdAt: now,
+            updatedAt: now,
+          ),
+          AccountsCompanion.insert(
+            id: 'liability_payables',
+            name: '应付款项',
+            accountType: 'LIABILITY',
+            commodityId: 'CNY',
+            isPlaceholder: const Value(true),
+            sortOrder: const Value(3),
+            createdAt: now,
+            updatedAt: now,
+          ),
+          // INCOME groups
+          AccountsCompanion.insert(
+            id: 'income_salary',
+            name: '工资收入',
+            accountType: 'INCOME',
+            commodityId: 'CNY',
+            isPlaceholder: const Value(true),
+            sortOrder: const Value(1),
+            createdAt: now,
+            updatedAt: now,
+          ),
+          AccountsCompanion.insert(
+            id: 'income_investment',
+            name: '投资收益',
+            accountType: 'INCOME',
+            commodityId: 'CNY',
+            isPlaceholder: const Value(true),
+            sortOrder: const Value(2),
+            createdAt: now,
+            updatedAt: now,
+          ),
+          AccountsCompanion.insert(
+            id: 'income_other',
+            name: '其他收入',
+            accountType: 'INCOME',
+            commodityId: 'CNY',
+            isPlaceholder: const Value(true),
+            sortOrder: const Value(3),
+            createdAt: now,
+            updatedAt: now,
+          ),
+          // EXPENSE groups
+          AccountsCompanion.insert(
+            id: 'expense_daily',
+            name: '日常生活',
+            accountType: 'EXPENSE',
+            commodityId: 'CNY',
+            isPlaceholder: const Value(true),
+            sortOrder: const Value(1),
+            createdAt: now,
+            updatedAt: now,
+          ),
+          AccountsCompanion.insert(
+            id: 'expense_transport',
+            name: '交通出行',
+            accountType: 'EXPENSE',
+            commodityId: 'CNY',
+            isPlaceholder: const Value(true),
+            sortOrder: const Value(2),
+            createdAt: now,
+            updatedAt: now,
+          ),
+          AccountsCompanion.insert(
+            id: 'expense_entertainment',
+            name: '娱乐休闲',
+            accountType: 'EXPENSE',
+            commodityId: 'CNY',
+            isPlaceholder: const Value(true),
+            sortOrder: const Value(3),
+            createdAt: now,
+            updatedAt: now,
+          ),
+          AccountsCompanion.insert(
+            id: 'expense_health',
+            name: '医疗健康',
+            accountType: 'EXPENSE',
+            commodityId: 'CNY',
+            isPlaceholder: const Value(true),
+            sortOrder: const Value(4),
+            createdAt: now,
+            updatedAt: now,
           ),
         ],
       );

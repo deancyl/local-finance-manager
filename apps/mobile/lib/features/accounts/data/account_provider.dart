@@ -23,6 +23,116 @@ final accountsByTypeProvider = Provider.family<List<Account>, String>((ref, type
   );
 });
 
+// ============================================================
+// HIERARCHY PROVIDERS - Account tree structure
+// ============================================================
+
+/// Provider for root accounts (no parent)
+final rootAccountsProvider = Provider<List<Account>>((ref) {
+  final accounts = ref.watch(accountsProvider);
+  return accounts.when(
+    data: (list) => list
+        .where((a) => a.parentId == null && !a.isHidden)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
+    loading: () => [],
+    error: (_, __) => [],
+  );
+});
+
+/// Provider for children of a specific parent
+final childAccountsProvider = Provider.family<List<Account>, String>((ref, parentId) {
+  final accounts = ref.watch(accountsProvider);
+  return accounts.when(
+    data: (list) => list
+        .where((a) => a.parentId == parentId && !a.isHidden)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
+    loading: () => [],
+    error: (_, __) => [],
+  );
+});
+
+/// Account node for tree structure with computed subtotal
+class AccountTreeNode {
+  final Account account;
+  final List<AccountTreeNode> children;
+  final double subtotal;
+
+  AccountTreeNode({
+    required this.account,
+    required this.children,
+    required this.subtotal,
+  });
+
+  bool get hasChildren => children.isNotEmpty;
+  bool get isGroup => account.isPlaceholder || hasChildren;
+}
+
+/// Provider for account hierarchy tree grouped by account type
+final accountHierarchyProvider = Provider<Map<String, List<AccountTreeNode>>>((ref) {
+  final accounts = ref.watch(accountsProvider);
+  final balances = ref.watch(accountBalancesProvider);
+  
+  return accounts.when(
+    data: (list) {
+      final result = <String, List<AccountTreeNode>>{};
+      
+      for (final type in ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE']) {
+        final rootAccountsOfType = list
+            .where((a) => 
+                a.parentId == null && 
+                a.accountType == type && 
+                !a.isHidden)
+            .toList()
+          ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+        
+        result[type] = rootAccountsOfType
+            .map((account) => _buildTreeNode(account, list, balances))
+            .toList();
+      }
+      
+      return result;
+    },
+    loading: () => {},
+    error: (_, __) => {},
+  );
+});
+
+/// Helper to build tree node recursively
+AccountTreeNode _buildTreeNode(
+  Account account, 
+  List<Account> allAccounts,
+  Map<String, double> balances,
+) {
+  final children = allAccounts
+      .where((a) => a.parentId == account.id && !a.isHidden)
+      .toList()
+    ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  
+  final childNodes = children
+      .map((child) => _buildTreeNode(child, allAccounts, balances))
+      .toList();
+  
+  // Subtotal = own balance + sum of children's subtotals (hybrid model)
+  final ownBalance = balances[account.id] ?? 0.0;
+  final childrenSubtotal = childNodes.fold(0.0, (sum, node) => sum + node.subtotal);
+  
+  return AccountTreeNode(
+    account: account,
+    children: childNodes,
+    subtotal: ownBalance + childrenSubtotal,
+  );
+}
+
+/// Provider for account balances (computed from transactions)
+/// TODO: Integrate with actual transaction data when available
+final accountBalancesProvider = Provider<Map<String, double>>((ref) {
+  // Placeholder - returns empty map
+  // In production, this would query splits/transactions to compute balances
+  return {};
+});
+
 class AccountNotifier extends StateNotifier<AsyncValue<void>> {
   final LocalFinanceDatabase _db;
 
@@ -35,9 +145,19 @@ class AccountNotifier extends StateNotifier<AsyncValue<void>> {
     String? parentId,
     String? code,
     String? description,
+    bool isPlaceholder = false,
+    int sortOrder = 0,
   }) async {
     state = const AsyncValue.loading();
     try {
+      // VALIDATION: Check for circular reference
+      if (parentId != null) {
+        final wouldCreateCycle = await _wouldCreateCycle(parentId, parentId);
+        if (wouldCreateCycle) {
+          throw ArgumentError('Cannot set parent: would create circular reference');
+        }
+      }
+      
       final id = const Uuid().v4();
       final now = DateTime.now().millisecondsSinceEpoch;
       
@@ -50,6 +170,8 @@ class AccountNotifier extends StateNotifier<AsyncValue<void>> {
           parentId: drift.Value(parentId),
           code: drift.Value(code),
           description: drift.Value(description),
+          isPlaceholder: drift.Value(isPlaceholder),
+          sortOrder: drift.Value(sortOrder),
           createdAt: now,
           updatedAt: now,
         ),
@@ -63,6 +185,19 @@ class AccountNotifier extends StateNotifier<AsyncValue<void>> {
   Future<void> updateAccount(Account account) async {
     state = const AsyncValue.loading();
     try {
+      // VALIDATION: Check for circular reference
+      if (account.parentId != null) {
+        final wouldCreateCycle = await _wouldCreateCycle(account.id, account.parentId!);
+        if (wouldCreateCycle) {
+          throw ArgumentError('Cannot set parent: would create circular reference');
+        }
+      }
+      
+      // VALIDATION: Cannot make account its own parent
+      if (account.parentId == account.id) {
+        throw ArgumentError('Cannot make account its own parent');
+      }
+      
       await (_db.update(_db.accounts)
         ..where((a) => a.id.equals(account.id))).write(
         AccountsCompanion(
@@ -71,6 +206,8 @@ class AccountNotifier extends StateNotifier<AsyncValue<void>> {
           parentId: drift.Value(account.parentId),
           code: drift.Value(account.code),
           description: drift.Value(account.description),
+          isPlaceholder: drift.Value(account.isPlaceholder),
+          sortOrder: drift.Value(account.sortOrder),
           updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
           version: drift.Value(account.version + 1),
         ),
@@ -84,11 +221,42 @@ class AccountNotifier extends StateNotifier<AsyncValue<void>> {
   Future<void> deleteAccount(String id) async {
     state = const AsyncValue.loading();
     try {
+      // VALIDATION: Check for children
+      final children = await _db.accountsDao.getChildren(id);
+      if (children.isNotEmpty) {
+        throw ArgumentError('Cannot delete account with children. Move or delete children first.');
+      }
+      
       await (_db.delete(_db.accounts)..where((a) => a.id.equals(id))).go();
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
+  }
+
+  /// Checks if setting parentId would create a circular reference
+  Future<bool> _wouldCreateCycle(String accountId, String newParentId) async {
+    // Can't be own parent
+    if (accountId == newParentId) return true;
+    
+    // Walk up the tree from newParentId to check if we reach accountId
+    String? currentId = newParentId;
+    final visited = <String>{};
+    
+    while (currentId != null) {
+      if (visited.contains(currentId)) {
+        // Cycle detected in existing tree (shouldn't happen, but safety check)
+        return true;
+      }
+      visited.add(currentId);
+      
+      if (currentId == accountId) return true;
+      
+      final parent = await _db.accountsDao.getById(currentId);
+      currentId = parent?.parentId;
+    }
+    
+    return false;
   }
 }
 
