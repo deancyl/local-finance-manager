@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Split;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:drift/drift.dart' show Value;
 
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
@@ -329,9 +330,9 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
       if (widget.transaction != null && _existingSplit != null) {
         // Update existing transaction
         final updatedTransaction = widget.transaction!.copyWith(
-          description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
-          notes: _notesController.text.isEmpty ? null : _notesController.text,
-          postDate: _selectedDate.millisecondsSinceEpoch,
+          description: Value(_descriptionController.text.isEmpty ? null : _descriptionController.text),
+          notes: Value(_notesController.text.isEmpty ? null : _notesController.text),
+          postDate: Value(_selectedDate.millisecondsSinceEpoch),
         );
         
         final updatedSplit = _existingSplit!.copyWith(
