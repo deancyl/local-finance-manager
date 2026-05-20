@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:gbk_codec/gbk_codec.dart';
+import 'package:gbk_codec/gbk_codec.dart' as gbk_pkg;
 
 /// Detects and handles file encoding for Chinese financial institution exports.
 ///
@@ -52,7 +52,7 @@ class EncodingDetector {
           return const Utf8Codec().decode(bytes);
         case gbk:
         case gb2312:
-          return gbk.decode(bytes);
+          return gbk_pkg.gbk.decode(bytes);
         case utf16:
         case utf16le:
           return _decodeUtf16Le(bytes);
@@ -63,7 +63,7 @@ class EncodingDetector {
           try {
             return const Utf8Codec().decode(bytes);
           } catch (_) {
-            return gbk.decode(bytes);
+            return gbk_pkg.gbk.decode(bytes);
           }
       }
     } catch (e) {
@@ -72,7 +72,7 @@ class EncodingDetector {
         return const Utf8Codec().decode(bytes);
       } catch (_) {}
       try {
-        return gbk.decode(bytes);
+        return gbk_pkg.gbk.decode(bytes);
       } catch (_) {}
       // Last resort: decode as Latin-1 (always succeeds)
       return latin1.decode(bytes);
