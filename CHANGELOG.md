@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.6] - 2026-05-20
+
+### Added
+- **Home Page Real Data**: Connected home dashboard to real account and transaction data
+  - Net worth calculated from ASSET accounts minus LIABILITY accounts
+  - Asset total shows sum of all ASSET account balances
+  - Liability total shows sum of all LIABILITY account balances
+  - Recent transactions list (last 10 transactions)
+  - Quick stats: today's transaction count, this month's income/expense
+
+### Changed
+- **HomePage refactored**: Converted from StatelessWidget to ConsumerWidget
+  - Uses Riverpod providers for reactive data
+  - AsyncValue handling for loading/error states
+  - Real data replaces hardcoded ¥0.00 placeholders
+
+### Technical Details
+- `packages/core/lib/src/data/repositories/account_repository_impl.dart` - AccountRepository implementation
+- `apps/mobile/lib/features/home/data/home_providers.dart` - Home data providers
+- `apps/mobile/lib/core/presentation/pages/home_page.dart` - Connected to real data
+
 ## [v0.3.5] - 2026-05-20
 
 ### Added
