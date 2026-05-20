@@ -8,6 +8,99 @@ import 'package:database/database.dart' as db;
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import '../data/importer_registry.dart';
 
+// ============================================================
+// TOP-LEVEL MAPPER FUNCTIONS
+// ============================================================
+
+Account _mapDbToAccount(db.Account dbAccount) {
+  return Account(
+    id: dbAccount.id,
+    name: dbAccount.name,
+    accountType: _stringToAccountType(dbAccount.accountType),
+    commodityId: dbAccount.commodityId,
+    parentId: dbAccount.parentId,
+    code: dbAccount.code,
+    description: dbAccount.description,
+    isPlaceholder: dbAccount.isPlaceholder,
+    isHidden: dbAccount.isHidden,
+    sortOrder: dbAccount.sortOrder,
+    createdAt: DateTime.fromMillisecondsSinceEpoch(dbAccount.createdAt),
+    updatedAt: DateTime.fromMillisecondsSinceEpoch(dbAccount.updatedAt),
+    version: dbAccount.version,
+  );
+}
+
+Transaction _mapDbToTransaction(db.Transaction dbTx) {
+  return Transaction(
+    id: dbTx.id,
+    description: dbTx.description,
+    postDate: DateTime.fromMillisecondsSinceEpoch(dbTx.postDate),
+    enterDate: DateTime.fromMillisecondsSinceEpoch(dbTx.enterDate),
+    commodityId: dbTx.currencyId,
+    notes: dbTx.notes,
+    importBatchId: dbTx.importBatchId,
+    externalId: dbTx.externalId,
+    isDoubleEntry: dbTx.isDoubleEntry ?? false,
+    version: dbTx.version,
+    createdAt: DateTime.fromMillisecondsSinceEpoch(dbTx.createdAt),
+    updatedAt: DateTime.fromMillisecondsSinceEpoch(dbTx.updatedAt),
+    deletedAt: dbTx.deletedAt != null ? DateTime.fromMillisecondsSinceEpoch(dbTx.deletedAt!) : null,
+  );
+}
+
+Split _mapDbToSplit(db.Split dbSplit) {
+  return Split(
+    id: dbSplit.id,
+    transactionId: dbSplit.transactionId,
+    accountId: dbSplit.accountId,
+    memo: dbSplit.memo,
+    valueNum: dbSplit.valueNum,
+    valueDenom: dbSplit.valueDenom,
+    quantityNum: dbSplit.quantityNum,
+    quantityDenom: dbSplit.quantityDenom,
+    reconcileState: _parseReconcileState(dbSplit.reconcileState ?? 'n'),
+    reconcileDate: dbSplit.reconcileDate != null ? DateTime.fromMillisecondsSinceEpoch(dbSplit.reconcileDate!) : null,
+    version: dbSplit.version,
+    createdAt: DateTime.fromMillisecondsSinceEpoch(dbSplit.createdAt),
+  );
+}
+
+AccountType _stringToAccountType(String type) {
+  switch (type) {
+    case 'ASSET':
+      return AccountType.asset;
+    case 'LIABILITY':
+      return AccountType.liability;
+    case 'EQUITY':
+      return AccountType.equity;
+    case 'INCOME':
+      return AccountType.income;
+    case 'EXPENSE':
+      return AccountType.expense;
+    default:
+      return AccountType.asset;
+  }
+}
+
+ReconcileState _parseReconcileState(String code) {
+  switch (code) {
+    case 'n':
+      return ReconcileState.none;
+    case 'c':
+      return ReconcileState.cleared;
+    case 'y':
+      return ReconcileState.reconciled;
+    case 'v':
+      return ReconcileState.voided;
+    default:
+      return ReconcileState.none;
+  }
+}
+
+// ============================================================
+// PROVIDERS
+// ============================================================
+
 /// Provider for the importer registry.
 final importerRegistryProvider = Provider<ImporterRegistry>((ref) {
   return ImporterRegistry();
@@ -257,91 +350,5 @@ class TransactionRepositoryImpl implements TransactionRepository {
     
     final result = await q.getSingle();
     return result.read(_db.transactions.id.count()) ?? 0;
-  }
-
-  // Mapper functions
-  Account _mapDbToAccount(db.Account dbAccount) {
-    return Account(
-      id: dbAccount.id,
-      name: dbAccount.name,
-      accountType: _stringToAccountType(dbAccount.accountType),
-      commodityId: dbAccount.commodityId,
-      parentId: dbAccount.parentId,
-      code: dbAccount.code,
-      description: dbAccount.description,
-      isPlaceholder: dbAccount.isPlaceholder,
-      isHidden: dbAccount.isHidden,
-      sortOrder: dbAccount.sortOrder,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(dbAccount.createdAt),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(dbAccount.updatedAt),
-      version: dbAccount.version,
-    );
-  }
-
-  Transaction _mapDbToTransaction(db.Transaction dbTx) {
-    return Transaction(
-      id: dbTx.id,
-      description: dbTx.description,
-      postDate: DateTime.fromMillisecondsSinceEpoch(dbTx.postDate),
-      enterDate: DateTime.fromMillisecondsSinceEpoch(dbTx.enterDate),
-      commodityId: dbTx.currencyId,
-      notes: dbTx.notes,
-      importBatchId: dbTx.importBatchId,
-      externalId: dbTx.externalId,
-      isDoubleEntry: dbTx.isDoubleEntry ?? false,
-      version: dbTx.version,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(dbTx.createdAt),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(dbTx.updatedAt),
-      deletedAt: dbTx.deletedAt != null ? DateTime.fromMillisecondsSinceEpoch(dbTx.deletedAt!.millisecondsSinceEpoch) : null,
-    );
-  }
-
-  Split _mapDbToSplit(db.Split dbSplit) {
-    return Split(
-      id: dbSplit.id,
-      transactionId: dbSplit.transactionId,
-      accountId: dbSplit.accountId,
-      memo: dbSplit.memo,
-      valueNum: dbSplit.valueNum,
-      valueDenom: dbSplit.valueDenom,
-      quantityNum: dbSplit.quantityNum,
-      quantityDenom: dbSplit.quantityDenom,
-      reconcileState: _parseReconcileState(dbSplit.reconcileState ?? 'n'),
-      reconcileDate: dbSplit.reconcileDate != null ? DateTime.fromMillisecondsSinceEpoch(dbSplit.reconcileDate!.millisecondsSinceEpoch) : null,
-      version: dbSplit.version,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(dbSplit.createdAt),
-    );
-  }
-
-  AccountType _stringToAccountType(String type) {
-    switch (type) {
-      case 'ASSET':
-        return AccountType.asset;
-      case 'LIABILITY':
-        return AccountType.liability;
-      case 'EQUITY':
-        return AccountType.equity;
-      case 'INCOME':
-        return AccountType.income;
-      case 'EXPENSE':
-        return AccountType.expense;
-      default:
-        return AccountType.asset;
-    }
-  }
-
-  ReconcileState _parseReconcileState(String code) {
-    switch (code) {
-      case 'n':
-        return ReconcileState.none;
-      case 'c':
-        return ReconcileState.cleared;
-      case 'y':
-        return ReconcileState.reconciled;
-      case 'v':
-        return ReconcileState.voided;
-      default:
-        return ReconcileState.none;
-    }
   }
 }
