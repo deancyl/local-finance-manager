@@ -42,7 +42,7 @@ class AboutPage extends StatelessWidget {
           // Version
           Center(
             child: Text(
-              '版本 0.3.9',
+              '版本 0.3.11',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -103,7 +103,7 @@ class AboutPage extends StatelessWidget {
               showLicensePage(
                 context: context,
                 applicationName: '本地金融管家',
-                applicationVersion: '0.3.9',
+                applicationVersion: '0.3.11',
               );
             },
           ),

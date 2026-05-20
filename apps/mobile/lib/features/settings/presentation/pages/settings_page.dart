@@ -26,12 +26,7 @@ class SettingsPage extends StatelessWidget {
             title: const Text('语言'),
             subtitle: const Text('中文简体'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Implement language settings
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('语言设置功能开发中')),
-              );
-            },
+            onTap: () => context.push('/settings/language'),
           ),
           const Divider(),
           // Security settings
@@ -65,7 +60,7 @@ class SettingsPage extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('关于'),
-            subtitle: const Text('版本 0.3.9'),
+            subtitle: const Text('版本 0.3.11'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/about'),
           ),

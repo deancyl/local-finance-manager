@@ -7,6 +7,7 @@ import '../../features/reports/presentation/pages/reports_page.dart';
 import '../../features/budgets/presentation/pages/budgets_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/settings/presentation/pages/theme_settings_page.dart';
+import '../../features/settings/presentation/pages/language_settings_page.dart';
 import '../../features/settings/presentation/pages/about_page.dart';
 import '../../features/import/presentation/pages/import_page.dart';
 // Sync temporarily disabled - PowerSync compatibility issues
@@ -61,6 +62,11 @@ class AppRouter {
         path: '/settings/theme',
         name: 'theme-settings',
         builder: (context, state) => const ThemeSettingsPage(),
+      ),
+      GoRoute(
+        path: '/settings/language',
+        name: 'language-settings',
+        builder: (context, state) => const LanguageSettingsPage(),
       ),
       GoRoute(
         path: '/settings/about',
