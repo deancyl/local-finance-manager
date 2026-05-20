@@ -6,6 +6,8 @@ import '../../features/transactions/presentation/pages/transactions_page.dart';
 import '../../features/reports/presentation/pages/reports_page.dart';
 import '../../features/budgets/presentation/pages/budgets_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
+import '../../features/settings/presentation/pages/theme_settings_page.dart';
+import '../../features/settings/presentation/pages/about_page.dart';
 import '../../features/import/presentation/pages/import_page.dart';
 // Sync temporarily disabled - PowerSync compatibility issues
 // import '../../features/sync/presentation/pages/sync_settings_page.dart';
@@ -51,37 +53,45 @@ class AppRouter {
             path: '/settings',
             name: 'settings',
             builder: (context, state) => const SettingsPage(),
-            // Sync routes temporarily disabled
-            // routes: [
-            //   GoRoute(
-            //     path: 'sync',
-            //     name: 'sync-settings',
-            //     builder: (context, state) => const SyncSettingsPage(),
-            //   ),
-            //   GoRoute(
-            //     path: 'sync/pairing',
-            //     name: 'sync-pairing',
-            //     builder: (context, state) => const DevicePairingPage(),
-            //   ),
-            //   GoRoute(
-            //     path: 'sync/queue',
-            //     name: 'sync-queue',
-            //     builder: (context, state) => const OfflineQueuePage(),
-            //   ),
-            // ],
           ),
         ],
+      ),
+      // Settings sub-routes (outside shell for full-screen pages)
+      GoRoute(
+        path: '/settings/theme',
+        name: 'theme-settings',
+        builder: (context, state) => const ThemeSettingsPage(),
+      ),
+      GoRoute(
+        path: '/settings/about',
+        name: 'about',
+        builder: (context, state) => const AboutPage(),
       ),
       GoRoute(
         path: '/import',
         name: 'import',
         builder: (context, state) => const ImportPage(),
       ),
-      // Sync login temporarily disabled
+      // Sync routes temporarily disabled
+      // GoRoute(
+      //   path: '/settings/sync',
+      //   name: 'sync-settings',
+      //   builder: (context, state) => const SyncSettingsPage(),
+      // ),
       // GoRoute(
       //   path: '/settings/sync/login',
       //   name: 'sync-login',
       //   builder: (context, state) => const SyncLoginPage(),
+      // ),
+      // GoRoute(
+      //   path: '/settings/sync/pairing',
+      //   name: 'sync-pairing',
+      //   builder: (context, state) => const DevicePairingPage(),
+      // ),
+      // GoRoute(
+      //   path: '/settings/sync/queue',
+      //   name: 'sync-queue',
+      //   builder: (context, state) => const OfflineQueuePage(),
       // ),
     ],
     errorBuilder: (context, state) => Scaffold(
