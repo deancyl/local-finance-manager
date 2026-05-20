@@ -6,37 +6,232 @@ import '../../data/account_provider.dart';
 import '../widgets/account_tree_card.dart';
 import '../widgets/add_account_dialog.dart';
 
-class AccountsPage extends ConsumerWidget {
+class AccountsPage extends ConsumerStatefulWidget {
   const AccountsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AccountsPage> createState() => _AccountsPageState();
+}
+
+class _AccountsPageState extends ConsumerState<AccountsPage> {
+  bool _isSearchExpanded = false;
+  final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final accountsAsync = ref.watch(accountsProvider);
-    final hierarchy = ref.watch(accountHierarchyProvider);
+    final hierarchy = ref.watch(filteredAccountHierarchyProvider);
+    final searchQuery = ref.watch(searchQueryProvider);
+    final typeFilter = ref.watch(selectedAccountTypeFilterProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('账户管理'),
+        title: _isSearchExpanded
+            ? _buildSearchField()
+            : const Text('账户管理'),
         actions: [
+          IconButton(
+            icon: Icon(_isSearchExpanded ? Icons.close : Icons.search),
+            onPressed: () => _toggleSearch(),
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => _showAddDialog(context),
           ),
         ],
       ),
-      body: accountsAsync.when(
-        data: (accounts) {
-          if (accounts.isEmpty) {
-            return _buildEmptyState(context);
-          }
-          return _buildAccountTree(context, ref, hierarchy);
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('错误: $error')),
+      body: Column(
+        children: [
+          // Filter chips row
+          _buildFilterChips(typeFilter),
+          // Account list
+          Expanded(
+            child: accountsAsync.when(
+              data: (accounts) {
+                if (accounts.isEmpty) {
+                  return _buildEmptyState(context);
+                }
+                if (hierarchy.isEmpty && (searchQuery.isNotEmpty || typeFilter != null)) {
+                  return _buildNoResultsState(context);
+                }
+                return _buildAccountTree(context, ref, hierarchy);
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Center(child: Text('错误: $error')),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddDialog(context),
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return TextField(
+      controller: _searchController,
+      focusNode: _searchFocusNode,
+      autofocus: true,
+      decoration: InputDecoration(
+        hintText: '搜索账户...',
+        border: InputBorder.none,
+        hintStyle: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+        suffixIcon: ref.watch(searchQueryProvider).isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear, size: 20),
+                onPressed: () {
+                  _searchController.clear();
+                  ref.read(searchQueryProvider.notifier).state = '';
+                },
+              )
+            : null,
+      ),
+      onChanged: (value) {
+        ref.read(searchQueryProvider.notifier).state = value;
+      },
+    );
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _isSearchExpanded = !_isSearchExpanded;
+      if (!_isSearchExpanded) {
+        _searchController.clear();
+        ref.read(searchQueryProvider.notifier).state = '';
+      }
+    });
+  }
+
+  Widget _buildFilterChips(String? typeFilter) {
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _buildFilterChip(
+            label: '全部',
+            isSelected: typeFilter == null,
+            onTap: () => ref.read(selectedAccountTypeFilterProvider.notifier).state = null,
+          ),
+          const SizedBox(width: 8),
+          _buildFilterChip(
+            label: '资产',
+            icon: Icons.trending_up,
+            color: Colors.green,
+            isSelected: typeFilter == 'ASSET',
+            onTap: () => ref.read(selectedAccountTypeFilterProvider.notifier).state = 'ASSET',
+          ),
+          const SizedBox(width: 8),
+          _buildFilterChip(
+            label: '负债',
+            icon: Icons.trending_down,
+            color: Colors.red,
+            isSelected: typeFilter == 'LIABILITY',
+            onTap: () => ref.read(selectedAccountTypeFilterProvider.notifier).state = 'LIABILITY',
+          ),
+          const SizedBox(width: 8),
+          _buildFilterChip(
+            label: '收入',
+            icon: Icons.arrow_upward,
+            color: Colors.blue,
+            isSelected: typeFilter == 'INCOME',
+            onTap: () => ref.read(selectedAccountTypeFilterProvider.notifier).state = 'INCOME',
+          ),
+          const SizedBox(width: 8),
+          _buildFilterChip(
+            label: '支出',
+            icon: Icons.arrow_downward,
+            color: Colors.orange,
+            isSelected: typeFilter == 'EXPENSE',
+            onTap: () => ref.read(selectedAccountTypeFilterProvider.notifier).state = 'EXPENSE',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    IconData? icon,
+    Color? color,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    final chipColor = color ?? theme.colorScheme.primary;
+    
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected 
+                  ? theme.colorScheme.onPrimary
+                  : chipColor,
+            ),
+            const SizedBox(width: 4),
+          ],
+          Text(label),
+        ],
+      ),
+      selected: isSelected,
+      onSelected: (_) => onTap(),
+      backgroundColor: theme.colorScheme.surface,
+      selectedColor: chipColor,
+      labelStyle: TextStyle(
+        color: isSelected 
+            ? theme.colorScheme.onPrimary
+            : theme.colorScheme.onSurface,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+      ),
+      side: BorderSide(
+        color: isSelected ? chipColor : theme.colorScheme.outline,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    );
+  }
+
+  Widget _buildNoResultsState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 64,
+            color: Theme.of(context).colorScheme.outline,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '未找到匹配的账户',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '尝试调整搜索条件或筛选器',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+          ),
+        ],
       ),
     );
   }

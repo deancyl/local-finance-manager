@@ -323,3 +323,68 @@ final accountNotifierProvider = StateNotifierProvider<AccountNotifier, AsyncValu
   final db = ref.watch(databaseProvider);
   return AccountNotifier(db);
 });
+
+// ============================================================
+// SEARCH & FILTER PROVIDERS
+// ============================================================
+
+/// Search query state provider
+final searchQueryProvider = StateProvider<String>((ref) => '');
+
+/// Selected account type filter (null = all types)
+final selectedAccountTypeFilterProvider = StateProvider<String?>((ref) => null);
+
+/// Filtered account hierarchy based on search query and type filter
+final filteredAccountHierarchyProvider = Provider<Map<String, List<AccountTreeNode>>>((ref) {
+  final hierarchy = ref.watch(accountHierarchyProvider);
+  final searchQuery = ref.watch(searchQueryProvider).toLowerCase().trim();
+  final typeFilter = ref.watch(selectedAccountTypeFilterProvider);
+  
+  // If no filters, return original hierarchy
+  if (searchQuery.isEmpty && typeFilter == null) {
+    return hierarchy;
+  }
+  
+  final result = <String, List<AccountTreeNode>>{};
+  
+  // Determine which types to show
+  final typesToShow = typeFilter != null 
+      ? [typeFilter] 
+      : ['ASSET', 'LIABILITY', 'INCOME', 'EXPENSE'];
+  
+  for (final type in typesToShow) {
+    final nodes = hierarchy[type];
+    if (nodes == null || nodes.isEmpty) continue;
+    
+    // Filter nodes - show if node or any descendant matches search
+    final filteredNodes = nodes
+        .where((node) => _nodeMatchesFilter(node, searchQuery))
+        .toList();
+    
+    if (filteredNodes.isNotEmpty) {
+      result[type] = filteredNodes;
+    }
+  }
+  
+  return result;
+});
+
+/// Recursively check if node or any descendant matches search query
+bool _nodeMatchesFilter(AccountTreeNode node, String searchQuery) {
+  // If no search query, match all
+  if (searchQuery.isEmpty) return true;
+  
+  // Check if this node's account name matches
+  if (node.account.name.toLowerCase().contains(searchQuery)) {
+    return true;
+  }
+  
+  // Check if any child matches (recursive)
+  for (final child in node.children) {
+    if (_nodeMatchesFilter(child, searchQuery)) {
+      return true;
+    }
+  }
+  
+  return false;
+}

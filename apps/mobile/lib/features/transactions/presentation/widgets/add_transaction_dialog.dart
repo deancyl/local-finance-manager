@@ -28,6 +28,7 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
   String _selectedCurrency = 'CNY';
   bool _isIncome = false;
   bool _isLoading = false;
+  Split? _existingSplit;
 
   @override
   void initState() {
@@ -37,6 +38,30 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
       _notesController.text = widget.transaction!.notes ?? '';
       _selectedDate = DateTime.fromMillisecondsSinceEpoch(widget.transaction!.postDate);
       _selectedCurrency = widget.transaction!.currencyId;
+      _loadSplitData();
+    }
+  }
+
+  Future<void> _loadSplitData() async {
+    if (widget.transaction == null) return;
+    
+    final db = ref.read(databaseProvider);
+    final splits = await db.transactionsDao.getSplits(widget.transaction!.id);
+    
+    if (splits.isNotEmpty && mounted) {
+      final split = splits.first;
+      _existingSplit = split;
+      
+      // Determine income/expense from amount sign
+      final amount = split.valueNum.abs() / 100.0;
+      final isIncome = split.valueNum > 0;
+      
+      setState(() {
+        _amountController.text = amount.toString();
+        _selectedAccountId = split.accountId;
+        _selectedCategoryId = split.categoryId;
+        _isIncome = isIncome;
+      });
     }
   }
 
@@ -301,20 +326,39 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
 
       final notifier = ref.read(transactionNotifierProvider.notifier);
 
-      await notifier.createTransaction(
-        accountId: _selectedAccountId!,
-        amount: finalAmount,
-        date: _selectedDate,
-        currencyId: _selectedCurrency,
-        description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
-        notes: _notesController.text.isEmpty ? null : _notesController.text,
-        categoryId: _selectedCategoryId,
-      );
+      if (widget.transaction != null && _existingSplit != null) {
+        // Update existing transaction
+        final updatedTransaction = widget.transaction!.copyWith(
+          description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+          notes: _notesController.text.isEmpty ? null : _notesController.text,
+          postDate: _selectedDate.millisecondsSinceEpoch,
+        );
+        
+        final updatedSplit = _existingSplit!.copyWith(
+          accountId: _selectedAccountId!,
+          categoryId: _selectedCategoryId,
+          valueNum: (finalAmount * 100).round(),
+          quantityNum: (finalAmount * 100).round(),
+        );
+        
+        await notifier.updateTransaction(updatedTransaction, updatedSplit);
+      } else {
+        // Create new transaction
+        await notifier.createTransaction(
+          accountId: _selectedAccountId!,
+          amount: finalAmount,
+          date: _selectedDate,
+          currencyId: _selectedCurrency,
+          description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+          notes: _notesController.text.isEmpty ? null : _notesController.text,
+          categoryId: _selectedCategoryId,
+        );
+      }
 
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('交易已保存')),
+          SnackBar(content: Text(widget.transaction == null ? '交易已保存' : '交易已更新')),
         );
       }
     } catch (e) {

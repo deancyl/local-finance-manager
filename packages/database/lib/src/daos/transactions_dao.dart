@@ -130,4 +130,45 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
     
     return query.map((row) => row.readTable(splits)).watch();
   }
+
+  /// Monthly trend result for aggregated income/expense data.
+  /// Returns month label, income total, and expense total.
+  Future<List<({String monthLabel, double income, double expense})>> getMonthlyTrend(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    final startMs = startDate.millisecondsSinceEpoch;
+    final endMs = endDate.millisecondsSinceEpoch;
+
+    // Single query with JOINs to get all splits with account type and transaction date
+    // Filter by date range and group by month
+    final query = customSelect(
+      '''
+      SELECT 
+        strftime('%Y-%m', datetime(t.post_date / 1000, 'unixepoch')) AS month_label,
+        SUM(CASE WHEN a.account_type = 'INCOME' THEN ABS(s.value_num) ELSE 0 END) / 100.0 AS income,
+        SUM(CASE WHEN a.account_type = 'EXPENSE' THEN ABS(s.value_num) ELSE 0 END) / 100.0 AS expense
+      FROM splits s
+      INNER JOIN transactions t ON t.id = s.transaction_id
+      INNER JOIN accounts a ON a.id = s.account_id
+      WHERE t.post_date >= ?1 
+        AND t.post_date <= ?2
+        AND t.deleted_at IS NULL
+        AND s.value_num != 0
+      GROUP BY month_label
+      ORDER BY month_label ASC
+      ''',
+      variables: [Variable.withInt(startMs), Variable.withInt(endMs)],
+      readsFrom: {transactions, splits, accounts},
+    );
+
+    final results = await query.get();
+
+    return results.map((row) {
+      final monthLabel = row.read<String>('month_label');
+      final income = row.read<double>('income') ?? 0.0;
+      final expense = row.read<double>('expense') ?? 0.0;
+      return (monthLabel: monthLabel, income: income, expense: expense);
+    }).toList();
+  }
 }

@@ -110,62 +110,44 @@ class CategoryBreakdown {
 }
 
 /// Provider for monthly trend data based on selected date range.
+/// Optimized: Single SQL query with JOIN and GROUP BY instead of N+1 queries.
 final monthlyTrendProvider = FutureProvider<List<MonthlyData>>((ref) async {
-  final splitsWithAccounts = await ref.watch(allSplitsWithAccountsProvider.future);
   final db = ref.watch(databaseProvider);
   final dateRange = ref.watch(dateRangeFilterProvider);
-  
-  // Get all categories for name lookup
-  final categories = await (db.select(db.categories)
-    ..where((c) => c.deletedAt.isNull()))
-    .get();
-  final categoryMap = {for (var c in categories) c.id: c};
-  
-  // Calculate months within the date range
+
+  // Single efficient query with JOIN and GROUP BY
+  final trendData = await db.transactionsDao.getMonthlyTrend(
+    dateRange.startDate,
+    dateRange.endDate,
+  );
+
+  // Calculate months within the date range to fill in gaps
   final startMonth = DateTime(dateRange.startDate.year, dateRange.startDate.month, 1);
   final endMonth = DateTime(dateRange.endDate.year, dateRange.endDate.month, 1);
-  
+
   final months = <MonthlyData>[];
   var currentMonth = startMonth;
-  
+
+  // Create a map from the query results for quick lookup
+  final dataMap = <String, ({double income, double expense})>{};
+  for (final data in trendData) {
+    dataMap[data.monthLabel] = (income: data.income, expense: data.expense);
+  }
+
+  // Fill in all months, using 0 for months with no data
   while (currentMonth.isBefore(endMonth) || currentMonth.isAtSameMomentAs(endMonth)) {
-    final monthStart = currentMonth.millisecondsSinceEpoch;
-    final monthEnd = DateTime(currentMonth.year, currentMonth.month + 1, 0, 23, 59, 59, 999).millisecondsSinceEpoch;
-    
-    double monthIncome = 0;
-    double monthExpense = 0;
-    
-    for (final (split, account) in splitsWithAccounts) {
-      // Check if split is within this month
-      if (split.valueNum != 0) {
-        // Get transaction date
-        final transaction = await (db.select(db.transactions)
-          ..where((t) => t.id.equals(split.transactionId)))
-          .getSingleOrNull();
-        
-        if (transaction != null && 
-            transaction.postDate >= monthStart && 
-            transaction.postDate <= monthEnd) {
-          final amount = split.valueNum.abs() / 100.0;
-          
-          if (account.accountType == 'INCOME') {
-            monthIncome += amount;
-          } else if (account.accountType == 'EXPENSE') {
-            monthExpense += amount;
-          }
-        }
-      }
-    }
-    
+    final monthLabel = '${currentMonth.year}-${currentMonth.month.toString().padLeft(2, '0')}';
+    final data = dataMap[monthLabel] ?? (income: 0.0, expense: 0.0);
+
     months.add(MonthlyData(
-      monthLabel: '${currentMonth.year}-${currentMonth.month.toString().padLeft(2, '0')}',
-      income: monthIncome,
-      expense: monthExpense,
+      monthLabel: monthLabel,
+      income: data.income,
+      expense: data.expense,
     ));
-    
+
     currentMonth = DateTime(currentMonth.year, currentMonth.month + 1, 1);
   }
-  
+
   return months;
 });
 
