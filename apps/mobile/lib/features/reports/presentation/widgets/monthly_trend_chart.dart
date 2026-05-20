@@ -1,14 +1,17 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:finance_app/features/reports/data/chart_providers.dart';
+import 'package:finance_app/features/transactions/data/transaction_filter.dart';
 
 /// Monthly trend bar chart showing income and expense for last 6 months.
 class MonthlyTrendChart extends StatelessWidget {
   final List<MonthlyData> data;
+  final void Function(TransactionFilter)? onBarTap;
   
   const MonthlyTrendChart({
     super.key,
     required this.data,
+    this.onBarTap,
   });
   
   @override
@@ -23,7 +26,20 @@ class MonthlyTrendChart extends StatelessWidget {
         BarChartData(
           alignment: BarChartAlignment.spaceAround,
           maxY: _calculateMaxY(),
-          barTouchData: BarTouchData(enabled: false),
+          barTouchData: BarTouchData(
+            enabled: true,
+            touchCallback: (event, response) {
+              if (event is FlTapUpEvent && response != null && response.spot != null) {
+                final tappedBar = response.spot!.tappedBarGroup;
+                final barIndex = tappedBar.x;
+                
+                if (barIndex >= 0 && barIndex < data.length) {
+                  final monthLabel = data[barIndex].monthLabel;
+                  _handleBarTap(monthLabel);
+                }
+              }
+            },
+          ),
           titlesData: FlTitlesData(
             show: true,
             bottomTitles: AxisTitles(
@@ -181,5 +197,28 @@ class MonthlyTrendChart extends StatelessWidget {
     } else {
       return '¥${value.toStringAsFixed(0)}';
     }
+  }
+  
+  void _handleBarTap(String monthLabel) {
+    if (onBarTap == null) return;
+    
+    // Parse monthLabel (format: "YYYY-MM")
+    final parts = monthLabel.split('-');
+    if (parts.length != 2) return;
+    
+    final year = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    if (year == null || month == null) return;
+    
+    // Create date range for the month
+    final startDate = DateTime(year, month, 1);
+    final endDate = DateTime(year, month + 1, 0, 23, 59, 59, 999);
+    
+    final filter = TransactionFilter(
+      startDate: startDate,
+      endDate: endDate,
+    );
+    
+    onBarTap!(filter);
   }
 }

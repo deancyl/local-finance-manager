@@ -1,14 +1,17 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:finance_app/features/reports/data/chart_providers.dart';
+import 'package:finance_app/features/transactions/data/transaction_filter.dart';
 
 /// Category breakdown pie chart showing expense distribution.
 class CategoryBreakdownChart extends StatelessWidget {
   final List<CategoryBreakdown> data;
+  final void Function(TransactionFilter)? onCategoryTap;
   
   const CategoryBreakdownChart({
     super.key,
     required this.data,
+    this.onCategoryTap,
   });
   
   @override
@@ -27,7 +30,18 @@ class CategoryBreakdownChart extends StatelessWidget {
               sectionsSpace: 2,
               centerSpaceRadius: 40,
               sections: _buildSections(total),
-              pieTouchData: PieTouchData(enabled: false),
+              pieTouchData: PieTouchData(
+                enabled: true,
+                touchCallback: (event, response) {
+                  if (event is FlTapUpEvent && response != null && response.touchedSection != null) {
+                    final touchedIndex = response.touchedSection!.touchedSectionIndex;
+                    if (touchedIndex >= 0 && touchedIndex < data.length) {
+                      final categoryId = data[touchedIndex].categoryId;
+                      _handleCategoryTap(categoryId);
+                    }
+                  }
+                },
+              ),
             ),
           ),
         ),
@@ -137,5 +151,15 @@ class CategoryBreakdownChart extends StatelessWidget {
       Colors.amber,
       Colors.cyan,
     ];
+  }
+  
+  void _handleCategoryTap(String categoryId) {
+    if (onCategoryTap == null) return;
+    
+    final filter = TransactionFilter(
+      categoryId: categoryId,
+    );
+    
+    onCategoryTap!(filter);
   }
 }

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/accounts/presentation/pages/accounts_page.dart';
 import '../../features/transactions/presentation/pages/transactions_page.dart';
+import '../../features/transactions/data/transaction_filter.dart';
 import '../../features/reports/presentation/pages/reports_page.dart';
 import '../../features/budgets/presentation/pages/budgets_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
@@ -35,7 +36,10 @@ class AppRouter {
           GoRoute(
             path: '/transactions',
             name: 'transactions',
-            builder: (context, state) => const TransactionsPage(),
+            builder: (context, state) {
+              final filter = state.extra as TransactionFilter?;
+              return TransactionsPage(initialFilter: filter);
+            },
           ),
           GoRoute(
             path: '/accounts',

@@ -11,7 +11,9 @@ import '../widgets/transfer_dialog.dart';
 import '../widgets/transaction_filter_dialog.dart';
 
 class TransactionsPage extends ConsumerStatefulWidget {
-  const TransactionsPage({super.key});
+  final TransactionFilter? initialFilter;
+  
+  const TransactionsPage({super.key, this.initialFilter});
 
   @override
   ConsumerState<TransactionsPage> createState() => _TransactionsPageState();
@@ -25,6 +27,14 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    
+    // Apply initial filter if provided
+    if (widget.initialFilter != null) {
+      Future.microtask(() {
+        ref.read(transactionFilterProvider.notifier).state = widget.initialFilter!;
+      });
+    }
+    
     // Load initial data
     Future.microtask(() {
       ref.read(filteredPaginatedTransactionsProvider.notifier).loadInitial();

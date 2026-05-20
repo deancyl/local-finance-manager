@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:database/database.dart' as db;
 import 'package:finance_app/features/reports/data/chart_providers.dart';
 import 'package:finance_app/features/reports/presentation/widgets/monthly_trend_chart.dart';
 import 'package:finance_app/features/reports/presentation/widgets/category_breakdown_chart.dart';
+import 'package:finance_app/features/transactions/data/transaction_filter.dart';
 
 class ReportsPage extends ConsumerWidget {
   const ReportsPage({super.key});
@@ -258,7 +260,10 @@ class ReportsPage extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: monthlyTrendAsync.when(
-              data: (data) => MonthlyTrendChart(data: data),
+              data: (data) => MonthlyTrendChart(
+                data: data,
+                onBarTap: (filter) => _navigateToTransactions(context, filter),
+              ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Center(child: Text('加载失败: $error')),
             ),
@@ -285,7 +290,10 @@ class ReportsPage extends ConsumerWidget {
             child: categoryBreakdownAsync.when(
               data: (data) => SizedBox(
                 height: 300,
-                child: CategoryBreakdownChart(data: data),
+                child: CategoryBreakdownChart(
+                  data: data,
+                  onCategoryTap: (filter) => _navigateToTransactions(context, filter),
+                ),
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Center(child: Text('加载失败: $error')),
@@ -386,5 +394,9 @@ class ReportsPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+  
+  void _navigateToTransactions(BuildContext context, TransactionFilter filter) {
+    context.push('/transactions', extra: filter);
   }
 }
