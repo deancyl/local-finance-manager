@@ -118,9 +118,9 @@ final defaultAssetAccountProvider = Provider<Account?>((ref) {
   final accounts = ref.watch(accountsProvider);
   return accounts.when(
     data: (list) {
-      // Find first ASSET type account
+      // Find first ASSET type account and map to core Account
       final assetAccounts = list.where((a) => a.accountType == 'ASSET').toList();
-      return assetAccounts.isNotEmpty ? assetAccounts.first : null;
+      return assetAccounts.isNotEmpty ? _mapDbToAccount(assetAccounts.first) : null;
     },
     loading: () => null,
     error: (_, __) => null,
