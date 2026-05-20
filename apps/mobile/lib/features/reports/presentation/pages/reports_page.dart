@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:database/database.dart';
+import 'package:database/database.dart' hide Split;
 import 'package:finance_app/features/transactions/data/transaction_provider.dart';
 import 'package:finance_app/features/reports/data/chart_providers.dart';
 import 'package:finance_app/features/reports/presentation/widgets/monthly_trend_chart.dart';

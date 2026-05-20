@@ -144,7 +144,7 @@ class MonthlyTrendChart extends StatelessWidget {
     final displayLabel = parts.length == 2 ? '${parts[0].substring(2)}/${parts[1]}' : monthLabel;
     
     return SideTitleWidget(
-      meta: meta,
+      axisSide: meta.axisSide,
       space: 4,
       child: Text(
         displayLabel,
@@ -164,7 +164,7 @@ class MonthlyTrendChart extends StatelessWidget {
     final formattedValue = _formatCurrency(value);
     
     return SideTitleWidget(
-      meta: meta,
+      axisSide: meta.axisSide,
       space: 4,
       child: Text(
         formattedValue,

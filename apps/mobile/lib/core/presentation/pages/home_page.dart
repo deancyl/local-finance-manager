@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:database/database.dart';
 
-import '../../features/home/data/home_providers.dart';
+import 'package:finance_app/features/home/data/home_providers.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -368,7 +368,7 @@ class HomePage extends ConsumerWidget {
                   return ListTile(
                     title: Text(transaction.description ?? '无描述'),
                     subtitle: Text(
-                      DateFormat('yyyy-MM-dd').format(transaction.postDate),
+                      DateFormat('yyyy-MM-dd').format(DateTime.fromMillisecondsSinceEpoch(transaction.postDate)),
                     ),
                     trailing: Text(
                       '查看',

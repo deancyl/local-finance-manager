@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:importers/importers.dart';
-import 'package:database/database.dart';
+import 'package:database/database.dart' hide Transaction, Split, Account, ImportBatch;
+import 'package:core/core.dart' show ImportBatchStatus;
 
 import '../../providers/import_providers.dart';
+import '../../../accounts/data/account_provider.dart';
 
 /// Import page for importing transactions from financial institutions.
 class ImportPage extends ConsumerStatefulWidget {

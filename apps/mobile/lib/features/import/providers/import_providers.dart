@@ -3,7 +3,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:importers/importers.dart';
 import 'package:core/core.dart';
-import 'package:database/database.dart';
+import 'package:database/database.dart' hide Transaction, Split, Account, ImportBatch;
 
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import '../data/importer_registry.dart';
@@ -16,7 +16,7 @@ final importerRegistryProvider = Provider<ImporterRegistry>((ref) {
 /// Provider for accounts available for import.
 final importAccountsProvider = FutureProvider<List<Account>>((ref) async {
   final db = ref.watch(databaseProvider);
-  return (db.select(db.accounts)..where((a) => a.deletedAt.isNull())).get();
+  return db.select(db.accounts).get();
 });
 
 /// Provider for default asset account.
@@ -121,7 +121,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
   TransactionRepositoryImpl(this._db);
 
   @override
-  Future<void> create(Transaction transaction, List<Split> splits) async {
+  Future<Transaction> create(Transaction transaction, List<Split> splits) async {
     await _db.transactionsDao.createWithSplits(
       TransactionsCompanion.insert(
         id: transaction.id,
@@ -144,6 +144,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
         createdAt: DateTime.now().millisecondsSinceEpoch,
       )).toList(),
     );
+    return transaction;
   }
 
   @override
@@ -165,7 +166,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
-  Future<void> update(Transaction transaction) async {
+  Future<Transaction> update(Transaction transaction, List<Split> splits) async {
     await (_db.update(_db.transactions)
       ..where((t) => t.id.equals(transaction.id))
     ).write(TransactionsCompanion(
@@ -173,10 +174,79 @@ class TransactionRepositoryImpl implements TransactionRepository {
       notes: drift.Value(transaction.notes),
       updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
     ));
+    return transaction;
   }
 
   @override
   Future<void> delete(String id) async {
     await _db.transactionsDao.softDelete(id);
+  }
+
+  @override
+  Future<List<Transaction>> getByDateRange(DateTime start, DateTime end) async {
+    return await _db.transactionsDao.getByDateRange(start, end);
+  }
+
+  @override
+  Future<List<Transaction>> getByAccount(String accountId) async {
+    final splits = await (_db.select(_db.splits)
+      ..where((s) => s.accountId.equals(accountId))
+    ).get();
+    final transactionIds = splits.map((s) => s.transactionId).toSet();
+    if (transactionIds.isEmpty) return [];
+    return await (_db.select(_db.transactions)
+      ..where((t) => t.id.isIn(transactionIds))
+    ).get();
+  }
+
+  @override
+  Future<List<Transaction>> getByImportBatch(String batchId) async {
+    return await (_db.select(_db.transactions)
+      ..where((t) => t.importBatchId.equals(batchId))
+    ).get();
+  }
+
+  @override
+  Future<List<Split>> getSplits(String transactionId) async {
+    return await _db.transactionsDao.getSplits(transactionId);
+  }
+
+  @override
+  Future<List<Transaction>> search(TransactionQuery query) async {
+    var q = _db.select(_db.transactions);
+    
+    if (query.startDate != null) {
+      q = q..where((t) => t.postDate.isBiggerOrEqualValue(query.startDate!.millisecondsSinceEpoch));
+    }
+    if (query.endDate != null) {
+      q = q..where((t) => t.postDate.isSmallerOrEqualValue(query.endDate!.millisecondsSinceEpoch));
+    }
+    if (query.searchText != null && query.searchText!.isNotEmpty) {
+      q = q..where((t) => t.description.like('%${query.searchText}%'));
+    }
+    
+    var results = await q.get();
+    
+    if (query.limit != null) {
+      results = results.take(query.limit!).toList();
+    }
+    
+    return results;
+  }
+
+  @override
+  Future<int> count({String? accountId, DateTime? start, DateTime? end}) async {
+    var q = _db.selectOnly(_db.transactions);
+    q.addColumns([_db.transactions.id.count()]);
+    
+    if (start != null) {
+      q = q..where(_db.transactions.postDate.isBiggerOrEqualValue(start.millisecondsSinceEpoch));
+    }
+    if (end != null) {
+      q = q..where(_db.transactions.postDate.isSmallerOrEqualValue(end.millisecondsSinceEpoch));
+    }
+    
+    final result = await q.getSingle();
+    return result.read(_db.transactions.id.count()) ?? 0;
   }
 }

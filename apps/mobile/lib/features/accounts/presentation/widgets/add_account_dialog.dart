@@ -198,7 +198,7 @@ class _AddAccountDialogState extends ConsumerState<AddAccountDialog> {
             parentId: drift.Value(_selectedParentId),
             code: drift.Value(_codeController.text.isEmpty ? null : _codeController.text),
             description: drift.Value(_descriptionController.text.isEmpty ? null : _descriptionController.text),
-            isPlaceholder: drift.Value(_isPlaceholder),
+            isPlaceholder: _isPlaceholder,
           ),
         );
       }

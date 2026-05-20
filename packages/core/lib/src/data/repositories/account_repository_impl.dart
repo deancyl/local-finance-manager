@@ -10,17 +10,14 @@ class AccountRepositoryImpl implements AccountRepository {
 
   @override
   Future<List<Account>> getAll() async {
-    final accounts = await (_db.select(_db.accounts)
-      ..where((a) => a.deletedAt.isNull())
-    ).get();
-    
+    final accounts = await _db.select(_db.accounts).get();
     return accounts.map(_mapToAccount).toList();
   }
 
   @override
   Future<Account?> getById(String id) async {
     final account = await (_db.select(_db.accounts)
-      ..where((a) => a.id.equals(id) & a.deletedAt.isNull())
+      ..where((a) => a.id.equals(id))
     ).getSingleOrNull();
     
     return account != null ? _mapToAccount(account) : null;
@@ -30,7 +27,7 @@ class AccountRepositoryImpl implements AccountRepository {
   Future<List<Account>> getByType(AccountType type) async {
     final typeStr = _accountTypeToString(type);
     final accounts = await (_db.select(_db.accounts)
-      ..where((a) => a.accountType.equals(typeStr) & a.deletedAt.isNull())
+      ..where((a) => a.accountType.equals(typeStr))
     ).get();
     
     return accounts.map(_mapToAccount).toList();
@@ -39,7 +36,7 @@ class AccountRepositoryImpl implements AccountRepository {
   @override
   Future<List<Account>> getChildren(String parentId) async {
     final accounts = await (_db.select(_db.accounts)
-      ..where((a) => a.parentId.equals(parentId) & a.deletedAt.isNull())
+      ..where((a) => a.parentId.equals(parentId))
     ).get();
     
     return accounts.map(_mapToAccount).toList();
@@ -84,14 +81,7 @@ class AccountRepositoryImpl implements AccountRepository {
 
   @override
   Future<void> delete(String id) async {
-    // Soft delete
-    await (_db.update(_db.accounts)
-      ..where((a) => a.id.equals(id))
-    ).write(
-      AccountsCompanion(
-        deletedAt: drift.Value(DateTime.now()),
-      ),
-    );
+    await (_db.delete(_db.accounts)..where((a) => a.id.equals(id))).go();
   }
 
   @override
