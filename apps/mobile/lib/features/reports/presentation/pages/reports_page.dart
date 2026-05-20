@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:database/database.dart';
+import 'package:database/database.dart' as db;
 import 'package:finance_app/features/transactions/data/transaction_provider.dart';
 import 'package:finance_app/features/reports/data/chart_providers.dart';
 import 'package:finance_app/features/reports/presentation/widgets/monthly_trend_chart.dart';
@@ -43,7 +43,7 @@ class ReportsPage extends ConsumerWidget {
     );
   }
 
-  Map<String, double> _calculateSummary(List<(Split, Account)> splitsWithAccounts) {
+  Map<String, double> _calculateSummary(List<(db.Split, db.Account)> splitsWithAccounts) {
     double totalIncome = 0;
     double totalExpense = 0;
 

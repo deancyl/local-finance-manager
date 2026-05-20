@@ -125,7 +125,7 @@ class BudgetNotifier extends StateNotifier<AsyncValue<void>> {
           name: name,
           categoryId: drift.Value(categoryId),
           amountNum: amountNum,
-          amountDenom: const drift.Constant(100), // Store as cents
+          amountDenom: drift.Value(100), // Store as cents
           currencyId: currencyId,
           period: period,
           startDate: startDate,

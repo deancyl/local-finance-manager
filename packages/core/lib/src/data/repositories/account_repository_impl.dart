@@ -1,10 +1,10 @@
-import 'package:database/database.dart' hide Account;
+import 'package:database/database.dart' as db;
 import 'package:core/core.dart';
 import 'package:drift/drift.dart' as drift;
 
 /// Implementation of AccountRepository using Drift database.
 class AccountRepositoryImpl implements AccountRepository {
-  final LocalFinanceDatabase _db;
+  final db.LocalFinanceDatabase _db;
 
   AccountRepositoryImpl(this._db);
 
@@ -45,7 +45,7 @@ class AccountRepositoryImpl implements AccountRepository {
   @override
   Future<Account> create(Account account) async {
     await _db.into(_db.accounts).insert(
-      AccountsCompanion.insert(
+      db.AccountsCompanion.insert(
         id: account.id,
         name: account.name,
         accountType: _accountTypeToString(account.accountType),
@@ -66,7 +66,7 @@ class AccountRepositoryImpl implements AccountRepository {
     await (_db.update(_db.accounts)
       ..where((a) => a.id.equals(account.id))
     ).write(
-      AccountsCompanion(
+      db.AccountsCompanion(
         name: drift.Value(account.name),
         accountType: drift.Value(_accountTypeToString(account.accountType)),
         parentId: drift.Value(account.parentId),
@@ -113,7 +113,7 @@ class AccountRepositoryImpl implements AccountRepository {
     return AccountNode(account: account, children: children);
   }
 
-  Account _mapToAccount(Account dbAccount) {
+  Account _mapToAccount(db.Account dbAccount) {
     return Account(
       id: dbAccount.id,
       name: dbAccount.name,

@@ -52,6 +52,7 @@ class CategoryNotifier extends StateNotifier<AsyncValue<void>> {
           icon: drift.Value(icon),
           color: drift.Value(color),
           createdAt: DateTime.now().millisecondsSinceEpoch,
+          updatedAt: DateTime.now(),
         ),
       );
       state = const AsyncValue.data(null);

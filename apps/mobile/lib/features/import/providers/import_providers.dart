@@ -3,7 +3,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:importers/importers.dart';
 import 'package:core/core.dart';
-import 'package:database/database.dart' hide Transaction, Split, Account, ImportBatch, TransactionRepository;
+import 'package:database/database.dart' as db;
 
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import '../data/importer_registry.dart';
@@ -15,8 +15,9 @@ final importerRegistryProvider = Provider<ImporterRegistry>((ref) {
 
 /// Provider for accounts available for import.
 final importAccountsProvider = FutureProvider<List<Account>>((ref) async {
-  final db = ref.watch(databaseProvider);
-  return db.select(db.accounts).get();
+  final database = ref.watch(databaseProvider);
+  final dbAccounts = await database.select(database.accounts).get();
+  return dbAccounts.map(_mapDbToAccount).toList();
 });
 
 /// Provider for default asset account.
@@ -35,8 +36,8 @@ final defaultAssetAccountProvider = Provider<Account?>((ref) {
 
 /// Provider for ImportTransactions use case.
 final importTransactionsProvider = Provider<ImportTransactions>((ref) {
-  final db = ref.watch(databaseProvider);
-  final repo = TransactionRepositoryImpl(db);
+  final database = ref.watch(databaseProvider);
+  final repo = TransactionRepositoryImpl(database);
   return ImportTransactions(repo);
 });
 
@@ -116,14 +117,14 @@ final importNotifierProvider = StateNotifierProvider<ImportNotifier, ImportState
 
 /// Simple TransactionRepository implementation for import.
 class TransactionRepositoryImpl implements TransactionRepository {
-  final LocalFinanceDatabase _db;
+  final db.LocalFinanceDatabase _db;
 
   TransactionRepositoryImpl(this._db);
 
   @override
   Future<Transaction> create(Transaction transaction, List<Split> splits) async {
     await _db.transactionsDao.createWithSplits(
-      TransactionsCompanion.insert(
+      db.TransactionsCompanion.insert(
         id: transaction.id,
         postDate: transaction.postDate.millisecondsSinceEpoch,
         enterDate: transaction.enterDate.millisecondsSinceEpoch,
@@ -135,14 +136,14 @@ class TransactionRepositoryImpl implements TransactionRepository {
         createdAt: DateTime.now().millisecondsSinceEpoch,
         updatedAt: DateTime.now().millisecondsSinceEpoch,
       ),
-      splits.map((s) => SplitsCompanion.insert(
+      splits.map((s) => db.SplitsCompanion.insert(
         id: s.id,
         transactionId: s.transactionId,
         accountId: s.accountId,
         valueNum: s.valueNum,
-        valueDenom: s.valueDenom,
+        valueDenom: drift.Value(s.valueDenom),
         quantityNum: s.quantityNum,
-        quantityDenom: s.quantityDenom,
+        quantityDenom: drift.Value(s.quantityDenom),
         createdAt: DateTime.now().millisecondsSinceEpoch,
       )).toList(),
     );
@@ -173,7 +174,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
   Future<Transaction> update(Transaction transaction, List<Split> splits) async {
     await (_db.update(_db.transactions)
       ..where((t) => t.id.equals(transaction.id))
-    ).write(TransactionsCompanion(
+    ).write(db.TransactionsCompanion(
       description: drift.Value(transaction.description),
       notes: drift.Value(transaction.notes),
       updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
@@ -259,41 +260,74 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   // Mapper functions
-  Transaction _mapDbToTransaction(dynamic db) {
-    // Database Transaction has: id, description, postDate (int), enterDate (int), currencyId, etc.
-    return Transaction(
-      id: db.id as String,
-      description: db.description as String?,
-      postDate: DateTime.fromMillisecondsSinceEpoch(db.postDate as int),
-      enterDate: DateTime.fromMillisecondsSinceEpoch(db.enterDate as int),
-      commodityId: db.currencyId as String,
-      notes: db.notes as String?,
-      importBatchId: db.importBatchId as String?,
-      externalId: db.externalId as String?,
-      isDoubleEntry: db.isDoubleEntry as bool? ?? false,
-      version: db.version as int? ?? 1,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(db.createdAt as int),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(db.updatedAt as int),
-      deletedAt: db.deletedAt != null ? DateTime.fromMillisecondsSinceEpoch(db.deletedAt as int) : null,
+  Account _mapDbToAccount(db.Account dbAccount) {
+    return Account(
+      id: dbAccount.id,
+      name: dbAccount.name,
+      accountType: _stringToAccountType(dbAccount.accountType),
+      commodityId: dbAccount.commodityId,
+      parentId: dbAccount.parentId,
+      code: dbAccount.code,
+      description: dbAccount.description,
+      isPlaceholder: dbAccount.isPlaceholder,
+      isHidden: dbAccount.isHidden,
+      sortOrder: dbAccount.sortOrder,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(dbAccount.createdAt),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(dbAccount.updatedAt),
+      version: dbAccount.version,
     );
   }
 
-  Split _mapDbToSplit(dynamic db) {
-    // Database Split has: id, transactionId, accountId, memo, valueNum, valueDenom, quantityNum, quantityDenom, reconcileState, reconcileDate, version, createdAt
-    return Split(
-      id: db.id as String,
-      transactionId: db.transactionId as String,
-      accountId: db.accountId as String,
-      memo: db.memo as String?,
-      valueNum: db.valueNum as int,
-      valueDenom: db.valueDenom as int? ?? 1,
-      quantityNum: db.quantityNum as int,
-      quantityDenom: db.quantityDenom as int? ?? 1,
-      reconcileState: _parseReconcileState(db.reconcileState as String? ?? 'n'),
-      reconcileDate: db.reconcileDate != null ? DateTime.fromMillisecondsSinceEpoch(db.reconcileDate as int) : null,
-      version: db.version as int? ?? 1,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(db.createdAt as int),
+  Transaction _mapDbToTransaction(db.Transaction dbTx) {
+    return Transaction(
+      id: dbTx.id,
+      description: dbTx.description,
+      postDate: DateTime.fromMillisecondsSinceEpoch(dbTx.postDate),
+      enterDate: DateTime.fromMillisecondsSinceEpoch(dbTx.enterDate),
+      commodityId: dbTx.currencyId,
+      notes: dbTx.notes,
+      importBatchId: dbTx.importBatchId,
+      externalId: dbTx.externalId,
+      isDoubleEntry: dbTx.isDoubleEntry ?? false,
+      version: dbTx.version,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(dbTx.createdAt),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(dbTx.updatedAt),
+      deletedAt: dbTx.deletedAt != null ? DateTime.fromMillisecondsSinceEpoch(dbTx.deletedAt!.millisecondsSinceEpoch) : null,
     );
+  }
+
+  Split _mapDbToSplit(db.Split dbSplit) {
+    return Split(
+      id: dbSplit.id,
+      transactionId: dbSplit.transactionId,
+      accountId: dbSplit.accountId,
+      memo: dbSplit.memo,
+      valueNum: dbSplit.valueNum,
+      valueDenom: dbSplit.valueDenom,
+      quantityNum: dbSplit.quantityNum,
+      quantityDenom: dbSplit.quantityDenom,
+      reconcileState: _parseReconcileState(dbSplit.reconcileState ?? 'n'),
+      reconcileDate: dbSplit.reconcileDate != null ? DateTime.fromMillisecondsSinceEpoch(dbSplit.reconcileDate!.millisecondsSinceEpoch) : null,
+      version: dbSplit.version,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(dbSplit.createdAt),
+    );
+  }
+
+  AccountType _stringToAccountType(String type) {
+    switch (type) {
+      case 'ASSET':
+        return AccountType.asset;
+      case 'LIABILITY':
+        return AccountType.liability;
+      case 'EQUITY':
+        return AccountType.equity;
+      case 'INCOME':
+        return AccountType.income;
+      case 'EXPENSE':
+        return AccountType.expense;
+      default:
+        return AccountType.asset;
+    }
   }
 
   ReconcileState _parseReconcileState(String code) {

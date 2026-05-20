@@ -14,10 +14,10 @@ class AmountParser {
 
   /// Chinese large number units.
   static const _largeUnits = {
-    '万': 10000,
-    '萬': 10000,
-    '亿': 100000000,
-    '億': 100000000,
+    '万': 10000.0,
+    '萬': 10000.0,
+    '亿': 100000000.0,
+    '億': 100000000.0,
   };
 
   /// Parse an amount string to double.
