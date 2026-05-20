@@ -484,20 +484,12 @@ class _BatchDetailSheetState extends ConsumerState<_BatchDetailSheet> {
                         final tx = transactions[index];
                         return ListTile(
                           leading: const Icon(Icons.receipt_long),
-                          title: Text(tx.description),
+                          title: Text(tx.description ?? '无描述'),
                           subtitle: Text(
                             dateFormat.format(
                                 DateTime.fromMillisecondsSinceEpoch(tx.postDate)),
                           ),
-                          trailing: Text(
-                            currencyFormat.format(
-                                tx.valueNum.toDouble() / tx.valueDenom.toDouble()),
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: tx.valueNum >= 0
-                                      ? AppTheme.incomeColor
-                                      : AppTheme.expenseColor,
-                                ),
-                          ),
+                          trailing: const Icon(Icons.chevron_right),
                         );
                       },
                     );

@@ -121,7 +121,32 @@ class EncodingDetector {
   }
 
   /// GBK codec using gbk_codec package.
-  static Codec<String, List<int>> get gbkCodec => gbk;
+  /// Returns a Codec wrapper around the gbk codec.
+  static Codec<String, List<int>> get gbkCodec => _GbkCodec();
+
+class _GbkCodec extends Codec<String, List<int>> {
+  const _GbkCodec();
+
+  @override
+  Converter<List<int>, String> get decoder => _GbkDecoder();
+
+  @override
+  Converter<String, List<int>> get encoder => _GbkEncoder();
+}
+
+class _GbkDecoder extends Converter<List<int>, String> {
+  const _GbkDecoder();
+
+  @override
+  String convert(List<int> input) => gbk.decode(input);
+}
+
+class _GbkEncoder extends Converter<String, List<int>> {
+  const _GbkEncoder();
+
+  @override
+  List<int> convert(String input) => gbk.encode(input);
+}
 
   /// UTF-16 LE codec.
   static Codec<String, List<int>> get utf16leCodec => const Utf16LeCodec();

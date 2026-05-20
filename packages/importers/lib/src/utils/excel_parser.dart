@@ -167,45 +167,25 @@ class ExcelParser {
       return '';
     }
 
-    // Handle different cell types
-    switch (cell.type) {
-      case CellType.text:
-      case CellType.string:
-        return value.toString().trim();
-
-      case CellType.num:
-        // Handle numbers (avoid scientific notation for large numbers)
-        final numValue = value;
-        if (numValue is double) {
-          // Check if it's actually an integer
-          if (numValue == numValue.toInt()) {
-            return numValue.toInt().toString();
-          }
-          // Format with reasonable precision
-          return numValue.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '');
-        }
-        return numValue.toString();
-
-      case CellType.date:
-        // Handle dates
-        if (value is DateTime) {
-          return _formatDateTime(value);
-        }
-        return value.toString();
-
-      case CellType.bool:
-        return value.toString();
-
-      case CellType.formula:
-        // For formula cells, get the calculated value
-        return value.toString().trim();
-
-      case CellType.empty:
-        return '';
-
-      default:
-        return value.toString().trim();
+    // Handle different value types
+    if (value is String) {
+      return value.trim();
+    } else if (value is double) {
+      // Check if it's actually an integer
+      if (value == value.toInt()) {
+        return value.toInt().toString();
+      }
+      // Format with reasonable precision
+      return value.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '');
+    } else if (value is int) {
+      return value.toString();
+    } else if (value is DateTime) {
+      return _formatDateTime(value);
+    } else if (value is bool) {
+      return value.toString();
     }
+
+    return value.toString().trim();
   }
 
   /// Format DateTime to string.

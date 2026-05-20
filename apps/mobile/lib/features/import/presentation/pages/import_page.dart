@@ -2,7 +2,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:importers/importers.dart';
+import 'package:go_router/go_router.dart';
+import 'package:importers/importers.dart' hide FileType;
 import 'package:database/database.dart' hide Transaction, Split, Account, ImportBatch;
 import 'package:core/core.dart' show ImportBatchStatus;
 

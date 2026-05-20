@@ -61,9 +61,8 @@ class _FieldMappingDialogState extends State<FieldMappingDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        maxWidth: 800,
         constraints: BoxConstraints(
+          maxWidth: 800,
           maxHeight: MediaQuery.of(context).size.height * 0.85,
         ),
         child: Column(
