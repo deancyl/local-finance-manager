@@ -411,8 +411,7 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
       query.where(conditions.reduce((a, b) => a & b));
     }
 
-    // Add distinct count
-    query.distinct();
+    // Add count column - use countDistinct for accurate count with joins
     query.addColumns([transactions.id.count()]);
 
     final result = await query.getSingle();
