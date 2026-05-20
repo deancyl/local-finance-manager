@@ -4,29 +4,33 @@ import 'package:intl/intl.dart';
 
 import 'package:database/database.dart';
 import '../../data/transaction_provider.dart';
+import '../../data/transaction_filter.dart';
 import '../widgets/transaction_card.dart';
 import '../widgets/add_transaction_dialog.dart';
+import '../widgets/transaction_filter_dialog.dart';
 
 class TransactionsPage extends ConsumerWidget {
   const TransactionsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final transactionsAsync = ref.watch(transactionsProvider);
+    final transactionsAsync = ref.watch(filteredTransactionsWithSplitsProvider);
+    final filter = ref.watch(transactionFilterProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('交易记录'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {},
-          ),
+          _buildFilterButton(context, ref, filter),
         ],
       ),
       body: transactionsAsync.when(
-        data: (transactions) {
+        data: (transactionsWithSplits) {
+          final transactions = transactionsWithSplits.map((t) => t.$1).toList();
           if (transactions.isEmpty) {
+            if (filter.isNotEmpty) {
+              return _buildNoResultsState(context, ref);
+            }
             return _buildEmptyState(context);
           }
           return _buildTransactionList(context, ref, transactions);
@@ -39,6 +43,30 @@ class TransactionsPage extends ConsumerWidget {
         icon: const Icon(Icons.add),
         label: const Text('记一笔'),
       ),
+    );
+  }
+
+  Widget _buildFilterButton(BuildContext context, WidgetRef ref, TransactionFilter filter) {
+    return Stack(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.filter_list),
+          onPressed: () => _showFilterDialog(context),
+        ),
+        if (filter.isNotEmpty)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -68,6 +96,50 @@ class TransactionsPage extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildNoResultsState(BuildContext context, WidgetRef ref) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 64,
+            color: Theme.of(context).colorScheme.outline,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '未找到符合条件的交易',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '尝试调整筛选条件',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.tonal(
+            onPressed: () {
+              ref.read(transactionFilterProvider.notifier).state = const TransactionFilter();
+            },
+            child: const Text('清除筛选'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFilterDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => const TransactionFilterDialog(),
     );
   }
 

@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.9] - 2026-05-20
+
+### Added
+- **Transaction Search/Filter**: Full search and filter functionality for transactions
+  - Search by description and notes (text search)
+  - Filter by date range (start/end date pickers)
+  - Filter by category (dropdown with "全部" option)
+  - Filter by account (dropdown with "全部" option)
+  - Filter by amount range (min/max absolute value)
+  - Combined filters (all filters can be applied together)
+  - Clear filters button
+  - Filter indicator badge on filter button when filters active
+  - Empty state for no results with clear filters option
+
+### Changed
+- **TransactionsPage enhanced**: Connected filter button to filter dialog
+  - Uses filteredTransactionsWithSplitsProvider for filtered results
+  - Shows badge indicator when filters are active
+  - Displays "未找到符合条件的交易" when filters return no results
+
+### Technical Details
+- `apps/mobile/lib/features/transactions/data/transaction_filter.dart` - Immutable filter state class with copyWith
+- `apps/mobile/lib/features/transactions/data/transaction_provider.dart` - Filter providers (transactionFilterProvider, filteredTransactionsProvider, filteredTransactionsWithSplitsProvider)
+- `apps/mobile/lib/features/transactions/presentation/widgets/transaction_filter_dialog.dart` - Filter UI with all filter options
+- `apps/mobile/lib/features/transactions/presentation/pages/transactions_page.dart` - Filter integration
+
 ## [v0.3.8] - 2026-05-20
 
 ### Added
