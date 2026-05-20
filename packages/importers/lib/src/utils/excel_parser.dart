@@ -167,25 +167,26 @@ class ExcelParser {
       return '';
     }
 
-    // Handle different value types
-    if (value is String) {
-      return value.trim();
-    } else if (value is double) {
+    // CellValue is abstract, convert to string and handle
+    final strValue = value.toString();
+    
+    // Handle different value types based on string representation
+    if (strValue.isEmpty) {
+      return '';
+    }
+    
+    // Check if it looks like a double
+    if (strValue.contains('.') && double.tryParse(strValue) != null) {
+      final d = double.parse(strValue);
       // Check if it's actually an integer
-      if (value == value.toInt()) {
-        return value.toInt().toString();
+      if (d == d.toInt()) {
+        return d.toInt().toString();
       }
       // Format with reasonable precision
-      return value.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '');
-    } else if (value is int) {
-      return value.toString();
-    } else if (value is DateTime) {
-      return _formatDateTime(value);
-    } else if (value is bool) {
-      return value.toString();
+      return d.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '');
     }
-
-    return value.toString().trim();
+    
+    return strValue.trim();
   }
 
   /// Format DateTime to string.

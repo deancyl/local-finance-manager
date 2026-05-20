@@ -52,29 +52,28 @@ class EncodingDetector {
           return const Utf8Codec().decode(bytes);
         case gbk:
         case gb2312:
-          return gbkCodec.decode(bytes);
+          return gbk.decode(bytes);
         case utf16:
         case utf16le:
-          return utf16leCodec.decode(bytes);
+          return _decodeUtf16Le(bytes);
         case utf16be:
-          return utf16beCodec.decode(bytes);
+          return _decodeUtf16Be(bytes);
         default:
           // Try UTF-8 first, then GBK
           try {
             return const Utf8Codec().decode(bytes);
           } catch (_) {
-            return gbkCodec.decode(bytes);
+            return gbk.decode(bytes);
           }
       }
     } catch (e) {
       // Fallback: try all encodings
-      for (final codec in [const Utf8Codec(), gbkCodec, latin1]) {
-        try {
-          return codec.decode(bytes);
-        } catch (_) {
-          continue;
-        }
-      }
+      try {
+        return const Utf8Codec().decode(bytes);
+      } catch (_) {}
+      try {
+        return gbk.decode(bytes);
+      } catch (_) {}
       // Last resort: decode as Latin-1 (always succeeds)
       return latin1.decode(bytes);
     }
@@ -120,58 +119,8 @@ class EncodingDetector {
     return gbkPatternCount > bytes.length * 0.1;
   }
 
-  /// GBK codec using gbk_codec package.
-  /// Returns a Codec wrapper around the gbk codec.
-  static Codec<String, List<int>> get gbkCodec => _GbkCodec();
-
-class _GbkCodec extends Codec<String, List<int>> {
-  const _GbkCodec();
-
-  @override
-  Converter<List<int>, String> get decoder => _GbkDecoder();
-
-  @override
-  Converter<String, List<int>> get encoder => _GbkEncoder();
-}
-
-class _GbkDecoder extends Converter<List<int>, String> {
-  const _GbkDecoder();
-
-  @override
-  String convert(List<int> input) => gbk.decode(input);
-}
-
-class _GbkEncoder extends Converter<String, List<int>> {
-  const _GbkEncoder();
-
-  @override
-  List<int> convert(String input) => gbk.encode(input);
-}
-
-  /// UTF-16 LE codec.
-  static Codec<String, List<int>> get utf16leCodec => const Utf16LeCodec();
-
-  /// UTF-16 BE codec.
-  static Codec<String, List<int>> get utf16beCodec => const Utf16BeCodec();
-}
-
-/// UTF-16 LE codec.
-class Utf16LeCodec extends Codec<String, List<int>> {
-  const Utf16LeCodec();
-
-  @override
-  Converter<List<int>, String> get decoder => const _Utf16LeDecoder();
-
-  @override
-  Converter<String, List<int>> get encoder =>
-      throw UnimplementedError('UTF-16 LE encoding not implemented');
-}
-
-class _Utf16LeDecoder extends Converter<List<int>, String> {
-  const _Utf16LeDecoder();
-
-  @override
-  String convert(List<int> input) {
+  /// Decode UTF-16 LE.
+  static String _decodeUtf16Le(List<int> input) {
     // Skip BOM if present
     var start = 0;
     if (input.length >= 2 && input[0] == 0xFF && input[1] == 0xFE) {
@@ -186,25 +135,9 @@ class _Utf16LeDecoder extends Converter<List<int>, String> {
 
     return String.fromCharCodes(codeUnits);
   }
-}
 
-/// UTF-16 BE codec.
-class Utf16BeCodec extends Codec<String, List<int>> {
-  const Utf16BeCodec();
-
-  @override
-  Converter<List<int>, String> get decoder => const _Utf16BeDecoder();
-
-  @override
-  Converter<String, List<int>> get encoder =>
-      throw UnimplementedError('UTF-16 BE encoding not implemented');
-}
-
-class _Utf16BeDecoder extends Converter<List<int>, String> {
-  const _Utf16BeDecoder();
-
-  @override
-  String convert(List<int> input) {
+  /// Decode UTF-16 BE.
+  static String _decodeUtf16Be(List<int> input) {
     // Skip BOM if present
     var start = 0;
     if (input.length >= 2 && input[0] == 0xFE && input[1] == 0xFF) {
