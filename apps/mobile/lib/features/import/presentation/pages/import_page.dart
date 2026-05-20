@@ -2,6 +2,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:importers/importers.dart';
+import 'package:database/database.dart';
+
+import '../../providers/import_providers.dart';
 
 /// Import page for importing transactions from financial institutions.
 class ImportPage extends ConsumerStatefulWidget {
@@ -18,6 +22,11 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   List<Map<String, dynamic>> _previewRows = [];
   bool _isLoading = false;
   String? _error;
+  
+  // New state for real import
+  ImporterBase? _importer;
+  ImportPreview? _importPreview;
+  String? _selectedAccountId;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +72,9 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   }
 
   Widget _buildSelectFile() {
+    final accountsAsync = ref.watch(accountsProvider);
+    final defaultAccount = ref.watch(defaultAssetAccountProvider);
+    
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -87,7 +99,38 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
+            
+            // Account selector
+            accountsAsync.when(
+              data: (accounts) {
+                if (accounts.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: '导入到账户',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.account_balance_wallet),
+                    ),
+                    value: _selectedAccountId ?? defaultAccount?.id,
+                    items: accounts.map((a) => DropdownMenuItem(
+                      value: a.id,
+                      child: Text('${a.name} (${a.accountType})'),
+                    )).toList(),
+                    onChanged: (value) {
+                      setState(() => _selectedAccountId = value);
+                    },
+                  ),
+                );
+              },
+              loading: () => const SizedBox(
+                height: 48,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+            
             FilledButton.icon(
               onPressed: _pickFile,
               icon: const Icon(Icons.folder_open),
@@ -332,18 +375,44 @@ class _ImportPageState extends ConsumerState<ImportPage> {
         _error = null;
       });
 
-      // TODO: Parse file using importers package
-      // For now, just show a placeholder
-      await Future.delayed(const Duration(seconds: 1));
+      // Use real importer registry
+      final registry = ref.read(importerRegistryProvider);
+      final importer = registry.detectImporter(
+        filename: file.name,
+        content: file.bytes!,
+      );
+
+      if (importer == null) {
+        setState(() {
+          _error = '不支持的文件格式。\n支持：支付宝、微信支付、工商银行、建设银行、中国银行的CSV文件';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Get preview from importer
+      final preview = await importer.preview(
+        content: file.bytes!,
+        maxRows: 20,
+      );
+
+      if (!preview.hasData) {
+        setState(() {
+          _error = '文件中没有可导入的数据';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Store for later import
+      _importer = importer;
+      _importPreview = preview;
 
       setState(() {
         _fileContent = file.bytes;
         _fileName = file.name;
-        _detectedSource = '支付宝'; // Placeholder
-        _previewRows = [
-          {'日期': '2026-05-19', '金额': '-35.50', '描述': '美团外卖', '分类': '餐饮'},
-          {'日期': '2026-05-18', '金额': '+5000.00', '描述': '工资', '分类': '收入'},
-        ]; // Placeholder
+        _detectedSource = importer.name;
+        _previewRows = preview.rows;
         _isLoading = false;
       });
     } catch (e) {
@@ -361,26 +430,74 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       _detectedSource = null;
       _previewRows = [];
       _error = null;
+      _importer = null;
+      _importPreview = null;
     });
   }
 
   Future<void> _importTransactions() async {
-    // TODO: Implement actual import
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('导入成功'),
-        content: Text('已成功导入 ${_previewRows.length} 条交易记录'),
-        actions: [
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text('完成'),
+    if (_importer == null || _fileContent == null) {
+      return;
+    }
+
+    // Get account ID (user selection or default)
+    final accountId = _selectedAccountId ?? 
+        ref.read(defaultAssetAccountProvider)?.id;
+    
+    if (accountId == null) {
+      setState(() {
+        _error = '请先创建一个账户';
+      });
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final notifier = ref.read(importNotifierProvider.notifier);
+      
+      final batch = await notifier.performImport(
+        importer: _importer!,
+        content: _fileContent!,
+        targetAccountId: accountId,
+        filename: _fileName ?? 'unknown.csv',
+      );
+
+      setState(() => _isLoading = false);
+
+      // Show result dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(batch.status == ImportBatchStatus.success 
+              ? '导入成功' : '导入完成'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('✓ 成功导入: ${batch.successCount} 条'),
+              if (batch.duplicateCount > 0)
+                Text('⊗ 跳过重复: ${batch.duplicateCount} 条'),
+              if (batch.errorCount > 0)
+                Text('✗ 导入失败: ${batch.errorCount} 条'),
+            ],
           ),
-        ],
-      ),
-    );
+          actions: [
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context);
+              },
+              child: const Text('完成'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _error = '导入失败: $e';
+        _isLoading = false;
+      });
+    }
   }
 }

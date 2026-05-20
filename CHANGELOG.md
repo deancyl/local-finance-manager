@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.5] - 2026-05-20
+
+### Added
+- **Import Feature Integration**: Connected import UI to existing importers package
+  - Real CSV parsing for Alipay, WeChat Pay, ICBC, CCB, BOC
+  - Automatic source detection based on file content
+  - Preview table shows actual parsed data
+  - Account selection dropdown before import
+  - Duplicate detection and silent skip
+  - Import result dialog with success/duplicate/error counts
+
+### Changed
+- **ImportPage refactored**: Replaced placeholder data with real importer integration
+  - Uses `ImporterRegistry` for source detection
+  - Calls `ImporterBase.preview()` for data preview
+  - Calls `ImporterBase.parse()` for actual import
+  - Uses `ImportTransactions` use case for database persistence
+
+### Technical Details
+- `apps/mobile/lib/features/import/data/importer_registry.dart` - Importer detection factory
+- `apps/mobile/lib/features/import/providers/import_providers.dart` - Riverpod providers for import
+- `apps/mobile/lib/features/import/presentation/pages/import_page.dart` - Connected to real importers
+
 ## [v0.3.4] - 2026-05-20
 
 ### Added
