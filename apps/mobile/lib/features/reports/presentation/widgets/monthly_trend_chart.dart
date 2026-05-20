@@ -30,8 +30,7 @@ class MonthlyTrendChart extends StatelessWidget {
             enabled: true,
             touchCallback: (event, response) {
               if (event is FlTapUpEvent && response != null && response.spot != null) {
-                final tappedBar = response.spot!.tappedBarGroup;
-                final barIndex = tappedBar.x;
+                final barIndex = response.spot!.spot.x.toInt();
                 
                 if (barIndex >= 0 && barIndex < data.length) {
                   final monthLabel = data[barIndex].monthLabel;
