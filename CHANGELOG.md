@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.4] - 2026-05-20
+
+### Added
+- **Budget Management UI**: Complete budget tracking feature with visual progress display
+  - Budget list page with spending progress bars
+  - Add/edit budget dialog with category selection
+  - Budget card showing spent vs. total amount with percentage
+  - Over-budget warning indicator (red bar + warning text)
+  - Support for MONTHLY, YEARLY, and CUSTOM budget periods
+
+### Changed
+- **BudgetsDao extended**: Added spending calculation methods
+  - `calculateSpentAmountNum()` - Query splits by categoryId + date range + EXPENSE account type
+  - `watchSpentAmountNum()` - Reactive spending updates
+  - `getProgress()` - Calculate budget usage percentage
+- **Database schema version 4**: Added performance index for budget queries
+  - Composite index on `splits(category_id, transaction_id)`
+- **BudgetPeriodCalculator utility**: Calendar-based period boundary calculation
+  - MONTHLY: 1st to last day of month
+  - YEARLY: Jan 1 to Dec 31
+  - Days remaining and total days helpers
+
+### Technical Details
+- `packages/core/lib/src/utils/budget_period_calculator.dart` - Period calculation utility
+- `packages/database/lib/src/daos/budgets_dao.dart` - Extended with spending calculations
+- `packages/database/lib/src/database.dart` - Schema v4, performance index
+- `apps/mobile/lib/features/budgets/data/budget_provider.dart` - State management
+- `apps/mobile/lib/features/budgets/presentation/widgets/budget_card.dart` - Progress card
+- `apps/mobile/lib/features/budgets/presentation/widgets/add_budget_dialog.dart` - Form dialog
+- `apps/mobile/lib/features/budgets/presentation/pages/budgets_page.dart` - List page
+
 ## [v0.3.3] - 2026-05-20
 
 ### Added

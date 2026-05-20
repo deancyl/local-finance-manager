@@ -40,7 +40,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final ImportSourcesDao importSourcesDao = ImportSourcesDao(this);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -53,6 +53,12 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
         
         // Insert default categories
         await _insertDefaultCategories();
+        
+        // Performance: Composite index for budget queries
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_splits_category_date '
+          'ON splits(category_id, transaction_id)',
+        );
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
@@ -70,6 +76,13 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
         if (from < 3) {
           // Add categoryId to Splits table for category-based reporting
           await m.addColumn(splits, splits.categoryId);
+        }
+        if (from < 4) {
+          // Performance: Composite index for budget queries
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_splits_category_date '
+            'ON splits(category_id, transaction_id)',
+          );
         }
       },
     );
