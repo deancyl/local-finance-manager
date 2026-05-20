@@ -48,19 +48,14 @@ class SettingsPage extends StatelessWidget {
             title: const Text('数据备份'),
             subtitle: const Text('导出、导入数据'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Implement backup settings
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('数据备份功能开发中')),
-              );
-            },
+            onTap: () => context.push('/settings/backup'),
           ),
           const Divider(),
           // About
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('关于'),
-            subtitle: const Text('版本 0.3.11'),
+            subtitle: const Text('版本 0.3.12'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/about'),
           ),

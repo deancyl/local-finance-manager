@@ -39,13 +39,15 @@ class AboutPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          // Version
+// Version
           Center(
             child: Text(
-              '版本 0.3.11',
+              '版本 0.3.12',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
+            ),
+          ),
             ),
           ),
           const SizedBox(height: 32),
@@ -100,10 +102,10 @@ class AboutPage extends StatelessWidget {
             title: const Text('开源许可'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              showLicensePage(
+showLicensePage(
                 context: context,
                 applicationName: '本地金融管家',
-                applicationVersion: '0.3.11',
+                applicationVersion: '0.3.12',
               );
             },
           ),
