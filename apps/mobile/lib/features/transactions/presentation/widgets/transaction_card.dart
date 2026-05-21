@@ -62,6 +62,17 @@ class TransactionCard extends ConsumerWidget {
                                 fontWeight: FontWeight.w600,
                               ),
                         ),
+                        if (transaction.notes != null && transaction.notes!.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            transaction.notes!,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                         const SizedBox(height: 4),
                         Text(
                           DateFormat('HH:mm').format(
