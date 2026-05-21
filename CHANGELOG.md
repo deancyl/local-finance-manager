@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.18] - 2026-05-21
+
+### Added
+- **Budget Management UI**: Complete budget tracking interface
+  - Budget list page with progress indicators
+  - Add/Edit/Delete budget dialogs
+  - Category-based budget filtering
+  - Period selector (monthly, yearly, custom)
+  - Progress bar with color coding (green/yellow/red)
+  - Spent vs. budget amount display
+  - Over-budget warnings
+
+### Technical Details
+- `apps/mobile/lib/features/budgets/data/budget_provider.dart` - Riverpod providers with spending calculation
+- `apps/mobile/lib/features/budgets/presentation/pages/budgets_page.dart` - Budget list UI
+- `apps/mobile/lib/features/budgets/presentation/widgets/budget_card.dart` - Progress card widget
+- `apps/mobile/lib/features/budgets/presentation/widgets/add_budget_dialog.dart` - Budget form dialog
+- Uses existing BudgetsDao for CRUD and progress calculation
+
 ## [v0.3.17] - 2026-05-21
 
 ### Added

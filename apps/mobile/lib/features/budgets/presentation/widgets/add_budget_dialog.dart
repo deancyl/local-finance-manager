@@ -191,15 +191,15 @@ class _AddBudgetDialogState extends ConsumerState<AddBudgetDialog> {
           startDate: now,
         );
       } else {
-        await notifier.updateBudget(
-          widget.budget!.copyWith(
-            name: _nameController.text,
-            categoryId: drift.Value(_selectedCategoryId),
-            amountNum: amountNum,
-            amountDenom: 100,
-            period: _selectedPeriod,
-          ),
+        // Update budget using BudgetNotifier
+        final updatedBudget = widget.budget!.copyWith(
+          name: _nameController.text,
+          categoryId: drift.Value(_selectedCategoryId),
+          amountNum: amountNum,
+          amountDenom: 100,
+          period: _selectedPeriod,
         );
+        await notifier.updateBudget(updatedBudget);
       }
 
       if (mounted) {
