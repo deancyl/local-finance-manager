@@ -25,6 +25,7 @@ import '../../features/tags/presentation/pages/tags_page.dart';
 import '../../features/recurring/presentation/pages/recurring_page.dart';
 import '../../features/attachments/presentation/pages/attachments_page.dart';
 import '../../features/reconciliation/presentation/pages/reconciliation_page.dart';
+import '../../features/closing/presentation/pages/period_closing_page.dart';
 // Sync temporarily disabled - PowerSync compatibility issues
 // import '../../features/sync/presentation/pages/sync_settings_page.dart';
 // import '../../features/sync/presentation/pages/sync_login_page.dart';
@@ -100,6 +101,11 @@ class AppRouter {
             path: '/reconciliation',
             name: 'reconciliation',
             builder: (context, state) => const ReconciliationPage(),
+          ),
+          GoRoute(
+            path: '/closing',
+            name: 'closing',
+            builder: (context, state) => const PeriodClosingPage(),
           ),
           GoRoute(
             path: '/settings',

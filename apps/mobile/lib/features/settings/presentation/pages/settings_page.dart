@@ -78,11 +78,20 @@ class SettingsPage extends StatelessWidget {
             onTap: () => context.push('/import/history'),
           ),
           const Divider(),
+          // Period Closing
+          ListTile(
+            leading: const Icon(Icons.lock),
+            title: const Text('期间结账'),
+            subtitle: const Text('管理会计期间结账'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/closing'),
+          ),
+          const Divider(),
           // About
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('关于'),
-            subtitle: const Text('版本 0.3.21'),
+            subtitle: const Text('版本 0.3.43'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/about'),
           ),
