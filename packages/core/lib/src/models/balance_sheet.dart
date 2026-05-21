@@ -29,7 +29,7 @@ class BalanceSheetItem extends Equatable {
   });
 
   /// Converts the balance amount to a Decimal.
-  Decimal get toDecimal => Decimal.fromInt(balanceNum) / Decimal.fromInt(denom);
+  Decimal get toDecimal => (Decimal.fromInt(balanceNum) / Decimal.fromInt(denom)).toDecimal();
 
   /// Returns true if this account has a debit balance.
   bool get isDebitBalance => balanceNum > 0;
@@ -48,13 +48,13 @@ class BalanceSheetItem extends Equatable {
 
   /// Creates a copy of this balance sheet item with the given fields replaced.
   BalanceSheetItem copyWith({
-    int? accountId,
+    String? accountId,
     String? accountName,
     AccountType? accountType,
     LiquidityType? liquidityType,
     int? balanceNum,
     int? denom,
-    int? parentId,
+    String? parentId,
     List<BalanceSheetItem>? children,
   }) {
     return BalanceSheetItem(
@@ -99,7 +99,7 @@ class BalanceSheetSection extends Equatable {
   });
 
   /// Converts the total amount to a Decimal.
-  Decimal get totalDecimal => Decimal.fromInt(totalNum) / Decimal.fromInt(denom);
+  Decimal get totalDecimal => (Decimal.fromInt(totalNum) / Decimal.fromInt(denom)).toDecimal();
 
   /// Returns the absolute total as Decimal.
   Decimal get absoluteTotal => totalDecimal.abs();

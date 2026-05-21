@@ -35,10 +35,10 @@ class AccountBalance extends Equatable {
   });
 
   /// Converts the debit amount to a Decimal.
-  Decimal get debitDecimal => Decimal.fromInt(debitNum) / Decimal.fromInt(denom);
+  Decimal get debitDecimal => (Decimal.fromInt(debitNum) / Decimal.fromInt(denom)).toDecimal();
 
   /// Converts the credit amount to a Decimal.
-  Decimal get creditDecimal => Decimal.fromInt(creditNum) / Decimal.fromInt(denom);
+  Decimal get creditDecimal => (Decimal.fromInt(creditNum) / Decimal.fromInt(denom)).toDecimal();
 
   /// Returns true if this account has a debit balance.
   bool get isDebitBalance => debitNum > creditNum;
@@ -60,13 +60,13 @@ class AccountBalance extends Equatable {
 
   /// Creates a copy of this account balance with the given fields replaced.
   AccountBalance copyWith({
-    int? accountId,
+    String? accountId,
     String? accountName,
     AccountType? accountType,
     int? debitNum,
     int? creditNum,
     int? denom,
-    int? parentId,
+    String? parentId,
     List<AccountBalance>? children,
   }) {
     return AccountBalance(
@@ -122,11 +122,11 @@ class TrialBalance extends Equatable {
 
   /// Converts the total debits to a Decimal.
   Decimal get totalDebitsDecimal =>
-      Decimal.fromInt(totalDebits) / Decimal.fromInt(commonDenom);
+      (Decimal.fromInt(totalDebits) / Decimal.fromInt(commonDenom)).toDecimal();
 
   /// Converts the total credits to a Decimal.
   Decimal get totalCreditsDecimal =>
-      Decimal.fromInt(totalCredits) / Decimal.fromInt(commonDenom);
+      (Decimal.fromInt(totalCredits) / Decimal.fromInt(commonDenom)).toDecimal();
 
   /// Returns the difference between debits and credits.
   Decimal get difference {

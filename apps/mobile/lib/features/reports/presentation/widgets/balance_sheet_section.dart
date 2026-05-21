@@ -28,7 +28,7 @@ class BalanceSheetSectionWidget extends StatefulWidget {
 
 class _BalanceSheetSectionWidgetState extends State<BalanceSheetSectionWidget> {
   late bool _isExpanded;
-  final Map<int, bool> _expandedItems = {};
+  final Map<String, bool> _expandedItems = {};
 
   @override
   void initState() {

@@ -25,7 +25,7 @@ class AccountTypeSection extends StatefulWidget {
 
 class _AccountTypeSectionState extends State<AccountTypeSection> {
   late bool _isExpanded;
-  final Map<int, bool> _expandedAccounts = {};
+  final Map<String, bool> _expandedAccounts = {};
 
   @override
   void initState() {

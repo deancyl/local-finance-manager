@@ -271,7 +271,7 @@ class BalanceSheetCalculator {
     }
 
     return BalanceSheetItem(
-      accountId: -1, // Special ID for calculated item
+      accountId: 'retained_earnings', // Special ID for calculated item
       accountName: '本期利润',
       accountType: AccountType.equity,
       liquidityType: LiquidityType.current,
@@ -332,13 +332,13 @@ class BalanceSheetCalculator {
     }
 
     return BalanceSheetItem(
-      accountId: account.id.hashCode, // Use hash code for int ID
+      accountId: account.id,
       accountName: account.name,
       accountType: account.accountType,
       liquidityType: account.liquidityType,
       balanceNum: balanceNum,
       denom: denom,
-      parentId: account.parentId?.hashCode,
+      parentId: account.parentId,
       children: childItems.isEmpty ? null : childItems,
     );
   }
