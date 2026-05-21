@@ -15,6 +15,17 @@ enum AccountType {
   const AccountType(this.code, this.labelZh);
 }
 
+/// Liquidity type enumeration for balance sheet grouping.
+enum LiquidityType {
+  current('current', '流动'),
+  nonCurrent('non_current', '非流动');
+
+  final String code;
+  final String labelZh;
+
+  const LiquidityType(this.code, this.labelZh);
+}
+
 /// Account model representing a financial account in the chart of accounts.
 ///
 /// Supports hierarchical structure via [parentId] for organizing accounts
@@ -33,6 +44,7 @@ class Account extends Equatable {
   final DateTime createdAt;
   final DateTime updatedAt;
   final int version;
+  final LiquidityType liquidityType;
 
   Account({
     String? id,
@@ -48,6 +60,7 @@ class Account extends Equatable {
     DateTime? createdAt,
     DateTime? updatedAt,
     this.version = 1,
+    this.liquidityType = LiquidityType.current,
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
@@ -67,6 +80,7 @@ class Account extends Equatable {
     DateTime? createdAt,
     DateTime? updatedAt,
     int? version,
+    LiquidityType? liquidityType,
   }) {
     return Account(
       id: id ?? this.id,
@@ -82,6 +96,7 @@ class Account extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       version: version ?? this.version,
+      liquidityType: liquidityType ?? this.liquidityType,
     );
   }
 
@@ -101,6 +116,7 @@ class Account extends Equatable {
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
       'version': version,
+      'liquidity_type': liquidityType.code,
     };
   }
 
@@ -123,6 +139,10 @@ class Account extends Equatable {
       createdAt: DateTime.fromMillisecondsSinceEpoch(json['created_at'] as int),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(json['updated_at'] as int),
       version: json['version'] as int? ?? 1,
+      liquidityType: LiquidityType.values.firstWhere(
+        (e) => e.code == json['liquidity_type'],
+        orElse: () => LiquidityType.current,
+      ),
     );
   }
 
@@ -141,5 +161,6 @@ class Account extends Equatable {
         createdAt,
         updatedAt,
         version,
+        liquidityType,
       ];
 }

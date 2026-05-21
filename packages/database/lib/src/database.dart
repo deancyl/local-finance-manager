@@ -55,7 +55,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final SplitsDao splitsDao = SplitsDao(this);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -216,6 +216,10 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             'CREATE INDEX IF NOT EXISTS idx_import_batches_date '
             'ON import_batches(imported_at)',
           );
+        }
+        if (from < 7) {
+          // Version 7: Add liquidity_type column to accounts for balance sheet grouping
+          await m.addColumn(accounts, accounts.liquidityType);
         }
       },
     );

@@ -28,6 +28,11 @@ class ReportsPage extends ConsumerWidget {
             onPressed: () => context.push('/reports/trial-balance'),
             tooltip: '试算平衡表',
           ),
+          IconButton(
+            icon: const Icon(Icons.balance),
+            onPressed: () => context.push('/reports/balance-sheet'),
+            tooltip: '资产负债表',
+          ),
         ],
       ),
       body: splitsWithTransactionsAsync.when(

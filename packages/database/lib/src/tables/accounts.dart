@@ -16,6 +16,7 @@ class Accounts extends Table {
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
   IntColumn get version => integer().withDefault(const Constant(1))();
+  TextColumn get liquidityType => text().nullable().withDefault(const Constant('current'))();
 
   @override
   Set<Column> get primaryKey => {id};

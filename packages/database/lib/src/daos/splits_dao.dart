@@ -123,6 +123,75 @@ class SplitsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$SplitsDaoM
       valueDenom: 1,
     );
   }
+
+  /// Gets account balances as of a specific date (for balance sheet).
+  /// Returns raw balance data (numerator and denominator) to avoid floating point.
+  /// Filters out deleted transactions.
+  Future<List<AccountBalanceRaw>> getAccountBalancesAsOfDate(DateTime asOfDate) async {
+    final asOfDateMs = asOfDate.millisecondsSinceEpoch;
+
+    final query = selectOnly(splits)
+      ..join([
+        innerJoin(accounts, accounts.id.equalsExp(splits.accountId)),
+        innerJoin(transactions, transactions.id.equalsExp(splits.transactionId)),
+      ])
+      ..where(transactions.deletedAt.isNull() & transactions.postDate.isSmallerOrEqualValue(asOfDateMs));
+
+    // Add columns for grouping and aggregation
+    query.addColumns([
+      accounts.id,
+      accounts.name,
+      accounts.accountType,
+      splits.valueNum.sum(),
+      splits.valueDenom,
+    ]);
+
+    // Group by account
+    query.groupBy([accounts.id, accounts.name, accounts.accountType, splits.valueDenom]);
+
+    final results = await query.get();
+
+    return results.map((row) {
+      return AccountBalanceRaw(
+        accountId: row.read(accounts.id)!,
+        accountName: row.read(accounts.name)!,
+        accountType: row.read(accounts.accountType)!,
+        totalNum: row.read(splits.valueNum.sum()) ?? 0,
+        valueDenom: row.read(splits.valueDenom) ?? 1,
+      );
+    }).toList();
+  }
+
+  /// Gets account balances grouped by liquidity type (for balance sheet).
+  /// Returns a map of liquidity type to list of account balances.
+  /// Filters out deleted transactions.
+  Future<Map<LiquidityType, List<AccountBalanceRaw>>> getBalancesByLiquidity(DateTime asOfDate) async {
+    final balances = await getAccountBalancesAsOfDate(asOfDate);
+
+    // Get liquidity type for each account
+    final Map<LiquidityType, List<AccountBalanceRaw>> result = {
+      LiquidityType.current: [],
+      LiquidityType.fixed: [],
+    };
+
+    // Query account liquidity types
+    final accountQuery = select(accounts)..where((tbl) => accounts.id.isIn(balances.map((b) => b.accountId)));
+    final accountResults = await accountQuery.get();
+
+    final liquidityMap = <String, String?>{};
+    for (final account in accountResults) {
+      liquidityMap[account.id] = account.liquidityType;
+    }
+
+    // Group balances by liquidity type
+    for (final balance in balances) {
+      final liquidityStr = liquidityMap[balance.accountId] ?? 'current';
+      final liquidity = LiquidityType.fromString(liquidityStr);
+      result[liquidity]!.add(balance);
+    }
+
+    return result;
+  }
 }
 
 /// Raw account balance data with integer values to avoid floating point.
@@ -165,4 +234,22 @@ class BalanceTotals {
 
   /// Checks if debits equal credits (balanced).
   bool get isBalanced => totalDebitsNum == totalCreditsNum;
+}
+
+/// Liquidity type for balance sheet classification.
+enum LiquidityType {
+  current,
+  fixed;
+
+  /// Parses a string to LiquidityType.
+  static LiquidityType fromString(String value) {
+    switch (value.toLowerCase()) {
+      case 'current':
+        return LiquidityType.current;
+      case 'fixed':
+        return LiquidityType.fixed;
+      default:
+        return LiquidityType.current;
+    }
+  }
 }
