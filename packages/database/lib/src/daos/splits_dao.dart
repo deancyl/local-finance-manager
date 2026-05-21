@@ -192,6 +192,111 @@ class SplitsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$SplitsDaoM
 
     return result;
   }
+
+  /// Gets splits with transaction info for general ledger report.
+  /// Returns splits for a specific account with transaction details.
+  /// Filters out deleted transactions.
+  Future<List<GeneralLedgerSplitData>> getSplitsWithTransactionInfo(
+    String accountId, {
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final query = selectOnly(splits)
+      ..join([
+        innerJoin(transactions, transactions.id.equalsExp(splits.transactionId)),
+      ])
+      ..where(splits.accountId.equals(accountId) & transactions.deletedAt.isNull());
+
+    // Apply date range filter
+    if (startDate != null) {
+      final startMs = startDate.millisecondsSinceEpoch;
+      query.where(transactions.postDate.isBiggerOrEqualValue(startMs));
+    }
+    if (endDate != null) {
+      final endMs = endDate.millisecondsSinceEpoch;
+      query.where(transactions.postDate.isSmallerOrEqualValue(endMs));
+    }
+
+    // Add columns
+    query.addColumns([
+      splits.id,
+      splits.transactionId,
+      splits.accountId,
+      transactions.postDate,
+      transactions.description,
+      transactions.referenceNum,
+      splits.memo,
+      splits.valueNum,
+      splits.valueDenom,
+    ]);
+
+    // Order by date ascending for running balance calculation
+    query.orderBy([OrderingTerm.asc(transactions.postDate)]);
+
+    final results = await query.get();
+
+    return results.map((row) {
+      return GeneralLedgerSplitData(
+        splitId: row.read(splits.id)!,
+        transactionId: row.read(splits.transactionId)!,
+        accountId: row.read(splits.accountId)!,
+        postDate: row.read(transactions.postDate)!,
+        description: row.read(transactions.description),
+        reference: row.read(transactions.referenceNum),
+        memo: row.read(splits.memo),
+        valueNum: row.read(splits.valueNum)!,
+        valueDenom: row.read(splits.valueDenom) ?? 1,
+      );
+    }).toList();
+  }
+
+  /// Gets all splits with transaction info before a specific date.
+  /// Used for calculating opening balance.
+  Future<List<GeneralLedgerSplitData>> getSplitsWithTransactionInfoBeforeDate(
+    String accountId,
+    DateTime beforeDate,
+  ) async {
+    final beforeMs = beforeDate.millisecondsSinceEpoch;
+
+    final query = selectOnly(splits)
+      ..join([
+        innerJoin(transactions, transactions.id.equalsExp(splits.transactionId)),
+      ])
+      ..where(
+        splits.accountId.equals(accountId) &
+        transactions.deletedAt.isNull() &
+        transactions.postDate.isSmallerThanValue(beforeMs),
+      );
+
+    // Add columns
+    query.addColumns([
+      splits.id,
+      splits.transactionId,
+      splits.accountId,
+      transactions.postDate,
+      transactions.description,
+      transactions.referenceNum,
+      splits.memo,
+      splits.valueNum,
+      splits.valueDenom,
+    ]);
+
+    final results = await query.get();
+
+    return results.map((row) {
+      return GeneralLedgerSplitData(
+        splitId: row.read(splits.id)!,
+        transactionId: row.read(splits.transactionId)!,
+        accountId: row.read(splits.accountId)!,
+        postDate: row.read(transactions.postDate)!,
+        description: row.read(transactions.description),
+        reference: row.read(transactions.referenceNum),
+        memo: row.read(splits.memo),
+        valueNum: row.read(splits.valueNum)!,
+        valueDenom: row.read(splits.valueDenom) ?? 1,
+      );
+    }).toList();
+  }
 }
 
 /// Raw account balance data with integer values to avoid floating point.
@@ -252,4 +357,35 @@ enum LiquidityType {
         return LiquidityType.current;
     }
   }
+}
+
+/// Split data with transaction info for general ledger report.
+class GeneralLedgerSplitData {
+  final String splitId;
+  final String transactionId;
+  final String accountId;
+  final int postDate;
+  final String? description;
+  final String? reference;
+  final String? memo;
+  final int valueNum;
+  final int valueDenom;
+
+  GeneralLedgerSplitData({
+    required this.splitId,
+    required this.transactionId,
+    required this.accountId,
+    required this.postDate,
+    this.description,
+    this.reference,
+    this.memo,
+    required this.valueNum,
+    required this.valueDenom,
+  });
+
+  /// Returns the date as DateTime.
+  DateTime get date => DateTime.fromMillisecondsSinceEpoch(postDate);
+
+  /// Returns the value as a decimal (for display purposes).
+  double get value => valueNum / valueDenom.toDouble();
 }

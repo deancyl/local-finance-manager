@@ -38,6 +38,11 @@ class ReportsPage extends ConsumerWidget {
             onPressed: () => context.push('/reports/income-statement'),
             tooltip: '利润表',
           ),
+          IconButton(
+            icon: const Icon(Icons.receipt_long),
+            onPressed: () => context.push('/reports/general-ledger'),
+            tooltip: '总账',
+          ),
         ],
       ),
       body: splitsWithTransactionsAsync.when(

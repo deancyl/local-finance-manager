@@ -8,6 +8,7 @@ import '../../features/reports/presentation/pages/reports_page.dart';
 import '../../features/reports/presentation/pages/trial_balance_page.dart';
 import '../../features/reports/presentation/pages/balance_sheet_page.dart';
 import '../../features/reports/presentation/pages/income_statement_page.dart';
+import '../../features/reports/presentation/pages/general_ledger_page.dart';
 import '../../features/budgets/presentation/pages/budgets_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/settings/presentation/pages/theme_settings_page.dart';
@@ -79,6 +80,14 @@ class AppRouter {
             path: '/reports/income-statement',
             name: 'income-statement',
             builder: (context, state) => const IncomeStatementPage(),
+          ),
+          GoRoute(
+            path: '/reports/general-ledger',
+            name: 'general-ledger',
+            builder: (context, state) {
+              final accountId = state.extra as String?;
+              return GeneralLedgerPage(initialAccountId: accountId);
+            },
           ),
           GoRoute(
             path: '/settings',
