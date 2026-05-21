@@ -79,6 +79,11 @@ class RecurringTransactionsDao extends DatabaseAccessor<LocalFinanceDatabase>
       throw StateError('Recurring transaction not found: $recurringId');
     }
 
+    // Validate required fields
+    if (recurring.accountId == null) {
+      throw StateError('Recurring transaction must have an accountId: $recurringId');
+    }
+
     // Check if we've reached max occurrences
     if (recurring.maxOccurrences != null &&
         recurring.occurrenceCount >= recurring.maxOccurrences!) {
@@ -106,12 +111,12 @@ class RecurringTransactionsDao extends DatabaseAccessor<LocalFinanceDatabase>
       updatedAt: now,
     );
 
-    // Create the split - note: quantityNum is required
+    // Create the split - accountId is required, categoryId is optional
     final split = SplitsCompanion.insert(
       id: '${transactionId}_split',
       transactionId: transactionId,
-      accountId: Value(recurring.accountId),
-      categoryId: Value(recurring.categoryId),
+      accountId: recurring.accountId!, // Required, validated above
+      categoryId: Value(recurring.categoryId), // Optional
       valueNum: recurring.valueNum,
       valueDenom: Value(recurring.valueDenom),
       quantityNum: recurring.valueNum,
