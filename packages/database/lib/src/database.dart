@@ -19,6 +19,7 @@ part 'daos/budgets_dao.dart';
 part 'daos/import_sources_dao.dart';
 part 'daos/tags_dao.dart';
 part 'daos/recurring_dao.dart';
+part 'daos/attachments_dao.dart';
 
 /// Local finance database with all tables.
 @DriftDatabase(
@@ -49,6 +50,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final ImportSourcesDao importSourcesDao = ImportSourcesDao(this);
   late final TagsDao tagsDao = TagsDao(this);
   late final RecurringTransactionsDao recurringTransactionsDao = RecurringTransactionsDao(this);
+  late final AttachmentsDao attachmentsDao = AttachmentsDao(this);
 
   @override
   int get schemaVersion => 5;

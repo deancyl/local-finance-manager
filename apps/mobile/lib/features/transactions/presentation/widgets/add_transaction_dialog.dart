@@ -7,6 +7,7 @@ import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import 'package:finance_app/features/categories/data/category_provider.dart';
 import 'package:finance_app/features/tags/presentation/widgets/tag_selector.dart';
+import 'package:finance_app/features/attachments/presentation/widgets/attachment_section.dart';
 import '../../data/transaction_provider.dart';
 
 class AddTransactionDialog extends ConsumerStatefulWidget {
@@ -256,6 +257,13 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
                 onChanged: (tagIds) {
                   _selectedTagIds = tagIds;
                 },
+              ),
+              const SizedBox(height: 16),
+              
+              // 附件
+              AttachmentSection(
+                transactionId: widget.transaction?.id,
+                isEditing: widget.transaction != null,
               ),
               const SizedBox(height: 24),
               

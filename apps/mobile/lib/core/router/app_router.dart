@@ -15,6 +15,7 @@ import '../../features/import/presentation/pages/import_page.dart';
 import '../../features/import/presentation/pages/import_history_page.dart';
 import '../../features/tags/presentation/pages/tags_page.dart';
 import '../../features/recurring/presentation/pages/recurring_page.dart';
+import '../../features/attachments/presentation/pages/attachments_page.dart';
 // Sync temporarily disabled - PowerSync compatibility issues
 // import '../../features/sync/presentation/pages/sync_settings_page.dart';
 // import '../../features/sync/presentation/pages/sync_login_page.dart';
@@ -105,6 +106,18 @@ class AppRouter {
         path: '/import/history',
         name: 'import-history',
         builder: (context, state) => const ImportHistoryPage(),
+      ),
+      GoRoute(
+        path: '/transactions/attachments/:transactionId',
+        name: 'attachments',
+        builder: (context, state) {
+          final transactionId = state.pathParameters['transactionId']!;
+          final description = state.extra as String?;
+          return AttachmentsPage(
+            transactionId: transactionId,
+            transactionDescription: description,
+          );
+        },
       ),
       // Sync routes temporarily disabled
       // GoRoute(
