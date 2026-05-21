@@ -97,9 +97,24 @@
 - 用户文档
 - API 文档
 
+#### v0.3.31 - Double-Entry Journal Entry Editor (已完成 ✅)
+**发布日期**: 2026-05-21
+
+**核心功能**:
+- 复式记账分录编辑器
+- 借贷平衡实时验证
+- 账户层级选择器
+- 多分录支持 (2+ splits)
+
+**技术亮点**:
+- JournalEntryValidator 业务逻辑验证
+- 自动借贷方向判断 (基于账户类型)
+- 分数精度金额计算 (valueNum/valueDenom)
+- Material 3 设计风格
+
 ---
 
-### v0.4.0 - Double-Entry Bookkeeping (计划中 📋)
+### v0.4.0 - Double-Entry Bookkeeping (进行中 🔄)
 **预计完成**: 2026-08
 
 **核心功能**:

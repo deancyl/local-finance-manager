@@ -15,4 +15,5 @@ export 'src/data/repositories/account_repository_impl.dart';
 export 'src/usecases/add_transaction.dart';
 export 'src/usecases/get_balance.dart';
 export 'src/usecases/import_transactions.dart';
+export 'src/usecases/journal_entry_validator.dart';
 export 'src/utils/budget_period_calculator.dart';
