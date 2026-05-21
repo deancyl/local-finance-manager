@@ -21,7 +21,9 @@ class TransactionsPage extends ConsumerStatefulWidget {
 
 class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
   TransactionFilter? _lastFilter;
+  bool _isSearching = false;
 
   @override
   void initState() {
@@ -44,6 +46,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -53,6 +56,15 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
       // Load more when within 200 pixels of bottom
       ref.read(filteredPaginatedTransactionsProvider.notifier).loadMore();
     }
+  }
+
+  void _updateSearchQuery(String query) {
+    final currentFilter = ref.read(transactionFilterProvider);
+    final newFilter = currentFilter.copyWith(
+      searchQuery: query.isEmpty ? null : query,
+      clearSearchQuery: query.isEmpty,
+    );
+    ref.read(transactionFilterProvider.notifier).state = newFilter;
   }
 
   @override
@@ -70,9 +82,42 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('交易记录'),
+        title: _isSearching 
+            ? TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: '搜索交易...',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                style: Theme.of(context).textTheme.bodyLarge,
+                autofocus: true,
+                onChanged: (query) {
+                  _updateSearchQuery(query);
+                },
+              )
+            : const Text('交易记录'),
         actions: [
-          _buildFilterButton(context, filter),
+          if (_isSearching)
+            IconButton(
+              icon: const Icon(Icons.clear),
+              onPressed: () {
+                _searchController.clear();
+                _updateSearchQuery('');
+                setState(() => _isSearching = false);
+              },
+            ),
+          if (!_isSearching)
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () {
+                setState(() => _isSearching = true);
+              },
+            ),
+          if (!_isSearching)
+            _buildFilterButton(context, filter),
         ],
       ),
       body: RefreshIndicator(
