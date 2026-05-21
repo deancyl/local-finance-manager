@@ -3,127 +3,320 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:database/database.dart';
 import '../../data/category_provider.dart';
+import '../widgets/add_category_dialog.dart';
+import '../widgets/category_icon_picker.dart';
+import '../widgets/category_color_picker.dart';
 
-class CategoriesPage extends ConsumerWidget {
+class CategoriesPage extends ConsumerStatefulWidget {
   const CategoriesPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CategoriesPage> createState() => _CategoriesPageState();
+}
+
+class _CategoriesPageState extends ConsumerState<CategoriesPage>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('分类管理'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: '支出分类'),
+            Tab(text: '收入分类'),
+          ],
+        ),
       ),
       body: categoriesAsync.when(
         data: (categories) {
           final expenseCategories = categories.where((c) => !c.isIncome).toList();
           final incomeCategories = categories.where((c) => c.isIncome).toList();
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
+          return TabBarView(
+            controller: _tabController,
             children: [
-              if (expenseCategories.isNotEmpty) ...[
-                _buildSectionHeader(context, '支出分类', Colors.red),
-                ...expenseCategories.map((c) => _buildCategoryItem(context, ref, c)),
-                const SizedBox(height: 24),
-              ],
-              if (incomeCategories.isNotEmpty) ...[
-                _buildSectionHeader(context, '收入分类', Colors.green),
-                ...incomeCategories.map((c) => _buildCategoryItem(context, ref, c)),
-              ],
+              _buildCategoryList(context, ref, expenseCategories, false),
+              _buildCategoryList(context, ref, incomeCategories, true),
             ],
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('错误: $error')),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddDialog(context),
+        child: const Icon(Icons.add),
+      ),
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
+  Widget _buildCategoryList(
+    BuildContext context,
+    WidgetRef ref,
+    List<Category> categories,
+    bool isIncome,
+  ) {
+    if (categories.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.category_outlined,
+              size: 64,
+              color: Theme.of(context).colorScheme.outline,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              isIncome ? '暂无收入分类' : '暂无支出分类',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: () => _showAddDialog(context, isIncome: isIncome),
+              icon: const Icon(Icons.add),
+              label: const Text('添加分类'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Group by parent
+    final rootCategories = categories.where((c) => c.parentId == null).toList();
+    final childCategories = categories.where((c) => c.parentId != null).toList();
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: rootCategories.length,
+      itemBuilder: (context, index) {
+        final category = rootCategories[index];
+        final children = childCategories
+            .where((c) => c.parentId == category.id)
+            .toList();
+
+        return _buildCategoryCard(context, ref, category, children);
+      },
+    );
+  }
+
+  Widget _buildCategoryCard(
+    BuildContext context,
+    WidgetRef ref,
+    Category category,
+    List<Category> children,
+  ) {
+    final color = category.color != null
+        ? CategoryColors.hexToColor(category.color)
+        : Theme.of(context).colorScheme.primary;
+    final icon = CategoryIcons.getIconData(category.icon);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
         children: [
-          Container(
-            width: 4,
-            height: 20,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
+          ListTile(
+            onTap: () => _showEditDialog(context, category),
+            leading: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: Colors.white, size: 22),
+            ),
+            title: Text(
+              category.name,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            subtitle: children.isNotEmpty
+                ? Text('包含 ${children.length} 个子分类')
+                : null,
+            trailing: PopupMenuButton<String>(
+              onSelected: (value) {
+                switch (value) {
+                  case 'edit':
+                    _showEditDialog(context, category);
+                    break;
+                  case 'add_child':
+                    _showAddDialog(
+                      context,
+                      isIncome: category.isIncome,
+                      parentId: category.id,
+                    );
+                    break;
+                  case 'delete':
+                    _deleteCategory(context, ref, category);
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit_outlined),
+                      SizedBox(width: 8),
+                      Text('编辑'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'add_child',
+                  child: Row(
+                    children: [
+                      Icon(Icons.add),
+                      SizedBox(width: 8),
+                      Text('添加子分类'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('删除', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+          if (children.isNotEmpty)
+            ...children.map((child) {
+              final childColor = child.color ?? category.color;
+              final childIcon = CategoryIcons.getIconData(child.icon);
+              
+              return Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 ),
-          ),
+                child: ListTile(
+                  onTap: () => _showEditDialog(context, child),
+                  contentPadding: const EdgeInsets.only(
+                    left: 72,
+                    right: 16,
+                    top: 4,
+                    bottom: 4,
+                  ),
+                  leading: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: childColor != null
+                          ? CategoryColors.hexToColor(childColor)
+                          : color.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(childIcon, color: Colors.white, size: 16),
+                  ),
+                  title: Text(
+                    child.name,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 20),
+                        onPressed: () => _showEditDialog(context, child),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 20),
+                        onPressed: () => _deleteCategory(context, ref, child),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
         ],
       ),
     );
   }
 
-  Widget _buildCategoryItem(BuildContext context, WidgetRef ref, Category category) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: category.color != null
-                ? Color(int.parse(category.color!.replaceFirst('#', '0xFF')))
-                : Theme.of(context).colorScheme.primary,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            _getIconData(category.icon),
-            color: Colors.white,
-            size: 20,
-          ),
-        ),
-        title: Text(category.name),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline),
-          onPressed: () => _deleteCategory(context, ref, category),
-        ),
+  void _showAddDialog(
+    BuildContext context, {
+    bool isIncome = false,
+    String? parentId,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => AddCategoryDialog(
+        initialIsIncome: isIncome,
       ),
     );
   }
 
-  IconData _getIconData(String? iconName) {
-    return switch (iconName) {
-      'restaurant' => Icons.restaurant,
-      'directions_car' => Icons.directions_car,
-      'shopping_cart' => Icons.shopping_cart,
-      'movie' => Icons.movie,
-      'local_hospital' => Icons.local_hospital,
-      'school' => Icons.school,
-      'account_balance_wallet' => Icons.account_balance_wallet,
-      'card_giftcard' => Icons.card_giftcard,
-      'trending_up' => Icons.trending_up,
-      _ => Icons.category,
-    };
+  void _showEditDialog(BuildContext context, Category category) {
+    showDialog(
+      context: context,
+      builder: (context) => AddCategoryDialog(category: category),
+    );
   }
 
-  void _deleteCategory(BuildContext context, WidgetRef ref, Category category) {
+  void _deleteCategory(
+    BuildContext context,
+    WidgetRef ref,
+    Category category,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('删除分类'),
-        content: Text('确定要删除分类 "${category.name}" 吗？'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('确定要删除分类 "${category.name}" 吗？'),
+            const SizedBox(height: 8),
+            Text(
+              '注意：删除后无法恢复',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('取消'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
             onPressed: () {
               ref.read(categoryNotifierProvider.notifier).deleteCategory(category.id);
               Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('分类已删除')),
+              );
             },
             child: const Text('删除'),
           ),

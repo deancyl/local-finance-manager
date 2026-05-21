@@ -61,14 +61,24 @@ class CategoryNotifier extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  Future<void> updateCategory(Category category) async {
+  Future<void> updateCategory(
+    String id, {
+    required String name,
+    required bool isIncome,
+    String? parentId,
+    String? icon,
+    String? color,
+  }) async {
     state = const AsyncValue.loading();
     try {
-      await (_db.update(_db.categories)..where((c) => c.id.equals(category.id))).write(
+      await (_db.update(_db.categories)..where((c) => c.id.equals(id))).write(
         CategoriesCompanion(
-          name: drift.Value(category.name),
-          icon: drift.Value(category.icon),
-          color: drift.Value(category.color),
+          name: drift.Value(name),
+          isIncome: drift.Value(isIncome),
+          parentId: drift.Value(parentId),
+          icon: drift.Value(icon),
+          color: drift.Value(color),
+          updatedAt: drift.Value(DateTime.now()),
         ),
       );
       state = const AsyncValue.data(null);
