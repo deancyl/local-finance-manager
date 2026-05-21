@@ -2,25 +2,19 @@ import 'package:equatable/equatable.dart';
 import 'package:decimal/decimal.dart';
 import 'account.dart';
 
-/// Enum representing the liquidity type for balance sheet items.
-enum LiquidityType {
-  current,
-  nonCurrent,
-}
-
 /// Balance sheet item representing a single account in the balance sheet.
 ///
 /// Represents an account with its balance in the balance sheet report.
 /// Supports hierarchical structure via [children] for displaying
 /// nested account structures.
 class BalanceSheetItem extends Equatable {
-  final int accountId;
+  final String accountId;
   final String accountName;
   final AccountType accountType;
   final LiquidityType liquidityType;
   final int balanceNum;   // 余额分子 (numerator for balance amount)
   final int denom;        // 分母 (denominator)
-  final int? parentId;
+  final String? parentId;
   final List<BalanceSheetItem>? children;
 
   const BalanceSheetItem({

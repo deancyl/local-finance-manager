@@ -14,13 +14,13 @@ enum BalanceSide {
 /// in the trial balance. Supports hierarchical structure via
 /// [children] for displaying nested account structures.
 class AccountBalance extends Equatable {
-  final int accountId;
+  final String accountId;
   final String accountName;
   final AccountType accountType;
   final int debitNum;   // 借方金额分子 (numerator for debit amount)
   final int creditNum;  // 贷方金额分子 (numerator for credit amount)
   final int denom;      // 分母 (denominator)
-  final int? parentId;
+  final String? parentId;
   final List<AccountBalance>? children;
 
   const AccountBalance({
