@@ -317,6 +317,220 @@ class AccountNotifier extends StateNotifier<AsyncValue<void>> {
     
     return false;
   }
+
+  // ============================================================
+  // REORDER METHODS - Drag-and-drop account reordering
+  // ============================================================
+
+  /// Reorders accounts within the same parent.
+  /// 
+  /// [accountIds] - List of account IDs in their new order.
+  /// [parentId] - The parent account ID (null for root accounts).
+  Future<void> reorderAccounts({
+    required List<String> accountIds,
+    String? parentId,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      // Update sortOrder for each account based on its position in the list
+      for (var i = 0; i < accountIds.length; i++) {
+        await (_db.update(_db.accounts)
+          ..where((a) => a.id.equals(accountIds[i]))).write(
+          AccountsCompanion(
+            sortOrder: drift.Value(i),
+            updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+          ),
+        );
+      }
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  /// Moves an account to a new parent.
+  /// 
+  /// [accountId] - The account to move.
+  /// [newParentId] - The new parent account ID (null to move to root).
+  /// [newSortOrder] - Optional position in the new parent's children list.
+  Future<void> moveAccount({
+    required String accountId,
+    String? newParentId,
+    int? newSortOrder,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      // VALIDATION: Check for circular reference
+      if (newParentId != null) {
+        final wouldCreateCycle = await _wouldCreateCycle(accountId, newParentId);
+        if (wouldCreateCycle) {
+          throw ArgumentError('Cannot move account: would create circular reference');
+        }
+      }
+      
+      // VALIDATION: Cannot make account its own parent
+      if (newParentId == accountId) {
+        throw ArgumentError('Cannot make account its own parent');
+      }
+      
+      // Get the account to determine its type
+      final account = await _db.accountsDao.getById(accountId);
+      if (account == null) {
+        throw ArgumentError('Account not found');
+      }
+      
+      // If newParentId is provided, verify parent exists and has same type
+      if (newParentId != null) {
+        final newParent = await _db.accountsDao.getById(newParentId);
+        if (newParent == null) {
+          throw ArgumentError('New parent account not found');
+        }
+        // Allow moving to parent of same type only
+        if (newParent.accountType != account.accountType) {
+          throw ArgumentError('Cannot move account to parent of different type');
+        }
+      }
+      
+      // Determine the new sort order
+      int sortOrder = newSortOrder ?? 0;
+      if (newSortOrder == null && newParentId != null) {
+        // Get current children of new parent to find max sortOrder
+        final siblings = await _db.accountsDao.getChildren(newParentId);
+        sortOrder = siblings.isEmpty ? 0 : siblings.map((s) => s.sortOrder).reduce((a, b) => a > b ? a : b) + 1;
+      } else if (newSortOrder == null) {
+        // For root accounts, get max sortOrder for this type
+        final rootAccounts = await _db.accountsDao.getRootAccountsByType(account.accountType);
+        sortOrder = rootAccounts.isEmpty ? 0 : rootAccounts.map((s) => s.sortOrder).reduce((a, b) => a > b ? a : b) + 1;
+      }
+      
+      await (_db.update(_db.accounts)
+        ..where((a) => a.id.equals(accountId))).write(
+        AccountsCompanion(
+          parentId: drift.Value(newParentId),
+          sortOrder: drift.Value(sortOrder),
+          updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+          version: drift.Value(account.version + 1),
+        ),
+      );
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  // ============================================================
+  // ACCOUNT CODE GENERATION - Hierarchy-based code generation
+  // ============================================================
+
+  /// Generates an account code based on hierarchy position.
+  /// 
+  /// Format: Root accounts get codes like "1000", "2000", etc.
+  /// Children get codes like "1100", "1110", "1111" based on position.
+  /// 
+  /// [accountType] - The account type (ASSET=1xxx, LIABILITY=2xxx, etc.)
+  /// [parentId] - The parent account ID (null for root).
+  /// [position] - The position among siblings (0-indexed).
+  Future<String> generateAccountCode({
+    required String accountType,
+    String? parentId,
+    required int position,
+  }) async {
+    // Base codes for each account type
+    final typeBaseCodes = {
+      'ASSET': 1000,
+      'LIABILITY': 2000,
+      'EQUITY': 3000,
+      'INCOME': 4000,
+      'EXPENSE': 5000,
+    };
+    
+    final baseCode = typeBaseCodes[accountType] ?? 1000;
+    
+    if (parentId == null) {
+      // Root account: base code + position * 100
+      // e.g., first ASSET root = 1000, second = 1100, third = 1200
+      return '${baseCode + position * 100}';
+    }
+    
+    // Get parent's code
+    final parent = await _db.accountsDao.getById(parentId);
+    if (parent == null || parent.code == null) {
+      // If parent has no code, generate from base
+      return '${baseCode + position * 100}';
+    }
+    
+    // Parse parent code
+    final parentCode = int.tryParse(parent.code!);
+    if (parentCode == null) {
+      return '${baseCode + position * 100}';
+    }
+    
+    // Child code: parent code + position * 10 (for depth 2)
+    // or parent code + position (for depth 3+)
+    // Determine depth by counting digits
+    final parentDepth = _getDepthFromCode(parentCode);
+    
+    if (parentDepth >= 3) {
+      // At max depth (4 digits), just append position
+      // This would create 5-digit codes which we avoid
+      // Instead, use the last digit position
+      final lastDigit = parentCode % 10;
+      return '${parentCode - lastDigit + position.clamp(0, 9)}';
+    }
+    
+    // Add a digit for the child position
+    final multiplier = parentDepth == 1 ? 100 : 10;
+    return '${parentCode + position * multiplier}';
+  }
+  
+  /// Determines the depth level from a numeric account code.
+  /// 1000 = depth 1 (root)
+  /// 1100 = depth 2
+  /// 1110 = depth 3
+  /// 1111 = depth 4
+  int _getDepthFromCode(int code) {
+    if (code % 1000 == 0) return 1; // e.g., 1000, 2000
+    if (code % 100 == 0) return 2;  // e.g., 1100, 2100
+    if (code % 10 == 0) return 3;   // e.g., 1110, 2110
+    return 4;                       // e.g., 1111, 2111
+  }
+
+  /// Regenerates codes for all accounts in a hierarchy branch.
+  /// Useful after reordering to maintain consistent code numbering.
+  Future<void> regenerateCodesForBranch(String parentId) async {
+    state = const AsyncValue.loading();
+    try {
+      final children = await _db.accountsDao.getChildren(parentId);
+      final parent = await _db.accountsDao.getById(parentId);
+      
+      for (var i = 0; i < children.length; i++) {
+        final child = children[i];
+        final newCode = await generateAccountCode(
+          accountType: child.accountType,
+          parentId: parentId,
+          position: i,
+        );
+        
+        await (_db.update(_db.accounts)
+          ..where((a) => a.id.equals(child.id))).write(
+          AccountsCompanion(
+            code: drift.Value(newCode),
+            sortOrder: drift.Value(i),
+            updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+          ),
+        );
+        
+        // Recursively regenerate codes for grandchildren
+        if (child.isPlaceholder) {
+          await regenerateCodesForBranch(child.id);
+        }
+      }
+      
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
 }
 
 final accountNotifierProvider = StateNotifierProvider<AccountNotifier, AsyncValue<void>>((ref) {

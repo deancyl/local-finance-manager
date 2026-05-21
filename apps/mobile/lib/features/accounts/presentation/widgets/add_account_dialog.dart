@@ -125,12 +125,19 @@ class _AddAccountDialogState extends ConsumerState<AddAccountDialog> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _codeController,
-                decoration: const InputDecoration(
-                  labelText: '账号后四位（可选）',
-                  prefixIcon: Icon(Icons.numbers),
+                decoration: InputDecoration(
+                  labelText: '账户代码（可选）',
+                  hintText: '例如: 1000, 1100',
+                  prefixIcon: const Icon(Icons.numbers),
+                  suffixIcon: widget.account == null 
+                      ? IconButton(
+                          icon: const Icon(Icons.auto_awesome),
+                          tooltip: '自动生成代码',
+                          onPressed: _generateCode,
+                        )
+                      : null,
                 ),
                 keyboardType: TextInputType.number,
-                maxLength: 4,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -279,5 +286,42 @@ class _AddAccountDialogState extends ConsumerState<AddAccountDialog> {
       default:
         return accountType;
     }
+  }
+
+  /// Generates an account code based on hierarchy position.
+  Future<void> _generateCode() async {
+    final accountsAsync = ref.read(accountsProvider);
+    
+    accountsAsync.when(
+      data: (accounts) async {
+        // Determine position among siblings
+        int position = 0;
+        
+        if (_selectedParentId != null) {
+          // Count siblings with same parent
+          position = accounts
+              .where((a) => a.parentId == _selectedParentId)
+              .length;
+        } else {
+          // Count root accounts of same type
+          position = accounts
+              .where((a) => a.parentId == null && a.accountType == _selectedType)
+              .length;
+        }
+        
+        final notifier = ref.read(accountNotifierProvider.notifier);
+        final code = await notifier.generateAccountCode(
+          accountType: _selectedType,
+          parentId: _selectedParentId,
+          position: position,
+        );
+        
+        setState(() {
+          _codeController.text = code;
+        });
+      },
+      loading: () {},
+      error: (_, __) {},
+    );
   }
 }
