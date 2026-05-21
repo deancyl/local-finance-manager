@@ -47,16 +47,17 @@ class TagsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TagsDaoMixin
     String? description,
     String? icon,
   }) async {
-    final updateCompanion = TagsCompanion(
-      id: Value(id),
-      updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
-      if (name != null) name: Value(name),
-      if (color != null) color: Value(color),
-      if (description != null) description: Value(description),
-      if (icon != null) icon: Value(icon),
-    );
+    final now = DateTime.now().millisecondsSinceEpoch;
     
-    await (update(tags)..where((t) => t.id.equals(id))).write(updateCompanion);
+    await (update(tags)..where((t) => t.id.equals(id))).write(
+      TagsCompanion(
+        updatedAt: Value(now),
+        name: name != null ? Value(name) : const Value.absent(),
+        color: color != null ? Value(color) : const Value.absent(),
+        description: description != null ? Value(description) : const Value.absent(),
+        icon: icon != null ? Value(icon) : const Value.absent(),
+      ),
+    );
   }
 
   /// Soft deletes a tag (sets deletedAt).
