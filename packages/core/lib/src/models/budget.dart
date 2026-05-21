@@ -25,6 +25,12 @@ class Budget extends Equatable {
   final DateTime startDate;
   final DateTime? endDate;
   final bool isActive;
+  // Alert settings
+  final bool alertEnabled;
+  final bool alertAt50;
+  final bool alertAt75;
+  final bool alertAt90;
+  final bool alertAt100;
   final DateTime createdAt;
 
   Budget({
@@ -38,6 +44,11 @@ class Budget extends Equatable {
     required this.startDate,
     this.endDate,
     this.isActive = true,
+    this.alertEnabled = true,
+    this.alertAt50 = true,
+    this.alertAt75 = true,
+    this.alertAt90 = true,
+    this.alertAt100 = true,
     DateTime? createdAt,
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now();
@@ -56,6 +67,11 @@ class Budget extends Equatable {
     required DateTime startDate,
     DateTime? endDate,
     bool isActive = true,
+    bool alertEnabled = true,
+    bool alertAt50 = true,
+    bool alertAt75 = true,
+    bool alertAt90 = true,
+    bool alertAt100 = true,
     DateTime? createdAt,
     int fraction = 100,
   }) {
@@ -70,6 +86,11 @@ class Budget extends Equatable {
       startDate: startDate,
       endDate: endDate,
       isActive: isActive,
+      alertEnabled: alertEnabled,
+      alertAt50: alertAt50,
+      alertAt75: alertAt75,
+      alertAt90: alertAt90,
+      alertAt100: alertAt100,
       createdAt: createdAt,
     );
   }
@@ -85,6 +106,11 @@ class Budget extends Equatable {
     DateTime? startDate,
     DateTime? endDate,
     bool? isActive,
+    bool? alertEnabled,
+    bool? alertAt50,
+    bool? alertAt75,
+    bool? alertAt90,
+    bool? alertAt100,
     DateTime? createdAt,
   }) {
     return Budget(
@@ -98,6 +124,11 @@ class Budget extends Equatable {
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       isActive: isActive ?? this.isActive,
+      alertEnabled: alertEnabled ?? this.alertEnabled,
+      alertAt50: alertAt50 ?? this.alertAt50,
+      alertAt75: alertAt75 ?? this.alertAt75,
+      alertAt90: alertAt90 ?? this.alertAt90,
+      alertAt100: alertAt100 ?? this.alertAt100,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -114,6 +145,11 @@ class Budget extends Equatable {
       'start_date': startDate.millisecondsSinceEpoch,
       'end_date': endDate?.millisecondsSinceEpoch,
       'is_active': isActive ? 1 : 0,
+      'alert_enabled': alertEnabled ? 1 : 0,
+      'alert_at_50': alertAt50 ? 1 : 0,
+      'alert_at_75': alertAt75 ? 1 : 0,
+      'alert_at_90': alertAt90 ? 1 : 0,
+      'alert_at_100': alertAt100 ? 1 : 0,
       'created_at': createdAt.millisecondsSinceEpoch,
     };
   }
@@ -135,6 +171,11 @@ class Budget extends Equatable {
           ? DateTime.fromMillisecondsSinceEpoch(json['end_date'] as int)
           : null,
       isActive: json['is_active'] == 1,
+      alertEnabled: json['alert_enabled'] == 1,
+      alertAt50: json['alert_at_50'] == 1,
+      alertAt75: json['alert_at_75'] == 1,
+      alertAt90: json['alert_at_90'] == 1,
+      alertAt100: json['alert_at_100'] == 1,
       createdAt: DateTime.fromMillisecondsSinceEpoch(json['created_at'] as int),
     );
   }
@@ -151,6 +192,11 @@ class Budget extends Equatable {
         startDate,
         endDate,
         isActive,
+        alertEnabled,
+        alertAt50,
+        alertAt75,
+        alertAt90,
+        alertAt100,
         createdAt,
       ];
 }

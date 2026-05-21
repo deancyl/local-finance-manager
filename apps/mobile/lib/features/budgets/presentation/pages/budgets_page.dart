@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:database/database.dart';
 
 import '../../data/budget_provider.dart';
+import '../../data/budget_notification_service.dart';
 import '../widgets/budget_card.dart';
 import '../widgets/add_budget_dialog.dart';
+import '../widgets/budget_alert_settings.dart';
 
 class BudgetsPage extends ConsumerWidget {
   const BudgetsPage({super.key});
@@ -84,6 +86,7 @@ class BudgetsPage extends ConsumerWidget {
         progress: spending.progress,
         onTap: () => _showEditDialog(context, budget),
         onDelete: () => _deleteBudget(context, ref, budget),
+        onAlertSettings: () => _showAlertSettings(context, ref, budget),
       ),
       loading: () => const Card(
         margin: EdgeInsets.only(bottom: 8),
@@ -135,6 +138,19 @@ class BudgetsPage extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showAlertSettings(BuildContext context, WidgetRef ref, Budget budget) {
+    showBudgetAlertSettingsDialog(
+      context,
+      budget: budget,
+      onSaved: (updatedBudget) {
+        ref.read(budgetNotifierProvider.notifier).updateBudget(updatedBudget);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('提醒设置已更新')),
+        );
+      },
     );
   }
 }

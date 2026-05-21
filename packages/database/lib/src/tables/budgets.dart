@@ -14,6 +14,12 @@ class Budgets extends Table {
   IntColumn get startDate => integer()();
   IntColumn get endDate => integer().nullable()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  // Alert settings
+  BoolColumn get alertEnabled => boolean().withDefault(const Constant(true))();
+  BoolColumn get alertAt50 => boolean().withDefault(const Constant(true))();
+  BoolColumn get alertAt75 => boolean().withDefault(const Constant(true))();
+  BoolColumn get alertAt90 => boolean().withDefault(const Constant(true))();
+  BoolColumn get alertAt100 => boolean().withDefault(const Constant(true))();
   IntColumn get createdAt => integer()();
   IntColumn get version => integer().withDefault(const Constant(1))();
   DateTimeColumn get updatedAt => dateTime()();

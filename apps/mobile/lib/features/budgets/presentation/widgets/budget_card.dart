@@ -8,6 +8,7 @@ class BudgetCard extends StatelessWidget {
   final double progress;
   final VoidCallback onTap;
   final VoidCallback onDelete;
+  final VoidCallback? onAlertSettings;
 
   const BudgetCard({
     super.key,
@@ -16,6 +17,7 @@ class BudgetCard extends StatelessWidget {
     required this.progress,
     required this.onTap,
     required this.onDelete,
+    this.onAlertSettings,
   });
 
   @override
@@ -44,11 +46,23 @@ class BudgetCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      budget.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                    child: Row(
+                      children: [
+                        Text(
+                          budget.name,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                        if (budget.alertEnabled) ...[
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.notifications_active_outlined,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
                           ),
+                        ],
+                      ],
                     ),
                   ),
                   // Period badge
@@ -64,6 +78,13 @@ class BudgetCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  if (onAlertSettings != null)
+                    IconButton(
+                      icon: const Icon(Icons.notifications_outlined),
+                      onPressed: onAlertSettings,
+                      color: Theme.of(context).colorScheme.primary,
+                      iconSize: 20,
+                    ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
                     onPressed: onDelete,

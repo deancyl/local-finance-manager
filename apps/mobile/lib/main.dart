@@ -2,21 +2,49 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
+import 'package:go_router/go_router.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/settings/data/theme_provider.dart';
 import 'features/settings/data/locale_provider.dart';
+import 'features/budgets/data/budget_notification_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize budget notification service
+  final notificationService = BudgetNotificationService();
+  await notificationService.initialize();
+  await notificationService.requestPermissions();
+  
   runApp(const ProviderScope(child: FinanceApp()));
 }
 
-class FinanceApp extends ConsumerWidget {
+class FinanceApp extends ConsumerStatefulWidget {
   const FinanceApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FinanceApp> createState() => _FinanceAppState();
+}
+
+class _FinanceAppState extends ConsumerState<FinanceApp> {
+  @override
+  void initState() {
+    super.initState();
+    _setupNotificationHandler();
+  }
+
+  void _setupNotificationHandler() {
+    // Handle notification taps
+    final notificationService = BudgetNotificationService();
+    // The notification handler is set up in the service
+    // Here we would handle navigation when a notification is tapped
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeProvider);
     final appLocale = ref.watch(localeProvider);
 

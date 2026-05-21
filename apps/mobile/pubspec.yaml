@@ -45,6 +45,8 @@ dependencies:
   qr_flutter: ^4.1.0
   mobile_scanner: ^4.0.0
   csv: ^6.0.0
+  flutter_local_notifications: ^18.0.1
+  workmanager: ^0.5.2
 
   # Local packages
   core:

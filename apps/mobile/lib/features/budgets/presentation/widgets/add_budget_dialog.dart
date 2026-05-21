@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart' as drift;
+import 'package:drift/drift.dart' show Value;
 import 'package:database/database.dart';
 
 import '../../data/budget_provider.dart';
@@ -23,6 +23,13 @@ class _AddBudgetDialogState extends ConsumerState<AddBudgetDialog> {
   String? _selectedCategoryId;
   String _selectedPeriod = 'MONTHLY';
   bool _isLoading = false;
+  
+  // Alert settings
+  bool _alertEnabled = true;
+  bool _alertAt50 = true;
+  bool _alertAt75 = true;
+  bool _alertAt90 = true;
+  bool _alertAt100 = true;
 
   @override
   void initState() {
@@ -32,6 +39,12 @@ class _AddBudgetDialogState extends ConsumerState<AddBudgetDialog> {
       _amountController.text = (widget.budget!.amountNum / widget.budget!.amountDenom).toStringAsFixed(2);
       _selectedCategoryId = widget.budget!.categoryId;
       _selectedPeriod = widget.budget!.period;
+      // Load alert settings
+      _alertEnabled = widget.budget!.alertEnabled;
+      _alertAt50 = widget.budget!.alertAt50;
+      _alertAt75 = widget.budget!.alertAt75;
+      _alertAt90 = widget.budget!.alertAt90;
+      _alertAt100 = widget.budget!.alertAt100;
     }
   }
 
@@ -151,6 +164,10 @@ class _AddBudgetDialogState extends ConsumerState<AddBudgetDialog> {
               ),
               const SizedBox(height: 24),
               
+              // Alert settings section
+              _buildAlertSettingsSection(context),
+              const SizedBox(height: 24),
+              
               // Submit button
               FilledButton(
                 onPressed: _isLoading ? null : _save,
@@ -189,15 +206,25 @@ class _AddBudgetDialogState extends ConsumerState<AddBudgetDialog> {
           currencyId: 'CNY',
           period: _selectedPeriod,
           startDate: now,
+          alertEnabled: _alertEnabled,
+          alertAt50: _alertAt50,
+          alertAt75: _alertAt75,
+          alertAt90: _alertAt90,
+          alertAt100: _alertAt100,
         );
       } else {
         // Update budget using BudgetNotifier
         final updatedBudget = widget.budget!.copyWith(
           name: _nameController.text,
-          categoryId: drift.Value(_selectedCategoryId),
+          categoryId: Value(_selectedCategoryId),
           amountNum: amountNum,
           amountDenom: 100,
           period: _selectedPeriod,
+          alertEnabled: _alertEnabled,
+          alertAt50: _alertAt50,
+          alertAt75: _alertAt75,
+          alertAt90: _alertAt90,
+          alertAt100: _alertAt100,
         );
         await notifier.updateBudget(updatedBudget);
       }
@@ -219,5 +246,83 @@ class _AddBudgetDialogState extends ConsumerState<AddBudgetDialog> {
         setState(() => _isLoading = false);
       }
     }
+  }
+  
+  Widget _buildAlertSettingsSection(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.notifications_outlined,
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '提醒设置',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          
+          // Master toggle
+          SwitchListTile(
+            title: const Text('启用预算提醒'),
+            subtitle: Text(
+              _alertEnabled ? '将在达到设定阈值时发送通知' : '不会发送预算提醒通知',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            value: _alertEnabled,
+            onChanged: (value) {
+              setState(() => _alertEnabled = value);
+            },
+            contentPadding: EdgeInsets.zero,
+          ),
+          
+          // Threshold toggles
+          if (_alertEnabled) ...[
+            const Divider(),
+            _buildThresholdToggle('50%', _alertAt50, (v) => setState(() => _alertAt50 = v)),
+            _buildThresholdToggle('75%', _alertAt75, (v) => setState(() => _alertAt75 = v)),
+            _buildThresholdToggle('90%', _alertAt90, (v) => setState(() => _alertAt90 = v)),
+            _buildThresholdToggle('100%', _alertAt100, (v) => setState(() => _alertAt100 = v)),
+          ],
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildThresholdToggle(String label, bool value, ValueChanged<bool> onChanged) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '$label 阈值提醒',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+            Switch(
+              value: value,
+              onChanged: onChanged,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
