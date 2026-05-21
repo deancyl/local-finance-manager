@@ -47,6 +47,7 @@ dependencies:
   csv: ^6.0.0
   flutter_local_notifications: ^18.0.1
   workmanager: ^0.5.2
+  local_auth: ^2.3.0
 
   # Local packages
   core:

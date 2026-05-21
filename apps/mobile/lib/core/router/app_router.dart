@@ -10,6 +10,7 @@ import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/settings/presentation/pages/theme_settings_page.dart';
 import '../../features/settings/presentation/pages/language_settings_page.dart';
 import '../../features/settings/presentation/pages/backup_settings_page.dart';
+import '../../features/settings/presentation/pages/security_settings_page.dart';
 import '../../features/settings/presentation/pages/about_page.dart';
 import '../../features/export/presentation/pages/export_page.dart';
 import '../../features/export/presentation/pages/import_page.dart' as export_import;
@@ -83,6 +84,11 @@ class AppRouter {
         path: '/settings/backup',
         name: 'backup-settings',
         builder: (context, state) => const BackupSettingsPage(),
+      ),
+      GoRoute(
+        path: '/settings/security',
+        name: 'security-settings',
+        builder: (context, state) => const SecuritySettingsPage(),
       ),
       GoRoute(
         path: '/settings/about',

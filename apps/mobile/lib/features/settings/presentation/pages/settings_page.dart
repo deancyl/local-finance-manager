@@ -33,14 +33,9 @@ class SettingsPage extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.security),
             title: const Text('安全设置'),
-            subtitle: const Text('密码、生物识别'),
+            subtitle: const Text('密码、PIN、生物识别'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Implement security settings
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('安全设置功能开发中')),
-              );
-            },
+            onTap: () => context.push('/settings/security'),
           ),
           // Backup settings
           ListTile(
