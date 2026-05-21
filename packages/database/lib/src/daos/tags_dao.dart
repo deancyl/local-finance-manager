@@ -1,7 +1,7 @@
 part of '../database.dart';
 
 /// Data Access Object for tags.
-@DriftAccessor(tables: [Tags, TransactionTags])
+@DriftAccessor(tables: [Tags, TransactionTags, Transactions])
 class TagsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TagsDaoMixin {
   TagsDao(super.db);
 
@@ -15,14 +15,14 @@ class TagsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TagsDaoMixin
     return (select(tags)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
-  /// Creates a new tag.
+  /// Creates a new tag with a generated ID.
   Future<String> createTag({
     required String name,
     String color = '#607D8B',
     String? description,
     String? icon,
   }) async {
-    final id = const Uuid().v4();
+    final id = DateTime.now().microsecondsSinceEpoch.toString();
     final now = DateTime.now().millisecondsSinceEpoch;
     
     await into(tags).insert(
@@ -92,11 +92,10 @@ class TagsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TagsDaoMixin
       mode: InsertMode.insertOrIgnore,
     );
     
-    // Increment usage count
-    await (update(tags)..where((t) => t.id.equals(tagId))).write(
-      TagsCompanion(
-        usageCount: tags.usageCount + const Value(1),
-      ),
+    // Increment usage count using custom statement
+    await customStatement(
+      'UPDATE tags SET usage_count = usage_count + 1 WHERE id = ?',
+      [tagId],
     );
   }
 
@@ -106,11 +105,10 @@ class TagsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TagsDaoMixin
           ..where((tt) => tt.transactionId.equals(transactionId) & tt.tagId.equals(tagId)))
         .go();
     
-    // Decrement usage count
-    await (update(tags)..where((t) => t.id.equals(tagId))).write(
-      TagsCompanion(
-        usageCount: tags.usageCount - const Value(1),
-      ),
+    // Decrement usage count using custom statement
+    await customStatement(
+      'UPDATE tags SET usage_count = usage_count - 1 WHERE id = ? AND usage_count > 0',
+      [tagId],
     );
   }
 
