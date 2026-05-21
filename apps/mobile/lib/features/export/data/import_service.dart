@@ -506,6 +506,7 @@ class ImportService {
           .getSingleOrNull();
 
       if (existing == null) {
+        final now = DateTime.now().millisecondsSinceEpoch;
         await _db.into(_db.commodities).insert(
           CommoditiesCompanion.insert(
             id: id,
@@ -513,7 +514,8 @@ class ImportService {
             mnemonic: data['mnemonic'] as String,
             fullName: drift.Value(data['fullName'] as String?),
             fraction: drift.Value(data['fraction'] as int? ?? 100),
-            createdAt: data['createdAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
+            createdAt: data['createdAt'] as int? ?? now,
+            updatedAt: data['updatedAt'] as int? ?? now,
           ),
         );
       }
@@ -687,12 +689,9 @@ class ImportService {
           name: data['name'] as String,
           categoryId: drift.Value(data['categoryId'] as String?),
           amountNum: data['amountNum'] as int? ?? 0,
-          amountDenom: drift.Value(data['amountDenom'] as int? ?? 1),
-          currencyId: data['currencyId'] as String? ?? 'CNY',
-          period: data['period'] as String? ?? 'monthly',
-          startDate: data['startDate'] as int? ?? DateTime.now().millisecondsSinceEpoch,
-          endDate: drift.Value(data['endDate'] as int?),
-          isActive: drift.Value(data['isActive'] as bool? ?? true),
+          currencyId: data['currencyId'] as String,
+          period: data['period'] as String,
+          startDate: data['startDate'] as int,
           createdAt: data['createdAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
           updatedAt: data['updatedAt'] != null
               ? DateTime.parse(data['updatedAt'] as String)

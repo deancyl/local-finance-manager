@@ -452,9 +452,13 @@ class ExportService {
     ExportFilters filters,
   ) async {
     // Build base query
-    final query = _db.select(_db.transactions)
-      ..where((t) => filters.includeDeleted ? const Value(true) : t.deletedAt.isNull())
-      ..orderBy([(t) => OrderingTerm.desc(t.postDate)]);
+    var query = _db.select(_db.transactions);
+
+    if (!filters.includeDeleted) {
+      query = query..where((t) => t.deletedAt.isNull());
+    }
+
+    query = query..orderBy([(t) => OrderingTerm.desc(t.postDate)]);
 
     // Apply date filters
     if (filters.startDate != null) {
