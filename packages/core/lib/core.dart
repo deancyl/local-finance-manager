@@ -21,4 +21,5 @@ export 'src/usecases/balance_sheet_calculator.dart';
 export 'src/usecases/income_statement_calculator.dart';
 export 'src/usecases/cash_flow_calculator.dart';
 export 'src/usecases/general_ledger_calculator.dart';
+export 'src/usecases/reconciliation_service.dart';
 export 'src/utils/budget_period_calculator.dart';

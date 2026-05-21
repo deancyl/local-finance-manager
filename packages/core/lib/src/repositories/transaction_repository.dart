@@ -38,6 +38,52 @@ abstract class TransactionRepository {
 
   /// Gets the count of transactions.
   Future<int> count({String? accountId, DateTime? start, DateTime? end});
+
+  /// Gets splits for an account within a date range with transaction info.
+  /// Returns a list of SplitWithTransactionData containing split and transaction details.
+  Future<List<SplitWithTransactionData>> getSplitsForAccount(
+    String accountId, {
+    DateTime? startDate,
+    DateTime? endDate,
+  });
+
+  /// Updates the reconcile state of a split.
+  Future<void> updateSplitReconcileState(
+    String splitId,
+    String reconcileState,
+    int? reconcileDate,
+  );
+}
+
+/// Split data with transaction information for reconciliation and reports.
+class SplitWithTransactionData {
+  final String splitId;
+  final String transactionId;
+  final int postDate;
+  final String? description;
+  final String? memo;
+  final int valueNum;
+  final int valueDenom;
+  final String reconcileState;
+  final int? reconcileDate;
+
+  SplitWithTransactionData({
+    required this.splitId,
+    required this.transactionId,
+    required this.postDate,
+    this.description,
+    this.memo,
+    required this.valueNum,
+    this.valueDenom = 1,
+    required this.reconcileState,
+    this.reconcileDate,
+  });
+
+  /// Returns the date as DateTime.
+  DateTime get date => DateTime.fromMillisecondsSinceEpoch(postDate);
+
+  /// Returns the value as a decimal (for display purposes).
+  double get value => valueNum / valueDenom.toDouble();
 }
 
 /// Query parameters for searching transactions.
