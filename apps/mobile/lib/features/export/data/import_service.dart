@@ -509,11 +509,11 @@ class ImportService {
         await _db.into(_db.commodities).insert(
           CommoditiesCompanion.insert(
             id: id,
+            namespace: data['namespace'] as String? ?? 'CURRENCY',
             mnemonic: data['mnemonic'] as String,
-            fullname: drift.Value(data['fullname'] as String?),
+            fullName: drift.Value(data['fullName'] as String?),
             fraction: drift.Value(data['fraction'] as int? ?? 100),
-            quoteSource: drift.Value(data['quoteSource'] as String?),
-            quoteTz: drift.Value(data['quoteTZ'] as String?),
+            createdAt: data['createdAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
           ),
         );
       }
@@ -686,13 +686,17 @@ class ImportService {
           id: id,
           name: data['name'] as String,
           categoryId: drift.Value(data['categoryId'] as String?),
-          amount: data['amount'] as int,
-          periodType: data['periodType'] as String,
-          startDate: data['startDate'] as int,
+          amountNum: data['amountNum'] as int? ?? 0,
+          amountDenom: drift.Value(data['amountDenom'] as int? ?? 1),
+          currencyId: data['currencyId'] as String? ?? 'CNY',
+          period: data['period'] as String? ?? 'monthly',
+          startDate: data['startDate'] as int? ?? DateTime.now().millisecondsSinceEpoch,
           endDate: drift.Value(data['endDate'] as int?),
-          rollover: drift.Value(data['rollover'] as bool? ?? false),
+          isActive: drift.Value(data['isActive'] as bool? ?? true),
           createdAt: data['createdAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
-          updatedAt: data['updatedAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
+          updatedAt: data['updatedAt'] != null
+              ? DateTime.parse(data['updatedAt'] as String)
+              : DateTime.now(),
         ),
       );
     }

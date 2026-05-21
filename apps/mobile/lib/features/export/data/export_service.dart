@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:csv/csv.dart';
+import 'package:drift/drift.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -207,7 +208,7 @@ class ExportService {
       'commodities': commodities.map((c) => <String, dynamic>{
         'id': c.id,
         'mnemonic': c.mnemonic,
-        'fullname': c.fullname,
+        'fullName': c.fullName,
       }).toList(),
     };
 
@@ -259,7 +260,7 @@ class ExportService {
       'commodities': commodities.map((c) => <String, dynamic>{
         'id': c.id,
         'mnemonic': c.mnemonic,
-        'fullname': c.fullname,
+        'fullName': c.fullName,
         'fraction': c.fraction,
       }).toList(),
     };
@@ -340,11 +341,10 @@ class ExportService {
       'exportType': 'full',
       'commodities': commodities.map((c) => <String, dynamic>{
         'id': c.id,
+        'namespace': c.namespace,
         'mnemonic': c.mnemonic,
-        'fullname': c.fullname,
+        'fullName': c.fullName,
         'fraction': c.fraction,
-        'quoteSource': c.quoteSource,
-        'quoteTZ': c.quoteTz,
       }).toList(),
       'accounts': accounts.map((a) => <String, dynamic>{
         'id': a.id,
@@ -411,13 +411,15 @@ class ExportService {
         'id': b.id,
         'name': b.name,
         'categoryId': b.categoryId,
-        'amount': b.amount,
-        'periodType': b.periodType,
+        'amountNum': b.amountNum,
+        'amountDenom': b.amountDenom,
+        'currencyId': b.currencyId,
+        'period': b.period,
         'startDate': b.startDate,
         'endDate': b.endDate,
-        'rollover': b.rollover,
+        'isActive': b.isActive,
         'createdAt': b.createdAt,
-        'updatedAt': b.updatedAt,
+        'updatedAt': b.updatedAt.toIso8601String(),
       }).toList(),
     };
 
@@ -451,7 +453,7 @@ class ExportService {
   ) async {
     // Build base query
     final query = _db.select(_db.transactions)
-      ..where((t) => filters.includeDeleted ? const Constant(true) : t.deletedAt.isNull())
+      ..where((t) => filters.includeDeleted ? const Value(true) : t.deletedAt.isNull())
       ..orderBy([(t) => OrderingTerm.desc(t.postDate)]);
 
     // Apply date filters
