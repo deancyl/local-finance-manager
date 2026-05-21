@@ -9,6 +9,7 @@ import 'package:finance_app/features/categories/data/category_provider.dart';
 import 'package:finance_app/features/tags/presentation/widgets/tag_selector.dart';
 import 'package:finance_app/features/attachments/presentation/widgets/attachment_section.dart';
 import '../../data/transaction_provider.dart';
+import 'quick_amount_input.dart';
 
 class AddTransactionDialog extends ConsumerStatefulWidget {
   final Transaction? transaction;
@@ -128,15 +129,9 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
               ),
               const SizedBox(height: 24),
               
-              // 金额输入
-              TextFormField(
+              // 金额输入 - Quick Amount Entry
+              QuickAmountInput(
                 controller: _amountController,
-                decoration: const InputDecoration(
-                  labelText: '金额',
-                  prefixText: '¥ ',
-                  prefixIcon: Icon(Icons.attach_money),
-                ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return '请输入金额';
