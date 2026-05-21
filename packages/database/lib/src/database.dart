@@ -10,6 +10,7 @@ import 'tables/imports.dart';
 import 'tables/recurring.dart';
 import 'tables/attachments.dart';
 import 'tables/tags.dart';
+import 'tables/closing_entries.dart';
 
 part 'database.g.dart';
 part 'daos/accounts_dao.dart';
@@ -21,6 +22,7 @@ part 'daos/tags_dao.dart';
 part 'daos/recurring_dao.dart';
 part 'daos/attachments_dao.dart';
 part 'daos/splits_dao.dart';
+part 'daos/closing_entries_dao.dart';
 
 /// Local finance database with all tables.
 @DriftDatabase(
@@ -37,6 +39,7 @@ part 'daos/splits_dao.dart';
     Attachments,
     Tags,
     TransactionTags,
+    ClosingEntries,
   ],
 )
 class LocalFinanceDatabase extends _$LocalFinanceDatabase {
@@ -53,9 +56,10 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final RecurringTransactionsDao recurringTransactionsDao = RecurringTransactionsDao(this);
   late final AttachmentsDao attachmentsDao = AttachmentsDao(this);
   late final SplitsDao splitsDao = SplitsDao(this);
+  late final ClosingEntriesDao closingEntriesDao = ClosingEntriesDao(this);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration {
@@ -220,6 +224,22 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
         if (from < 7) {
           // Version 7: Add liquidity_type column to accounts for balance sheet grouping
           await m.addColumn(accounts, accounts.liquidityType);
+        }
+        if (from < 8) {
+          // Version 8: Add closing entries table for closing process
+          await m.createTable(closingEntries);
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_closing_entries_fiscal_period '
+            'ON closing_entries(fiscal_period_id)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_closing_entries_type '
+            'ON closing_entries(closing_type)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_closing_entries_status '
+            'ON closing_entries(status)',
+          );
         }
       },
     );
