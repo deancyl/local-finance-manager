@@ -53,7 +53,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final AttachmentsDao attachmentsDao = AttachmentsDao(this);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -133,6 +133,87 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
           
           // Insert default system tags
           await _insertDefaultTags();
+        }
+        if (from < 6) {
+          // Version 6: Performance indexes for critical query paths
+          
+          // Transactions: Date range queries (most common filter)
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_transactions_post_date '
+            'ON transactions(post_date)',
+          );
+          
+          // Transactions: Soft delete filtering
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_transactions_deleted_at '
+            'ON transactions(deleted_at)',
+          );
+          
+          // Transactions: Import batch queries
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_transactions_import_batch '
+            'ON transactions(import_batch_id)',
+          );
+          
+          // Splits: Account balance calculations
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_splits_account '
+            'ON splits(account_id)',
+          );
+          
+          // Splits: Transaction lookup (JOIN optimization)
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_splits_transaction '
+            'ON splits(transaction_id)',
+          );
+          
+          // Splits: Reconciliation status filtering
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_splits_reconcile '
+            'ON splits(reconcile_state)',
+          );
+          
+          // Accounts: Hierarchy traversal
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_accounts_parent '
+            'ON accounts(parent_id)',
+          );
+          
+          // Accounts: Type filtering
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_accounts_type '
+            'ON accounts(account_type)',
+          );
+          
+          // Budgets: Category lookup
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_budgets_category '
+            'ON budgets(category_id)',
+          );
+          
+          // Budgets: Active budget filtering
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_budgets_active '
+            'ON budgets(is_active) WHERE is_active = 1',
+          );
+          
+          // Categories: Hierarchy traversal
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_categories_parent '
+            'ON categories(parent_id)',
+          );
+          
+          // Import batches: Source tracking
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_import_batches_source '
+            'ON import_batches(source_id)',
+          );
+          
+          // Import batches: Date ordering
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_import_batches_date '
+            'ON import_batches(imported_at)',
+          );
         }
       },
     );
