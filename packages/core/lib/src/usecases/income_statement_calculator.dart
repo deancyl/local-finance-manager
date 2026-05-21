@@ -1,110 +1,6 @@
 import '../models/account.dart';
+import '../models/income_statement.dart';
 import 'trial_balance_calculator.dart';
-
-/// Income statement section containing line items and totals.
-class IncomeStatementSection {
-  /// List of account balances in this section
-  final List<IncomeStatementLine> lines;
-  
-  /// Total numerator for this section
-  final int totalNum;
-  
-  /// Common denominator for this section
-  final int totalDenom;
-  
-  /// Section title (e.g., "营业收入", "营业成本")
-  final String title;
-
-  const IncomeStatementSection({
-    required this.lines,
-    required this.totalNum,
-    required this.totalDenom,
-    required this.title,
-  });
-
-  /// Get total as a decimal string for display
-  String get totalDisplay => '${totalNum ~/ totalDenom}.${(totalNum % totalDenom).abs().toString().padLeft(2, '0')}';
-}
-
-/// Single line item in income statement.
-class IncomeStatementLine {
-  /// Account ID
-  final String accountId;
-  
-  /// Account name
-  final String accountName;
-  
-  /// Balance numerator
-  final int balanceNum;
-  
-  /// Balance denominator
-  final int balanceDenom;
-  
-  /// Account code (optional)
-  final String? accountCode;
-  
-  /// Parent account ID (for hierarchy)
-  final String? parentId;
-  
-  /// Child line items (for hierarchical accounts)
-  final List<IncomeStatementLine>? children;
-
-  const IncomeStatementLine({
-    required this.accountId,
-    required this.accountName,
-    required this.balanceNum,
-    required this.balanceDenom,
-    this.accountCode,
-    this.parentId,
-    this.children,
-  });
-
-  /// Get balance as a decimal string for display
-  String get balanceDisplay => '${balanceNum ~/ balanceDenom}.${(balanceNum % balanceDenom).abs().toString().padLeft(2, '0')}';
-}
-
-/// Income statement report.
-class IncomeStatement {
-  /// Revenue section
-  final IncomeStatementSection revenueSection;
-  
-  /// Expense section
-  final IncomeStatementSection expenseSection;
-  
-  /// Net income numerator
-  final int netIncomeNum;
-  
-  /// Common denominator
-  final int netIncomeDenom;
-  
-  /// Report generation timestamp
-  final DateTime generatedAt;
-  
-  /// Start date of the reporting period
-  final DateTime startDate;
-  
-  /// End date of the reporting period
-  final DateTime endDate;
-
-  const IncomeStatement({
-    required this.revenueSection,
-    required this.expenseSection,
-    required this.netIncomeNum,
-    required this.netIncomeDenom,
-    required this.generatedAt,
-    required this.startDate,
-    required this.endDate,
-  });
-
-  /// Get net income as a decimal string for display
-  String get netIncomeDisplay => '${netIncomeNum ~/ netIncomeDenom}.${(netIncomeNum % netIncomeDenom).abs().toString().padLeft(2, '0')}';
-  
-  /// Check if net income is positive (profit)
-  bool get isProfit => netIncomeNum > 0;
-  
-  /// Check if net income is negative (loss)
-  bool get isLoss => netIncomeNum < 0;
-}
 
 /// Calculator for generating income statement reports.
 ///
@@ -131,27 +27,27 @@ class IncomeStatementCalculator {
     required DateTime endDate,
   }) async {
     // Calculate revenue section
-    final revenueSection = calculateRevenues(accounts, balances);
+    final revenues = calculateRevenues(accounts, balances);
     
     // Calculate expense section
-    final expenseSection = calculateExpenses(accounts, balances);
+    final expenses = calculateExpenses(accounts, balances);
     
     // Calculate net income
-    final (netIncomeNum, netIncomeDenom) = calculateNetIncome(
-      revenueSection.totalNum,
-      revenueSection.totalDenom,
-      expenseSection.totalNum,
-      expenseSection.totalDenom,
+    final (netIncomeNum, denom) = calculateNetIncome(
+      revenues.totalNum,
+      revenues.denom,
+      expenses.totalNum,
+      expenses.denom,
     );
     
     return IncomeStatement(
-      revenueSection: revenueSection,
-      expenseSection: expenseSection,
-      netIncomeNum: netIncomeNum,
-      netIncomeDenom: netIncomeDenom,
-      generatedAt: DateTime.now(),
       startDate: startDate,
       endDate: endDate,
+      revenues: revenues,
+      expenses: expenses,
+      netIncomeNum: netIncomeNum,
+      denom: denom,
+      generatedAt: DateTime.now(),
     );
   }
 
@@ -184,30 +80,30 @@ class IncomeStatementCalculator {
             !incomeAccounts.any((parent) => parent.id == a.parentId))
         .toList();
     
-    // Build hierarchical lines
-    final lines = <IncomeStatementLine>[];
+    // Build hierarchical items
+    final items = <IncomeStatementItem>[];
     for (final account in rootIncomeAccounts) {
-      final line = _buildIncomeLine(account, accountMap, balanceMap);
-      lines.add(line);
+      final item = _buildIncomeItem(account, accountMap, balanceMap);
+      items.add(item);
     }
     
     // Calculate total using LCM for common denominator
     int commonDenom = 1;
-    for (final line in lines) {
-      commonDenom = _lcm(commonDenom, line.balanceDenom);
+    for (final item in items) {
+      commonDenom = _lcm(commonDenom, item.denom);
     }
     
     int totalNum = 0;
-    for (final line in lines) {
-      final scale = commonDenom ~/ line.balanceDenom;
-      totalNum += line.balanceNum * scale;
+    for (final item in items) {
+      final scale = commonDenom ~/ item.denom;
+      totalNum += item.amountNum * scale;
     }
     
     return IncomeStatementSection(
-      lines: lines,
-      totalNum: totalNum,
-      totalDenom: commonDenom,
       title: '营业收入',
+      items: items,
+      totalNum: totalNum,
+      denom: commonDenom,
     );
   }
 
@@ -240,30 +136,30 @@ class IncomeStatementCalculator {
             !expenseAccounts.any((parent) => parent.id == a.parentId))
         .toList();
     
-    // Build hierarchical lines
-    final lines = <IncomeStatementLine>[];
+    // Build hierarchical items
+    final items = <IncomeStatementItem>[];
     for (final account in rootExpenseAccounts) {
-      final line = _buildExpenseLine(account, accountMap, balanceMap);
-      lines.add(line);
+      final item = _buildExpenseItem(account, accountMap, balanceMap);
+      items.add(item);
     }
     
     // Calculate total using LCM for common denominator
     int commonDenom = 1;
-    for (final line in lines) {
-      commonDenom = _lcm(commonDenom, line.balanceDenom);
+    for (final item in items) {
+      commonDenom = _lcm(commonDenom, item.denom);
     }
     
     int totalNum = 0;
-    for (final line in lines) {
-      final scale = commonDenom ~/ line.balanceDenom;
-      totalNum += line.balanceNum * scale;
+    for (final item in items) {
+      final scale = commonDenom ~/ item.denom;
+      totalNum += item.amountNum * scale;
     }
     
     return IncomeStatementSection(
-      lines: lines,
-      totalNum: totalNum,
-      totalDenom: commonDenom,
       title: '营业成本',
+      items: items,
+      totalNum: totalNum,
+      denom: commonDenom,
     );
   }
 
@@ -293,10 +189,10 @@ class IncomeStatementCalculator {
     return (netIncomeNum ~/ gcd, commonDenom ~/ gcd);
   }
 
-  /// Build income line with hierarchical children.
+  /// Build income item with hierarchical children.
   ///
   /// Income balance = Credit - Debit (positive = income)
-  IncomeStatementLine _buildIncomeLine(
+  IncomeStatementItem _buildIncomeItem(
     Account account,
     Map<String, Account> accountMap,
     Map<String, AccountBalanceRaw> balanceMap,
@@ -308,9 +204,9 @@ class IncomeStatementCalculator {
                       !a.isHidden)
         .toList();
     
-    // Build child lines recursively
-    final childLines = children
-        .map((child) => _buildIncomeLine(child, accountMap, balanceMap))
+    // Build child items recursively
+    final childItems = children
+        .map((child) => _buildIncomeItem(child, accountMap, balanceMap))
         .toList();
     
     // Get raw balance for this account
@@ -327,32 +223,32 @@ class IncomeStatementCalculator {
     }
     
     // Add child balances (aggregate)
-    if (childLines.isNotEmpty) {
+    if (childItems.isNotEmpty) {
       // Find common denominator for aggregation
-      balanceDenom = _lcm(balanceDenom, _findCommonDenom(childLines));
+      balanceDenom = _lcm(balanceDenom, _findCommonDenom(childItems));
       
       // Scale and add child balances
-      for (final child in childLines) {
-        final scale = balanceDenom ~/ child.balanceDenom;
-        balanceNum += child.balanceNum * scale;
+      for (final child in childItems) {
+        final scale = balanceDenom ~/ child.denom;
+        balanceNum += child.amountNum * scale;
       }
     }
     
-    return IncomeStatementLine(
+    return IncomeStatementItem(
       accountId: account.id,
       accountName: account.name,
-      balanceNum: balanceNum,
-      balanceDenom: balanceDenom,
-      accountCode: account.code,
+      accountType: AccountType.income,
+      amountNum: balanceNum,
+      denom: balanceDenom,
       parentId: account.parentId,
-      children: childLines.isEmpty ? null : childLines,
+      children: childItems.isEmpty ? null : childItems,
     );
   }
 
-  /// Build expense line with hierarchical children.
+  /// Build expense item with hierarchical children.
   ///
   /// Expense balance = Debit - Credit (positive = expense)
-  IncomeStatementLine _buildExpenseLine(
+  IncomeStatementItem _buildExpenseItem(
     Account account,
     Map<String, Account> accountMap,
     Map<String, AccountBalanceRaw> balanceMap,
@@ -364,9 +260,9 @@ class IncomeStatementCalculator {
                       !a.isHidden)
         .toList();
     
-    // Build child lines recursively
-    final childLines = children
-        .map((child) => _buildExpenseLine(child, accountMap, balanceMap))
+    // Build child items recursively
+    final childItems = children
+        .map((child) => _buildExpenseItem(child, accountMap, balanceMap))
         .toList();
     
     // Get raw balance for this account
@@ -383,33 +279,33 @@ class IncomeStatementCalculator {
     }
     
     // Add child balances (aggregate)
-    if (childLines.isNotEmpty) {
+    if (childItems.isNotEmpty) {
       // Find common denominator for aggregation
-      balanceDenom = _lcm(balanceDenom, _findCommonDenom(childLines));
+      balanceDenom = _lcm(balanceDenom, _findCommonDenom(childItems));
       
       // Scale and add child balances
-      for (final child in childLines) {
-        final scale = balanceDenom ~/ child.balanceDenom;
-        balanceNum += child.balanceNum * scale;
+      for (final child in childItems) {
+        final scale = balanceDenom ~/ child.denom;
+        balanceNum += child.amountNum * scale;
       }
     }
     
-    return IncomeStatementLine(
+    return IncomeStatementItem(
       accountId: account.id,
       accountName: account.name,
-      balanceNum: balanceNum,
-      balanceDenom: balanceDenom,
-      accountCode: account.code,
+      accountType: AccountType.expense,
+      amountNum: balanceNum,
+      denom: balanceDenom,
       parentId: account.parentId,
-      children: childLines.isEmpty ? null : childLines,
+      children: childItems.isEmpty ? null : childItems,
     );
   }
 
-  /// Find common denominator for a list of income statement lines.
-  int _findCommonDenom(List<IncomeStatementLine> lines) {
+  /// Find common denominator for a list of income statement items.
+  int _findCommonDenom(List<IncomeStatementItem> items) {
     int denom = 1;
-    for (final line in lines) {
-      denom = _lcm(denom, line.balanceDenom);
+    for (final item in items) {
+      denom = _lcm(denom, item.denom);
     }
     return denom;
   }
