@@ -22,6 +22,13 @@ class ReportsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('报表分析'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.account_balance),
+            onPressed: () => context.push('/reports/trial-balance'),
+            tooltip: '试算平衡表',
+          ),
+        ],
       ),
       body: splitsWithTransactionsAsync.when(
         data: (splitsWithTransactions) {

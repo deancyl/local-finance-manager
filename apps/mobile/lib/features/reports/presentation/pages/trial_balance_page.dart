@@ -1,0 +1,360 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:core/core.dart';
+
+import '../../data/trial_balance_provider.dart';
+import '../widgets/account_type_section.dart';
+import '../widgets/balance_summary_card.dart';
+
+/// Trial balance report page with date range filtering.
+///
+/// Displays accounts grouped by type (资产/负债/权益/收入/费用)
+/// with debit/credit amounts and balance verification.
+class TrialBalancePage extends ConsumerStatefulWidget {
+  const TrialBalancePage({super.key});
+
+  @override
+  ConsumerState<TrialBalancePage> createState() => _TrialBalancePageState();
+}
+
+class _TrialBalancePageState extends ConsumerState<TrialBalancePage> {
+  DateTime? _startDate;
+  DateTime? _endDate;
+
+  @override
+  void initState() {
+    super.initState();
+    // Set default date range to current year
+    final now = DateTime.now();
+    _startDate = DateTime(now.year, 1, 1);
+    _endDate = DateTime(now.year, 12, 31, 23, 59, 59, 999);
+    
+    // Load initial data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
+  }
+
+  Future<void> _loadData() async {
+    await ref.read(trialBalanceProvider.notifier).setDateRange(_startDate, _endDate);
+  }
+
+  Future<void> _selectStartDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _startDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+      locale: const Locale('zh', 'CN'),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _startDate = DateTime(picked.year, picked.month, picked.day);
+      });
+      await _loadData();
+    }
+  }
+
+  Future<void> _selectEndDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _endDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+      locale: const Locale('zh', 'CN'),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _endDate = DateTime(picked.year, picked.month, picked.day, 23, 59, 59, 999);
+      });
+      await _loadData();
+    }
+  }
+
+  Future<void> _handleRefresh() async {
+    await ref.read(trialBalanceProvider.notifier).refresh();
+  }
+
+  void _handleExport() {
+    // TODO: Implement export functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('导出功能开发中...')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final trialBalanceAsync = ref.watch(trialBalanceProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('试算平衡表'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: _handleExport,
+            tooltip: '导出',
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Date range selector
+          _buildDateRangeSelector(context),
+          
+          // Content
+          Expanded(
+            child: trialBalanceAsync.when(
+              data: (trialBalance) {
+                if (trialBalance == null) {
+                  return _buildEmptyState(context);
+                }
+                return _buildContent(context, trialBalance);
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => _buildErrorState(context, error),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateRangeSelector(BuildContext context) {
+    final theme = Theme.of(context);
+    final dateFormat = DateFormat('yyyy-MM-dd');
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.date_range,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '日期范围',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              // Start date
+              Expanded(
+                child: InkWell(
+                  onTap: _selectStartDate,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: 16,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _startDate != null
+                              ? dateFormat.format(_startDate!)
+                              : '开始日期',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              
+              const SizedBox(width: 12),
+              
+              // End date
+              Expanded(
+                child: InkWell(
+                  onTap: _selectEndDate,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: 16,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _endDate != null
+                              ? dateFormat.format(_endDate!)
+                              : '结束日期',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, TrialBalance trialBalance) {
+    if (trialBalance.accounts.isEmpty) {
+      return _buildEmptyState(context);
+    }
+
+    // Group accounts by type
+    final accountsByType = <AccountType, List<AccountBalance>>{};
+    for (final account in trialBalance.accounts) {
+      accountsByType.putIfAbsent(account.accountType, () => []).add(account);
+    }
+
+    // Define display order
+    const typeOrder = [
+      AccountType.asset,
+      AccountType.liability,
+      AccountType.equity,
+      AccountType.income,
+      AccountType.expense,
+    ];
+
+    return RefreshIndicator(
+      onRefresh: _handleRefresh,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(top: 12, bottom: 12),
+        child: Column(
+          children: [
+            // Account type sections
+            ...typeOrder.map((type) {
+              final accounts = accountsByType[type];
+              if (accounts == null || accounts.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              return AccountTypeSection(
+                accountType: type,
+                accounts: accounts,
+                initiallyExpanded: true,
+              );
+            }),
+            
+            const SizedBox(height: 12),
+            
+            // Summary card
+            BalanceSummaryCard.fromTrialBalance(trialBalance),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.account_balance_wallet_outlined,
+            size: 64,
+            color: theme.colorScheme.outline,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '暂无账户数据',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '请先添加账户和交易记录',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, Object error) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: theme.colorScheme.error,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '加载失败',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error.toString(),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _handleRefresh,
+              icon: const Icon(Icons.refresh),
+              label: const Text('重试'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
