@@ -50,6 +50,22 @@ class SettingsPage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/backup'),
           ),
+          // Export data
+          ListTile(
+            leading: const Icon(Icons.upload_file),
+            title: const Text('导出数据'),
+            subtitle: const Text('导出交易、账户、分类'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/export'),
+          ),
+          // Import data
+          ListTile(
+            leading: const Icon(Icons.download),
+            title: const Text('导入数据'),
+            subtitle: const Text('从CSV或JSON导入'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/import'),
+          ),
           // Tags management
           ListTile(
             leading: const Icon(Icons.label),
@@ -71,7 +87,7 @@ class SettingsPage extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('关于'),
-            subtitle: const Text('版本 0.3.12'),
+            subtitle: const Text('版本 0.3.21'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/about'),
           ),

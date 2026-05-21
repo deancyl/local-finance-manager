@@ -11,6 +11,8 @@ import '../../features/settings/presentation/pages/theme_settings_page.dart';
 import '../../features/settings/presentation/pages/language_settings_page.dart';
 import '../../features/settings/presentation/pages/backup_settings_page.dart';
 import '../../features/settings/presentation/pages/about_page.dart';
+import '../../features/export/presentation/pages/export_page.dart';
+import '../../features/export/presentation/pages/import_page.dart' as export_import;
 import '../../features/import/presentation/pages/import_page.dart';
 import '../../features/import/presentation/pages/import_history_page.dart';
 import '../../features/tags/presentation/pages/tags_page.dart';
@@ -86,6 +88,16 @@ class AppRouter {
         path: '/settings/about',
         name: 'about',
         builder: (context, state) => const AboutPage(),
+      ),
+      GoRoute(
+        path: '/settings/export',
+        name: 'export',
+        builder: (context, state) => const ExportPage(),
+      ),
+      GoRoute(
+        path: '/settings/import',
+        name: 'import-data',
+        builder: (context, state) => const export_import.ImportPage(),
       ),
       GoRoute(
         path: '/settings/tags',
