@@ -241,6 +241,127 @@ class ExportNotifier extends StateNotifier<ExportState> {
     }
   }
 
+  /// Exports transactions to QIF format
+  Future<void> exportTransactionsToQIF(
+    ExportFilters filters, {
+    String accountType = 'Cash',
+  }) async {
+    state = ExportState(
+      status: ExportStatus.exporting,
+      message: '正在导出交易记录为QIF格式...',
+    );
+
+    try {
+      final result = await _exportService.exportTransactionsToQIF(
+        filters: filters,
+        accountType: accountType,
+      );
+
+      state = ExportState(
+        status: ExportStatus.success,
+        message: '导出成功！共导出 ${result.transactionCount} 条交易记录\n'
+            '账户类型: ${result.accountType}',
+        result: ExportResult(
+          filePath: result.filePath,
+          transactionCount: result.transactionCount,
+          accountCount: result.accountCount,
+          categoryCount: result.categoryCount,
+          format: 'QIF',
+        ),
+      );
+    } on ExportException catch (e) {
+      state = ExportState(
+        status: ExportStatus.error,
+        message: e.message,
+      );
+    } catch (e) {
+      state = ExportState(
+        status: ExportStatus.error,
+        message: '导出失败: $e',
+      );
+    }
+  }
+
+  /// Exports all accounts to QIF format
+  Future<void> exportAllToQIF() async {
+    state = ExportState(
+      status: ExportStatus.exporting,
+      message: '正在导出所有账户为QIF格式...',
+    );
+
+    try {
+      final result = await _exportService.exportAllToQIF();
+
+      state = ExportState(
+        status: ExportStatus.success,
+        message: '导出成功！\n'
+            '交易: ${result.transactionCount} 条\n'
+            '账户: ${result.accountCount} 个\n'
+            '分类: ${result.categoryCount} 个',
+        result: ExportResult(
+          filePath: result.filePath,
+          transactionCount: result.transactionCount,
+          accountCount: result.accountCount,
+          categoryCount: result.categoryCount,
+          format: 'QIF',
+        ),
+      );
+    } on ExportException catch (e) {
+      state = ExportState(
+        status: ExportStatus.error,
+        message: e.message,
+      );
+    } catch (e) {
+      state = ExportState(
+        status: ExportStatus.error,
+        message: '导出失败: $e',
+      );
+    }
+  }
+
+  /// Exports transactions to OFX format
+  Future<void> exportTransactionsToOFX(
+    ExportFilters filters, {
+    String? bankId,
+    String? accountId,
+  }) async {
+    state = ExportState(
+      status: ExportStatus.exporting,
+      message: '正在导出交易记录为OFX格式...',
+    );
+
+    try {
+      final result = await _exportService.exportTransactionsToOFX(
+        filters: filters,
+        bankId: bankId,
+        accountId: accountId,
+      );
+
+      state = ExportState(
+        status: ExportStatus.success,
+        message: '导出成功！共导出 ${result.transactionCount} 条交易记录\n'
+            '货币: ${result.currency}',
+        result: ExportResult(
+          filePath: result.filePath,
+          transactionCount: result.transactionCount,
+          accountCount: result.accountCount,
+          categoryCount: result.categoryCount,
+          format: 'OFX',
+        ),
+      );
+    } on ExportException catch (e) {
+      state = ExportState(
+        status: ExportStatus.error,
+        message: e.message,
+      );
+    } catch (e) {
+      state = ExportState(
+        status: ExportStatus.error,
+        message: '导出失败: $e',
+      );
+    }
+  }
+
   /// Shares the exported file
   Future<void> shareResult() async {
     final result = state.result;

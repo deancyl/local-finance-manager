@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:database/database.dart';
+import 'qif_export_service.dart';
+import 'ofx_export_service.dart';
 
 /// Export filter options
 class ExportFilters {
@@ -445,6 +447,72 @@ class ExportService {
         subject: subject ?? '财务数据导出',
       );
     }
+  }
+
+  /// Exports transactions to QIF format (Quicken/GnuCash compatible)
+  Future<QifExportResult> exportTransactionsToQIF({
+    required ExportFilters filters,
+    String accountType = 'Cash',
+    String? customPath,
+  }) async {
+    final qifService = QifExportService(_db);
+    return qifService.exportToQIF(
+      filters: filters,
+      accountType: accountType,
+      customPath: customPath,
+    );
+  }
+
+  /// Exports a specific account to QIF format
+  Future<QifExportResult> exportAccountToQIF({
+    required String accountId,
+    required ExportFilters filters,
+    String? customPath,
+  }) async {
+    final qifService = QifExportService(_db);
+    return qifService.exportAccountToQIF(
+      accountId: accountId,
+      filters: filters,
+      customPath: customPath,
+    );
+  }
+
+  /// Exports all accounts with transactions to QIF format
+  Future<QifExportResult> exportAllToQIF({String? customPath}) async {
+    final qifService = QifExportService(_db);
+    return qifService.exportAllToQIF(customPath: customPath);
+  }
+
+  /// Exports transactions to OFX format (Microsoft Money/QuickBooks compatible)
+  Future<OfxExportResult> exportTransactionsToOFX({
+    required ExportFilters filters,
+    String? bankId,
+    String? accountId,
+    String? customPath,
+  }) async {
+    final ofxService = OfxExportService(_db);
+    return ofxService.exportToOFX(
+      filters: filters,
+      bankId: bankId,
+      accountId: accountId,
+      customPath: customPath,
+    );
+  }
+
+  /// Exports a specific account to OFX format
+  Future<OfxExportResult> exportAccountToOFX({
+    required String accountId,
+    required ExportFilters filters,
+    String? bankId,
+    String? customPath,
+  }) async {
+    final ofxService = OfxExportService(_db);
+    return ofxService.exportAccountToOFX(
+      accountId: accountId,
+      filters: filters,
+      bankId: bankId,
+      customPath: customPath,
+    );
   }
 
   /// Fetches filtered transactions with their splits
