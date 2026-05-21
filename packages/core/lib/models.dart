@@ -15,3 +15,4 @@ export 'src/models/import_source.dart';
 export 'src/models/import_batch.dart';
 export 'src/models/trial_balance.dart';
 export 'src/models/balance_sheet.dart';
+export 'src/models/income_statement.dart';

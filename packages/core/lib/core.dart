@@ -18,4 +18,5 @@ export 'src/usecases/import_transactions.dart';
 export 'src/usecases/journal_entry_validator.dart';
 export 'src/usecases/trial_balance_calculator.dart';
 export 'src/usecases/balance_sheet_calculator.dart';
+export 'src/usecases/income_statement_calculator.dart';
 export 'src/utils/budget_period_calculator.dart';

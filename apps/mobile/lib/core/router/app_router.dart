@@ -7,6 +7,7 @@ import '../../features/transactions/data/transaction_filter.dart';
 import '../../features/reports/presentation/pages/reports_page.dart';
 import '../../features/reports/presentation/pages/trial_balance_page.dart';
 import '../../features/reports/presentation/pages/balance_sheet_page.dart';
+import '../../features/reports/presentation/pages/income_statement_page.dart';
 import '../../features/budgets/presentation/pages/budgets_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/settings/presentation/pages/theme_settings_page.dart';
@@ -73,6 +74,11 @@ class AppRouter {
             path: '/reports/balance-sheet',
             name: 'balance-sheet',
             builder: (context, state) => const BalanceSheetPage(),
+          ),
+          GoRoute(
+            path: '/reports/income-statement',
+            name: 'income-statement',
+            builder: (context, state) => const IncomeStatementPage(),
           ),
           GoRoute(
             path: '/settings',
