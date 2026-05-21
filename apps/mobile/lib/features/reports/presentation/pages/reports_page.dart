@@ -39,6 +39,11 @@ class ReportsPage extends ConsumerWidget {
             tooltip: '利润表',
           ),
           IconButton(
+            icon: const Icon(Icons.account_balance_wallet),
+            onPressed: () => context.push('/reports/cash-flow'),
+            tooltip: '现金流量表',
+          ),
+          IconButton(
             icon: const Icon(Icons.receipt_long),
             onPressed: () => context.push('/reports/general-ledger'),
             tooltip: '总账',

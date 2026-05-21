@@ -16,4 +16,5 @@ export 'src/models/import_batch.dart';
 export 'src/models/trial_balance.dart';
 export 'src/models/balance_sheet.dart';
 export 'src/models/income_statement.dart';
+export 'src/models/cash_flow_statement.dart';
 export 'src/models/general_ledger.dart';
