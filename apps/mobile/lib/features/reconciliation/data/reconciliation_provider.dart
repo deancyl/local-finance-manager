@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 
-import 'package:database/database.dart' hide Account;
+import 'package:database/database.dart' hide Account, Transaction, Split;
 import 'package:core/core.dart';
 import '../../accounts/data/account_provider.dart';
 
