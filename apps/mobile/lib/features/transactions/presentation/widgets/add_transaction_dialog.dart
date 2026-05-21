@@ -6,6 +6,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import 'package:finance_app/features/categories/data/category_provider.dart';
+import 'package:finance_app/features/tags/presentation/widgets/tag_selector.dart';
 import '../../data/transaction_provider.dart';
 
 class AddTransactionDialog extends ConsumerStatefulWidget {
@@ -30,6 +31,7 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
   bool _isIncome = false;
   bool _isLoading = false;
   Split? _existingSplit;
+  List<String> _selectedTagIds = [];
 
   @override
   void initState() {
@@ -246,6 +248,15 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
                 ),
                 maxLines: 2,
               ),
+              const SizedBox(height: 16),
+              
+              // 标签选择
+              TagSelector(
+                transactionId: widget.transaction?.id,
+                onChanged: (tagIds) {
+                  _selectedTagIds = tagIds;
+                },
+              ),
               const SizedBox(height: 24),
               
               // 保存按钮
@@ -343,9 +354,17 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
         );
         
         await notifier.updateTransaction(updatedTransaction, updatedSplit);
+        
+        // Update tags
+        if (widget.transaction != null) {
+          await ref.read(databaseProvider).tagsDao.updateTransactionTags(
+            widget.transaction!.id,
+            _selectedTagIds,
+          );
+        }
       } else {
         // Create new transaction
-        await notifier.createTransaction(
+        final transactionId = await notifier.createTransaction(
           accountId: _selectedAccountId!,
           amount: finalAmount,
           date: _selectedDate,
@@ -354,6 +373,14 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
           notes: _notesController.text.isEmpty ? null : _notesController.text,
           categoryId: _selectedCategoryId,
         );
+        
+        // Save tags for new transaction
+        if (transactionId != null && _selectedTagIds.isNotEmpty) {
+          await ref.read(databaseProvider).tagsDao.updateTransactionTags(
+            transactionId,
+            _selectedTagIds,
+          );
+        }
       }
 
       if (mounted) {

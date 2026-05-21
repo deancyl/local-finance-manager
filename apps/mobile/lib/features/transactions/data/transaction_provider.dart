@@ -203,7 +203,7 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
 
   TransactionNotifier(this._db) : super(const AsyncValue.data(null));
 
-  Future<void> createTransaction({
+  Future<String?> createTransaction({
     required String accountId,
     required double amount,
     required DateTime date,
@@ -248,8 +248,10 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
       });
 
       state = const AsyncValue.data(null);
+      return transactionId;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+      return null;
     }
   }
 

@@ -50,6 +50,14 @@ class SettingsPage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/backup'),
           ),
+          // Tags management
+          ListTile(
+            leading: const Icon(Icons.label),
+            title: const Text('标签管理'),
+            subtitle: const Text('管理交易标签'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/tags'),
+          ),
           // Import history
           ListTile(
             leading: const Icon(Icons.history),
