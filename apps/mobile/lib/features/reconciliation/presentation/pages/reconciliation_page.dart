@@ -4,8 +4,9 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:core/core.dart';
-import '../data/reconciliation_provider.dart';
+import '../../data/reconciliation_provider.dart';
 import '../widgets/reconciliation_dialog.dart';
+import 'reconciliation_history_page.dart';
 
 /// Page for reconciling account transactions against a bank statement.
 /// 
@@ -24,6 +25,18 @@ class ReconciliationPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('账户对账'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: '对账历史',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ReconciliationHistoryPage(),
+                ),
+              );
+            },
+          ),
           if (state.hasSession)
             IconButton(
               icon: const Icon(Icons.close),
