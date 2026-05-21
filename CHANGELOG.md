@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.19] - 2026-05-21
+
+### Added
+- **Recurring Transactions**: Scheduled transaction templates
+  - Recurring transaction management page
+  - Add/Edit/Delete recurring templates
+  - Frequency support: daily, weekly, monthly, yearly, custom
+  - Interval configuration (e.g., every 2 weeks)
+  - Start/End date configuration
+  - Max occurrences limit
+  - Active/inactive toggle
+  - Auto-generation of transactions from templates
+  - Next date calculation for all frequency types
+
+### Technical Details
+- `packages/database/lib/src/daos/recurring_dao.dart` - DAO with CRUD and generation
+- `apps/mobile/lib/features/recurring/data/recurring_provider.dart` - Riverpod providers
+- `apps/mobile/lib/features/recurring/presentation/pages/recurring_page.dart` - List UI
+- `apps/mobile/lib/features/recurring/presentation/widgets/add_recurring_dialog.dart` - Form dialog
+- Date calculation handles month rollover, last day of month, leap years
+
 ## [v0.3.18] - 2026-05-21
 
 ### Added

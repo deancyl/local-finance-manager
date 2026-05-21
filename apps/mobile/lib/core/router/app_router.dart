@@ -14,6 +14,7 @@ import '../../features/settings/presentation/pages/about_page.dart';
 import '../../features/import/presentation/pages/import_page.dart';
 import '../../features/import/presentation/pages/import_history_page.dart';
 import '../../features/tags/presentation/pages/tags_page.dart';
+import '../../features/recurring/presentation/pages/recurring_page.dart';
 // Sync temporarily disabled - PowerSync compatibility issues
 // import '../../features/sync/presentation/pages/sync_settings_page.dart';
 // import '../../features/sync/presentation/pages/sync_login_page.dart';
@@ -89,6 +90,11 @@ class AppRouter {
         path: '/settings/tags',
         name: 'tags',
         builder: (context, state) => const TagsPage(),
+      ),
+      GoRoute(
+        path: '/settings/recurring',
+        name: 'recurring',
+        builder: (context, state) => const RecurringPage(),
       ),
       GoRoute(
         path: '/import',
