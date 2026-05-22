@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/accounts/presentation/pages/accounts_page.dart';
 import '../../features/transactions/presentation/pages/transactions_page.dart';
+import '../../features/transactions/presentation/pages/add_transaction_page.dart';
 import '../../features/transactions/data/transaction_filter.dart';
 import '../../features/reports/presentation/pages/reports_page.dart';
 import '../../features/reports/presentation/pages/trial_balance_page.dart';
@@ -54,6 +55,11 @@ class AppRouter {
               final filter = state.extra as TransactionFilter?;
               return TransactionsPage(initialFilter: filter);
             },
+          ),
+          GoRoute(
+            path: '/transactions/add',
+            name: 'add-transaction',
+            builder: (context, state) => const AddTransactionPage(),
           ),
           GoRoute(
             path: '/accounts',
