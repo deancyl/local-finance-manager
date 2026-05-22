@@ -2,10 +2,74 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
 
-import 'package:database/database.dart' hide Account, Transaction, Split, ClosingEntry;
+import 'package:database/database.dart' hide ClosingEntry;
 import 'package:database/database.dart' as db show ClosingEntry;
 import 'package:core/core.dart';
 import '../../accounts/data/account_provider.dart';
+
+// Type aliases to distinguish database types from core types
+typedef DbAccount = Account;
+typedef DbTransaction = Transaction;
+typedef DbSplit = Split;
+
+// Conversion helpers
+DbTransaction _convertTransactionToDb(Transaction t) {
+  // This is a placeholder - in reality we need proper conversion
+  // For now, we'll use the database type directly
+  throw UnimplementedError('Transaction conversion not implemented');
+}
+
+Transaction _convertDbToTransaction(DbTransaction t) {
+  return Transaction(
+    id: t.id,
+    description: t.description,
+    postDate: DateTime.fromMillisecondsSinceEpoch(t.postDate),
+    enterDate: DateTime.fromMillisecondsSinceEpoch(t.enterDate),
+    commodityId: t.currencyId,
+    referenceNumber: t.referenceNum,
+    notes: t.notes,
+    importBatchId: t.importBatchId,
+    externalId: t.externalId,
+    isDoubleEntry: t.isDoubleEntry,
+    idempotencyKey: t.idempotencyKey,
+    version: t.version,
+    createdAt: DateTime.fromMillisecondsSinceEpoch(t.createdAt),
+    updatedAt: DateTime.fromMillisecondsSinceEpoch(t.updatedAt),
+    deletedAt: t.deletedAt != null ? DateTime.fromMillisecondsSinceEpoch(t.deletedAt!) : null,
+  );
+}
+
+Split _convertDbToSplit(DbSplit s) {
+  ReconcileState reconcileState;
+  switch (s.reconcileState) {
+    case 'c':
+      reconcileState = ReconcileState.cleared;
+      break;
+    case 'y':
+      reconcileState = ReconcileState.reconciled;
+      break;
+    case 'v':
+      reconcileState = ReconcileState.voided;
+      break;
+    default:
+      reconcileState = ReconcileState.none;
+  }
+  
+  return Split(
+    id: s.id,
+    transactionId: s.transactionId,
+    accountId: s.accountId,
+    memo: s.memo,
+    valueNum: s.valueNum,
+    valueDenom: s.valueDenom,
+    quantityNum: s.quantityNum,
+    quantityDenom: s.quantityDenom,
+    reconcileState: reconcileState,
+    reconcileDate: s.reconcileDate != null ? DateTime.fromMillisecondsSinceEpoch(s.reconcileDate!) : null,
+    version: s.version,
+    createdAt: DateTime.fromMillisecondsSinceEpoch(s.createdAt),
+  );
+}
 
 /// Provider for the closing entry service.
 final closingEntryServiceProvider = Provider<ClosingEntryService>((ref) {
@@ -403,22 +467,26 @@ class _DatabaseTransactionRepository implements TransactionRepository {
 
   @override
   Future<List<Transaction>> getAll() async {
-    return await _db.transactionsDao.getAll();
+    final dbTransactions = await _db.transactionsDao.getAll();
+    return dbTransactions.map(_convertDbToTransaction).toList();
   }
 
   @override
   Future<Transaction?> getById(String id) async {
-    return await _db.transactionsDao.getById(id);
+    final dbTransaction = await _db.transactionsDao.getById(id);
+    return dbTransaction != null ? _convertDbToTransaction(dbTransaction) : null;
   }
 
   @override
   Future<List<Transaction>> getByDateRange(DateTime start, DateTime end) async {
-    return await _db.transactionsDao.getByDateRange(start, end);
+    final dbTransactions = await _db.transactionsDao.getByDateRange(start, end);
+    return dbTransactions.map(_convertDbToTransaction).toList();
   }
 
   @override
   Future<List<Transaction>> getByAccount(String accountId) async {
-    return await _db.transactionsDao.getByAccount(accountId);
+    final dbTransactions = await _db.transactionsDao.getByAccount(accountId);
+    return dbTransactions.map(_convertDbToTransaction).toList();
   }
 
   @override
@@ -443,7 +511,8 @@ class _DatabaseTransactionRepository implements TransactionRepository {
 
   @override
   Future<List<Split>> getSplits(String transactionId) async {
-    return await _db.transactionsDao.getSplits(transactionId);
+    final dbSplits = await _db.transactionsDao.getSplits(transactionId);
+    return dbSplits.map(_convertDbToSplit).toList();
   }
 
   @override
@@ -462,7 +531,7 @@ class _DatabaseTransactionRepository implements TransactionRepository {
       categoryId: query.categoryId,
       searchQuery: query.searchText,
     );
-    return results.map((r) => r.$1).toList();
+    return results.map((r) => _convertDbToTransaction(r.$1)).toList();
   }
 
   @override

@@ -67,17 +67,17 @@ extension type ExchangeRatesDao(LocalFinanceDatabase db) implements LocalFinance
   }
 
   /// Insert a new exchange rate
-  Future<String> insertRate({
+  Future<void> insertRate({
     required String fromCurrency,
     required String toCurrency,
     required double rate,
     required DateTime date,
     String source = 'manual',
-  }) {
+  }) async {
     final id = '${fromCurrency}_${toCurrency}_${date.millisecondsSinceEpoch}_$source';
     final now = DateTime.now().millisecondsSinceEpoch;
 
-    return db.into(db.exchangeRates).insert(
+    await db.into(db.exchangeRates).insert(
           ExchangeRatesCompanion.insert(
             id: id,
             fromCurrency: fromCurrency,

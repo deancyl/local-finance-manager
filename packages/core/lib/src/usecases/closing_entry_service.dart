@@ -2,6 +2,7 @@ import '../models/closing_entry.dart';
 import '../models/account.dart';
 import '../models/transaction.dart';
 import '../models/split.dart';
+import '../models/trial_balance.dart';
 import '../repositories/account_repository.dart';
 import '../repositories/transaction_repository.dart';
 import 'trial_balance_calculator.dart';
