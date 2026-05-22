@@ -1,5 +1,4 @@
 import 'package:core/core.dart';
-import '../providers/llm_provider.dart';
 
 /// Transaction categorization service.
 ///
