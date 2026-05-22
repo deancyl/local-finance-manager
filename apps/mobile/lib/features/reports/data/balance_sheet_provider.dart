@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:database/database.dart' hide Account, AccountBalanceRaw;
 import 'package:core/core.dart';
 import '../../accounts/data/account_provider.dart';
+import 'currency_conversion_service.dart';
 
 // ============================================================
 // AS-OF DATE STATE PROVIDER
@@ -24,11 +25,13 @@ final balanceSheetProvider = AsyncNotifierProvider<BalanceSheetNotifier, Balance
 class BalanceSheetNotifier extends AsyncNotifier<BalanceSheet?> {
   late final LocalFinanceDatabase _db;
   late final BalanceSheetCalculator _calculator;
+  late final CurrencyConversionService _currencyService;
 
   @override
   BalanceSheet? build() {
     _db = ref.watch(databaseProvider);
     _calculator = BalanceSheetCalculator();
+    _currencyService = ref.watch(currencyConversionServiceProvider);
     
     // Initial load
     _fetch();
@@ -39,6 +42,7 @@ class BalanceSheetNotifier extends AsyncNotifier<BalanceSheet?> {
   /// Fetch balance sheet data from database
   Future<BalanceSheet> _fetch() async {
     final asOfDate = ref.read(balanceSheetAsOfDateProvider);
+    final targetCurrency = ref.read(reportCurrencyProvider);
 
     // Get all accounts
     final accountsData = await _db.accountsDao.getAll();
@@ -67,20 +71,49 @@ class BalanceSheetNotifier extends AsyncNotifier<BalanceSheet?> {
     final rawBalances = await _db.splitsDao.getAccountBalancesAsOfDate(asOfDate);
 
     // Convert database AccountBalanceRaw to core AccountBalanceRaw
-    final balances = rawBalances.map((raw) {
+    // with currency conversion
+    final balances = <AccountBalanceRaw>[];
+    for (final raw in rawBalances) {
       // Calculate debit and credit from totalNum
       // In double-entry: positive = credit, negative = debit
       final totalNum = raw.totalNum;
-      final debitNum = totalNum < 0 ? totalNum.abs() : 0;
-      final creditNum = totalNum > 0 ? totalNum : 0;
+      var debitNum = totalNum < 0 ? totalNum.abs() : 0;
+      var creditNum = totalNum > 0 ? totalNum : 0;
       
-      return AccountBalanceRaw(
+      // Get account's commodity for currency conversion
+      final account = accounts.firstWhere(
+        (a) => a.id == raw.accountId,
+        orElse: () => throw StateError('Account not found: ${raw.accountId}'),
+      );
+      
+      // Convert to target currency if needed
+      if (account.commodityId != targetCurrency) {
+        final debitAmount = debitNum / raw.valueDenom.toDouble();
+        final creditAmount = creditNum / raw.valueDenom.toDouble();
+        
+        final convertedDebit = await _currencyService.convertOrDefault(
+          debitAmount,
+          account.commodityId,
+          targetCurrency,
+        );
+        final convertedCredit = await _currencyService.convertOrDefault(
+          creditAmount,
+          account.commodityId,
+          targetCurrency,
+        );
+        
+        // Convert back to integer (using 100 as denominator for cents)
+        debitNum = (convertedDebit * 100).round();
+        creditNum = (convertedCredit * 100).round();
+      }
+      
+      balances.add(AccountBalanceRaw(
         accountId: raw.accountId,
         debitNum: debitNum,
         creditNum: creditNum,
-        denom: raw.valueDenom,
-      );
-    }).toList();
+        denom: 100, // Standardized to cents after conversion
+      ));
+    }
 
     // Calculate balance sheet
     final balanceSheet = await _calculator.calculate(
@@ -108,6 +141,12 @@ class BalanceSheetNotifier extends AsyncNotifier<BalanceSheet?> {
   /// Set as-of date and refresh
   Future<void> setAsOfDate(DateTime date) async {
     ref.read(balanceSheetAsOfDateProvider.notifier).state = date;
+    await refresh();
+  }
+
+  /// Set target currency and refresh
+  Future<void> setCurrency(String currencyId) async {
+    ref.read(reportCurrencyProvider.notifier).state = currencyId;
     await refresh();
   }
 }

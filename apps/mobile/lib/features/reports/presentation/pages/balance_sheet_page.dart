@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:core/core.dart';
 
 import '../../data/balance_sheet_provider.dart';
+import '../../data/currency_conversion_service.dart';
+import '../../../currency/data/currency_provider.dart';
 import '../widgets/balance_sheet_section.dart';
 import '../widgets/balance_verification_card.dart';
 
@@ -109,6 +111,8 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
   Widget _buildAsOfDateSelector(BuildContext context) {
     final theme = Theme.of(context);
     final dateFormat = DateFormat('yyyy-MM-dd');
+    final currencies = ref.watch(currenciesProvider);
+    final selectedCurrency = ref.watch(reportCurrencyProvider);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -124,6 +128,7 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Date selector row
           Row(
             children: [
               Icon(
@@ -171,6 +176,53 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ],
+              ),
+            ),
+          ),
+          
+          // Currency selector row
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Icon(
+                Icons.currency_exchange,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '报表币种',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: theme.colorScheme.outline,
+              ),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: selectedCurrency,
+                isExpanded: true,
+                items: currencies.map((currency) {
+                  return DropdownMenuItem(
+                    value: currency.id,
+                    child: Text('${currency.mnemonic} - ${currency.fullName ?? currency.id}'),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    ref.read(balanceSheetProvider.notifier).setCurrency(value);
+                  }
+                },
               ),
             ),
           ),
