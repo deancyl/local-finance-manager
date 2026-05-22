@@ -31,38 +31,6 @@ import '../utils/amount_parser.dart';
 /// - 理财通购买
 /// - 理财通赎回
 class WeChatPayImporter extends ImporterBase {
-  /// WeChat Pay CSV header columns (in Chinese).
-  // ignore: unused_field
-  static const _expectedHeaders = [
-    '交易时间',
-    '交易类型',
-    '交易对方',
-    '商品',
-    '收/支',
-    '金额(元)',
-    '支付方式',
-    '当前状态',
-    '交易单号',
-    '商户单号',
-    '备注',
-  ];
-
-  /// Alternative header variations.
-  // ignore: unused_field
-  static const _alternativeHeaders = [
-    '交易时间',
-    '交易类型',
-    '交易对方',
-    '商品说明',
-    '收/支',
-    '金额(元)',
-    '支付方式',
-    '当前状态',
-    '交易单号',
-    '商户单号',
-    '备注',
-  ];
-
   @override
   String get name => 'WeChat Pay';
 
