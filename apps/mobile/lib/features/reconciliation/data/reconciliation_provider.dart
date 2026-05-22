@@ -290,11 +290,13 @@ final reconciliationNotifierProvider =
 });
 
 /// Provider for accounts eligible for reconciliation (non-placeholder, non-hidden).
+/// Returns core.Account type for use with reconciliation service.
 final reconcilableAccountsProvider = Provider<List<core.Account>>((ref) {
   final accountsAsync = ref.watch(accountsProvider);
   return accountsAsync.when(
     data: (accounts) => accounts
         .where((a) => !a.isPlaceholder && !a.isHidden)
+        .map((a) => _convertDbToAccount(a))
         .toList(),
     loading: () => [],
     error: (_, __) => [],

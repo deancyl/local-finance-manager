@@ -159,11 +159,12 @@ class _ReconciliationHistoryPageState extends ConsumerState<ReconciliationHistor
 
     // Query splits that are reconciled for this account
     // Group by reconcile date to show reconciliation sessions
+    final accountId = _selectedAccountId!; // Safe: already checked for null above
     final query = db.select(db.splits).join([
       drift.innerJoin(db.transactions, db.transactions.id.equalsExp(db.splits.transactionId)),
       drift.innerJoin(db.accounts, db.accounts.id.equalsExp(db.splits.accountId)),
     ])
-      ..where(db.splits.accountId.equals(_selectedAccountId) & 
+      ..where(db.splits.accountId.equals(accountId) & 
               db.splits.reconcileState.equals('y') &
               db.splits.reconcileDate.isNotNull())
       ..orderBy([drift.OrderingTerm.desc(db.splits.reconcileDate)]);
