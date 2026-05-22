@@ -6,8 +6,6 @@ import 'package:uuid/uuid.dart';
 import 'package:database/database.dart';
 import '../../accounts/data/account_provider.dart';
 
-part 'undo_redo_provider.g.dart';
-
 // ============================================================
 // COMMAND PATTERN - Undoable Operations
 // ============================================================
