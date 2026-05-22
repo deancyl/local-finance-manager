@@ -2,9 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
 
-import 'package:database/database.dart' hide ClosingEntry, AccountBalanceRaw;
+import 'package:database/database.dart' hide ClosingEntry, AccountBalanceRaw, Account, Transaction, Split;
 import 'package:database/database.dart' as db show ClosingEntry;
-import 'package:core/core.dart' hide Account, Transaction, Split;
+import 'package:core/core.dart' as core;
 import 'package:core/src/models/trial_balance.dart' show AccountBalanceRaw;
 import '../../accounts/data/account_provider.dart';
 
@@ -14,14 +14,14 @@ typedef DbTransaction = Transaction;
 typedef DbSplit = Split;
 
 // Conversion helpers
-DbTransaction _convertTransactionToDb(Transaction t) {
+DbTransaction _convertTransactionToDb(core.Transaction t) {
   // This is a placeholder - in reality we need proper conversion
   // For now, we'll use the database type directly
   throw UnimplementedError('Transaction conversion not implemented');
 }
 
-Transaction _convertDbToTransaction(DbTransaction t) {
-  return Transaction(
+core.Transaction _convertDbToTransaction(DbTransaction t) {
+  return core.Transaction(
     id: t.id,
     description: t.description,
     postDate: DateTime.fromMillisecondsSinceEpoch(t.postDate),
@@ -40,23 +40,23 @@ Transaction _convertDbToTransaction(DbTransaction t) {
   );
 }
 
-Split _convertDbToSplit(DbSplit s) {
-  ReconcileState reconcileState;
+core.Split _convertDbToSplit(DbSplit s) {
+  core.ReconcileState reconcileState;
   switch (s.reconcileState) {
     case 'c':
-      reconcileState = ReconcileState.cleared;
+      reconcileState = core.ReconcileState.cleared;
       break;
     case 'y':
-      reconcileState = ReconcileState.reconciled;
+      reconcileState = core.ReconcileState.reconciled;
       break;
     case 'v':
-      reconcileState = ReconcileState.voided;
+      reconcileState = core.ReconcileState.voided;
       break;
     default:
-      reconcileState = ReconcileState.none;
+      reconcileState = core.ReconcileState.none;
   }
   
-  return Split(
+  return core.Split(
     id: s.id,
     transactionId: s.transactionId,
     accountId: s.accountId,
@@ -73,11 +73,11 @@ Split _convertDbToSplit(DbSplit s) {
 }
 
 /// Provider for the closing entry service.
-final closingEntryServiceProvider = Provider<ClosingEntryService>((ref) {
+final closingEntryServiceProvider = Provider<core.ClosingEntryService>((ref) {
   final db = ref.watch(databaseProvider);
   final accountRepo = _DatabaseAccountRepository(db);
   final transactionRepo = _DatabaseTransactionRepository(db);
-  return ClosingEntryService(
+  return core.ClosingEntryService(
     accountRepository: accountRepo,
     transactionRepository: transactionRepo,
   );
@@ -179,7 +179,7 @@ class PeriodClosingState {
 /// Notifier for managing period closing workflow.
 class PeriodClosingNotifier extends StateNotifier<PeriodClosingState> {
   final LocalFinanceDatabase _db;
-  final ClosingEntryService _service;
+  final core.ClosingEntryService _service;
 
   PeriodClosingNotifier(this._db, this._service) : super(PeriodClosingState()) {
     _loadPeriods();
@@ -266,7 +266,7 @@ class PeriodClosingNotifier extends StateNotifier<PeriodClosingState> {
 
     try {
       // Get trial balance for the period
-      final trialBalanceCalculator = TrialBalanceCalculator(
+      final trialBalanceCalculator = core.TrialBalanceCalculator(
         accountRepository: _DatabaseAccountRepository(_db),
         transactionRepository: _DatabaseTransactionRepository(_db),
       );
@@ -406,7 +406,7 @@ final periodClosingEntriesProvider =
 // ============================================================
 
 /// Internal account repository implementation using database.
-class _DatabaseAccountRepository implements AccountRepository {
+class _DatabaseAccountRepository implements core.AccountRepository {
   final LocalFinanceDatabase _db;
 
   _DatabaseAccountRepository(this._db);
@@ -424,7 +424,7 @@ class _DatabaseAccountRepository implements AccountRepository {
   }
 
   @override
-  Future<List<core.Account>> getByType(AccountType type) async {
+  Future<List<core.Account>> getByType(core.AccountType type) async {
     final dbAccounts = await _db.accountsDao.getByType(type.name.toUpperCase());
     return dbAccounts.map(_convertDbToAccount).toList();
   }
@@ -504,52 +504,51 @@ core.Account _convertDbToAccount(DbAccount a) {
     version: a.version,
     createdAt: DateTime.fromMillisecondsSinceEpoch(a.createdAt),
     updatedAt: DateTime.fromMillisecondsSinceEpoch(a.updatedAt),
-    deletedAt: a.deletedAt != null ? DateTime.fromMillisecondsSinceEpoch(a.deletedAt!) : null,
   );
 }
 
 /// Internal transaction repository implementation using database.
-class _DatabaseTransactionRepository implements TransactionRepository {
+class _DatabaseTransactionRepository implements core.TransactionRepository {
   final LocalFinanceDatabase _db;
 
   _DatabaseTransactionRepository(this._db);
 
   @override
-  Future<List<Transaction>> getAll() async {
+  Future<List<core.Transaction>> getAll() async {
     final dbTransactions = await _db.transactionsDao.getAll();
     return dbTransactions.map(_convertDbToTransaction).toList();
   }
 
   @override
-  Future<Transaction?> getById(String id) async {
+  Future<core.Transaction?> getById(String id) async {
     final dbTransaction = await _db.transactionsDao.getById(id);
     return dbTransaction != null ? _convertDbToTransaction(dbTransaction) : null;
   }
 
   @override
-  Future<List<Transaction>> getByDateRange(DateTime start, DateTime end) async {
+  Future<List<core.Transaction>> getByDateRange(DateTime start, DateTime end) async {
     final dbTransactions = await _db.transactionsDao.getByDateRange(start, end);
     return dbTransactions.map(_convertDbToTransaction).toList();
   }
 
   @override
-  Future<List<Transaction>> getByAccount(String accountId) async {
+  Future<List<core.Transaction>> getByAccount(String accountId) async {
     final dbTransactions = await _db.transactionsDao.getByAccount(accountId);
     return dbTransactions.map(_convertDbToTransaction).toList();
   }
 
   @override
-  Future<List<Transaction>> getByImportBatch(String batchId) async {
+  Future<List<core.Transaction>> getByImportBatch(String batchId) async {
     return [];
   }
 
   @override
-  Future<Transaction> create(Transaction transaction, List<Split> splits) async {
+  Future<core.Transaction> create(core.Transaction transaction, List<core.Split> splits) async {
     throw UnimplementedError('Use TransactionNotifier for creating transactions');
   }
 
   @override
-  Future<Transaction> update(Transaction transaction, List<Split> splits) async {
+  Future<core.Transaction> update(core.Transaction transaction, List<core.Split> splits) async {
     throw UnimplementedError('Use TransactionNotifier for updating transactions');
   }
 
@@ -559,7 +558,7 @@ class _DatabaseTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Future<List<Split>> getSplits(String transactionId) async {
+  Future<List<core.Split>> getSplits(String transactionId) async {
     final dbSplits = await _db.transactionsDao.getSplits(transactionId);
     return dbSplits.map(_convertDbToSplit).toList();
   }
@@ -570,7 +569,7 @@ class _DatabaseTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Future<List<Transaction>> search(TransactionQuery query) async {
+  Future<List<core.Transaction>> search(core.TransactionQuery query) async {
     final results = await _db.transactionsDao.getFilteredTransactionsPaginated(
       limit: query.limit ?? 100,
       offset: query.offset ?? 0,
@@ -589,7 +588,7 @@ class _DatabaseTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Future<List<SplitWithTransactionData>> getSplitsForAccount(
+  Future<List<core.SplitWithTransactionData>> getSplitsForAccount(
     String accountId, {
     DateTime? startDate,
     DateTime? endDate,
@@ -600,7 +599,7 @@ class _DatabaseTransactionRepository implements TransactionRepository {
       endDate: endDate,
     );
 
-    return splitsData.map((data) => SplitWithTransactionData(
+    return splitsData.map((data) => core.SplitWithTransactionData(
       splitId: data.splitId,
       transactionId: data.transactionId,
       postDate: data.postDate,
