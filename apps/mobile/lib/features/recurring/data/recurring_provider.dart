@@ -3,6 +3,7 @@ import 'package:drift/drift.dart' as drift;
 
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
+import 'package:core/core.dart';
 
 /// Provider that watches all non-deleted recurring transactions.
 final recurringTransactionsProvider = StreamProvider<List<RecurringTransaction>>((ref) {

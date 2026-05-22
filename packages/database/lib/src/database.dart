@@ -13,6 +13,7 @@ import 'tables/tags.dart';
 import 'tables/closing_entries.dart';
 import 'tables/exchange_rates.dart';
 import 'tables/cost_centers.dart';
+import 'tables/audit_logs.dart';
 
 part 'database.g.dart';
 part 'daos/accounts_dao.dart';
@@ -27,6 +28,7 @@ part 'daos/splits_dao.dart';
 part 'daos/closing_entries_dao.dart';
 part 'daos/exchange_rates_dao.dart';
 part 'daos/cost_centers_dao.dart';
+part 'daos/audit_logs_dao.dart';
 
 /// Local finance database with all tables.
 @DriftDatabase(
@@ -46,6 +48,7 @@ part 'daos/cost_centers_dao.dart';
     ClosingEntries,
     ExchangeRates,
     CostCenters,
+    AuditLogs,
   ],
 )
 class LocalFinanceDatabase extends _$LocalFinanceDatabase {
@@ -65,9 +68,10 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final ClosingEntriesDao closingEntriesDao = ClosingEntriesDao(this);
   late final ExchangeRatesDao exchangeRatesDao = ExchangeRatesDao(this);
   late final CostCentersDao costCentersDao = CostCentersDao(this);
+  late final AuditLogsDao auditLogsDao = AuditLogsDao(this);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration {
@@ -289,6 +293,26 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
           await customStatement(
             'CREATE INDEX IF NOT EXISTS idx_splits_cost_center '
             'ON splits(cost_center_id)',
+          );
+        }
+        if (from < 11) {
+          // Version 11: Add audit logs table for compliance tracking
+          await m.createTable(auditLogs);
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_audit_logs_entity '
+            'ON audit_logs(entity_type, entity_id)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp '
+            'ON audit_logs(changed_at)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_audit_logs_operation '
+            'ON audit_logs(operation)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_audit_logs_session '
+            'ON audit_logs(session_id)',
           );
         }
       },
