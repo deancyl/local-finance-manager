@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
 
-import 'package:database/database.dart' as db hide ClosingEntry, AccountBalanceRaw;
+import 'package:database/database.dart' as db;
 import 'package:core/core.dart' as core;
 import 'package:core/src/models/trial_balance.dart' show AccountBalanceRaw;
 import '../../accounts/data/account_provider.dart';
@@ -177,7 +177,7 @@ class PeriodClosingState {
 
 /// Notifier for managing period closing workflow.
 class PeriodClosingNotifier extends StateNotifier<PeriodClosingState> {
-  final LocalFinanceDatabase _db;
+  final db.LocalFinanceDatabase _db;
   final core.ClosingEntryService _service;
 
   PeriodClosingNotifier(this._db, this._service) : super(PeriodClosingState()) {
@@ -304,7 +304,7 @@ class PeriodClosingNotifier extends StateNotifier<PeriodClosingState> {
       // Save closing entries to database
       final now = DateTime.now().millisecondsSinceEpoch;
       for (final entry in closingEntries) {
-        await _db.closingEntriesDao.create(ClosingEntriesCompanion.insert(
+        await _db.closingEntriesDao.create(db.ClosingEntriesCompanion.insert(
           id: entry.id,
           fiscalPeriodId: entry.fiscalPeriodId,
           closingType: entry.closingType.code,
@@ -406,7 +406,7 @@ final periodClosingEntriesProvider =
 
 /// Internal account repository implementation using database.
 class _DatabaseAccountRepository implements core.AccountRepository {
-  final LocalFinanceDatabase _db;
+  final db.LocalFinanceDatabase _db;
 
   _DatabaseAccountRepository(this._db);
 
@@ -508,7 +508,7 @@ core.Account _convertDbToAccount(DbAccount a) {
 
 /// Internal transaction repository implementation using database.
 class _DatabaseTransactionRepository implements core.TransactionRepository {
-  final LocalFinanceDatabase _db;
+  final db.LocalFinanceDatabase _db;
 
   _DatabaseTransactionRepository(this._db);
 
@@ -619,7 +619,7 @@ class _DatabaseTransactionRepository implements core.TransactionRepository {
   ) async {
     await (_db.update(_db.splits)
       ..where((s) => s.id.equals(splitId))).write(
-      SplitsCompanion(
+      db.SplitsCompanion(
         reconcileState: drift.Value(reconcileState),
         reconcileDate: drift.Value(reconcileDate),
       ),
