@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:database/database.dart';
+import 'package:finance_app/features/currency/data/currency_provider.dart';
 import '../data/journal_entry_provider.dart';
 import 'journal_account_selector.dart';
 
@@ -87,6 +88,10 @@ class _JournalEntryDialogState extends ConsumerState<JournalEntryDialog> {
                 children: [
                   // Date picker
                   _buildDatePicker(theme, state, notifier),
+                  const SizedBox(height: 16),
+
+                  // Currency selector
+                  _buildCurrencySelector(theme, state, notifier),
                   const SizedBox(height: 16),
 
                   // Description field
@@ -243,6 +248,41 @@ class _JournalEntryDialogState extends ConsumerState<JournalEntryDialog> {
         ),
       ),
       onChanged: notifier.setReferenceNumber,
+    );
+  }
+
+  Widget _buildCurrencySelector(
+    ThemeData theme,
+    JournalEntryState state,
+    JournalEntryNotifier notifier,
+  ) {
+    final currencies = ref.watch(currenciesProvider);
+
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: '币种',
+        prefixIcon: const Icon(Icons.currency_exchange),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: state.currencyId,
+          isExpanded: true,
+          items: currencies.map((currency) {
+            return DropdownMenuItem(
+              value: currency.id,
+              child: Text('${currency.mnemonic} - ${currency.fullName ?? currency.id}'),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              notifier.setCurrency(value);
+            }
+          },
+        ),
+      ),
     );
   }
 

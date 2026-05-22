@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:core/core.dart';
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
+import 'package:finance_app/features/currency/data/currency_provider.dart';
 
 /// Represents a single split line in the journal entry editor.
 class SplitLine {
@@ -61,6 +62,7 @@ class JournalEntryState {
   final DateTime date;
   final String description;
   final String? referenceNumber;
+  final String currencyId; // Transaction currency
   final List<SplitLine> splits;
   final bool isValid;
   final String? errorMessage;
@@ -72,6 +74,7 @@ class JournalEntryState {
     this.date = DateTime.now,
     this.description = '',
     this.referenceNumber,
+    this.currencyId = 'CNY', // Default to CNY
     this.splits = const [],
     this.isValid = false,
     this.errorMessage,
@@ -90,6 +93,7 @@ class JournalEntryState {
     DateTime? date,
     String? description,
     String? referenceNumber,
+    String? currencyId,
     List<SplitLine>? splits,
     bool? isValid,
     String? errorMessage,
@@ -101,6 +105,7 @@ class JournalEntryState {
       date: date ?? this.date,
       description: description ?? this.description,
       referenceNumber: referenceNumber ?? this.referenceNumber,
+      currencyId: currencyId ?? this.currencyId,
       splits: splits ?? this.splits,
       isValid: isValid ?? this.isValid,
       errorMessage: errorMessage,
@@ -147,6 +152,11 @@ class JournalEntryNotifier extends StateNotifier<JournalEntryState> {
   /// Updates the reference number.
   void setReferenceNumber(String? referenceNumber) {
     state = state.copyWith(referenceNumber: referenceNumber);
+  }
+
+  /// Updates the transaction currency.
+  void setCurrency(String currencyId) {
+    state = state.copyWith(currencyId: currencyId);
   }
 
   /// Adds a new split line.
@@ -342,7 +352,7 @@ class JournalEntryNotifier extends StateNotifier<JournalEntryState> {
             id: transactionId,
             postDate: postDate,
             enterDate: now,
-            currencyId: 'CNY',
+            currencyId: state.currencyId, // Use selected currency
             description: drift.Value(state.description.isEmpty ? null : state.description),
             notes: drift.Value(state.referenceNumber),
             isDoubleEntry: const drift.Value(true),
