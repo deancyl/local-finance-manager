@@ -47,5 +47,5 @@ class KeychainFactory {
   }
 
   /// Checks if the keychain service is initialized.
-  static bool isInitialized => _instance != null;
+  static bool get isInitialized => _instance != null;
 }

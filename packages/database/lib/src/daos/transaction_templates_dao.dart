@@ -56,7 +56,7 @@ class TransactionTemplatesDao extends DatabaseAccessor<LocalFinanceDatabase> {
   }
 
   /// Update a template
-  Future<int> update(TransactionTemplatesCompanion template) async {
+  Future<int> updateTemplate(TransactionTemplatesCompanion template) async {
     return (db.update(db.transactionTemplates)
       ..where((t) => t.id.equals(template.id.value)))
       .write(template);
@@ -109,7 +109,7 @@ class TransactionTemplatesDao extends DatabaseAccessor<LocalFinanceDatabase> {
   }
 
   /// Delete a template
-  Future<int> delete(String id) async {
+  Future<int> deleteTemplate(String id) async {
     return (db.delete(db.transactionTemplates)
       ..where((t) => t.id.equals(id)))
       .go();
