@@ -12,6 +12,7 @@ import 'tables/attachments.dart';
 import 'tables/tags.dart';
 import 'tables/closing_entries.dart';
 import 'tables/exchange_rates.dart';
+import 'tables/cost_centers.dart';
 
 part 'database.g.dart';
 part 'daos/accounts_dao.dart';
@@ -25,6 +26,7 @@ part 'daos/attachments_dao.dart';
 part 'daos/splits_dao.dart';
 part 'daos/closing_entries_dao.dart';
 part 'daos/exchange_rates_dao.dart';
+part 'daos/cost_centers_dao.dart';
 
 /// Local finance database with all tables.
 @DriftDatabase(
@@ -43,6 +45,7 @@ part 'daos/exchange_rates_dao.dart';
     TransactionTags,
     ClosingEntries,
     ExchangeRates,
+    CostCenters,
   ],
 )
 class LocalFinanceDatabase extends _$LocalFinanceDatabase {
@@ -61,9 +64,10 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final SplitsDao splitsDao = SplitsDao(this);
   late final ClosingEntriesDao closingEntriesDao = ClosingEntriesDao(this);
   late final ExchangeRatesDao exchangeRatesDao = ExchangeRatesDao(this);
+  late final CostCentersDao costCentersDao = CostCentersDao(this);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration {
@@ -263,6 +267,28 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
           await customStatement(
             'CREATE INDEX IF NOT EXISTS idx_exchange_rates_currencies_date '
             'ON exchange_rates(from_currency, to_currency, date)',
+          );
+        }
+        if (from < 10) {
+          // Version 10: Add cost centers table for cost allocation
+          await m.createTable(costCenters);
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_cost_centers_parent '
+            'ON cost_centers(parent_id)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_cost_centers_type '
+            'ON cost_centers(cost_center_type)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_cost_centers_active '
+            'ON cost_centers(is_active) WHERE is_active = 1',
+          );
+          // Add cost_center_id column to splits
+          await m.addColumn(splits, splits.costCenterId);
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_splits_cost_center '
+            'ON splits(cost_center_id)',
           );
         }
       },

@@ -32,6 +32,7 @@ class Splits extends Table {
   TextColumn get transactionId => text().references(Transactions, #id)();
   TextColumn get accountId => text().references(Accounts, #id)();
   TextColumn get categoryId => text().nullable().references(Categories, #id)();
+  TextColumn get costCenterId => text().nullable()(); // Cost center for expense allocation
   TextColumn get memo => text().nullable()();
   IntColumn get valueNum => integer()();
   IntColumn get valueDenom => integer().withDefault(const Constant(1))();
