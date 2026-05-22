@@ -2,16 +2,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
 
-import 'package:database/database.dart' hide ClosingEntry, AccountBalanceRaw, Account, Transaction, Split;
-import 'package:database/database.dart' as db show ClosingEntry;
+import 'package:database/database.dart' as db hide ClosingEntry, AccountBalanceRaw;
 import 'package:core/core.dart' as core;
 import 'package:core/src/models/trial_balance.dart' show AccountBalanceRaw;
 import '../../accounts/data/account_provider.dart';
 
 // Type aliases to distinguish database types from core types
-typedef DbAccount = Account;
-typedef DbTransaction = Transaction;
-typedef DbSplit = Split;
+typedef DbAccount = db.Account;
+typedef DbTransaction = db.Transaction;
+typedef DbSplit = db.Split;
 
 // Conversion helpers
 DbTransaction _convertTransactionToDb(core.Transaction t) {
@@ -436,7 +435,7 @@ class _DatabaseAccountRepository implements core.AccountRepository {
   }
 
   @override
-  Future<List<AccountNode>> getHierarchy() async {
+  Future<List<core.AccountNode>> getHierarchy() async {
     final dbAccounts = await _db.accountsDao.getAll();
     final accounts = dbAccounts.map(_convertDbToAccount).toList();
     
@@ -446,11 +445,11 @@ class _DatabaseAccountRepository implements core.AccountRepository {
       byParent.putIfAbsent(account.parentId, () => []).add(account);
     }
     
-    AccountNode buildNode(core.Account account) {
+    core.AccountNode buildNode(core.Account account) {
       final children = (byParent[account.id] ?? [])
           .map((child) => buildNode(child))
           .toList();
-      return AccountNode(account: account, children: children);
+      return core.AccountNode(account: account, children: children);
     }
     
     final roots = byParent[null] ?? [];

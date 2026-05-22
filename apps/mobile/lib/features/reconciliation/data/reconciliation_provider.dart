@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 
 import 'package:database/database.dart' hide Account, Transaction, Split;
-import 'package:core/core.dart';
+import 'package:core/core.dart' show AccountRepository, AccountNode, AccountType, Account, Transaction, Split, ReconciliationService, ReconciliationResult, ReconciliationStatus;
 import '../../accounts/data/account_provider.dart';
 
 /// Provider for the reconciliation service.
@@ -252,6 +252,12 @@ class _DatabaseAccountRepository implements AccountRepository {
   @override
   Future<List<Account>> getChildren(String parentId) async {
     return await _db.accountsDao.getChildren(parentId);
+  }
+
+  @override
+  Future<List<AccountNode>> getHierarchy() async {
+    // Not implemented for reconciliation use case
+    return [];
   }
 
   @override

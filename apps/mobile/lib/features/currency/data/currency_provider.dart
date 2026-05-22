@@ -3,9 +3,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
 
 import 'package:database/database.dart';
-
-// Re-export databaseProvider from accounts for convenience
-export 'package:finance_app/features/accounts/data/account_provider.dart' show databaseProvider;
+import 'package:finance_app/features/accounts/data/account_provider.dart';
 
 /// Provider for all commodities (currencies)
 final commoditiesProvider = StreamProvider<List<Commodity>>((ref) {
