@@ -2,9 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
 
-import 'package:database/database.dart' hide ClosingEntry;
+import 'package:database/database.dart' hide ClosingEntry, AccountBalanceRaw;
 import 'package:database/database.dart' as db show ClosingEntry;
-import 'package:core/core.dart';
+import 'package:core/core.dart' hide Account, Transaction, Split;
+import 'package:core/src/models/trial_balance.dart' show AccountBalanceRaw;
 import '../../accounts/data/account_provider.dart';
 
 // Type aliases to distinguish database types from core types
@@ -285,7 +286,7 @@ class PeriodClosingNotifier extends StateNotifier<PeriodClosingState> {
       }
 
       // Get default commodity
-      final commodities = await _db.commoditiesDao.getAll();
+      final commodities = await _db.select(_db.commodities).get();
       final commodityId = commodities.isNotEmpty ? commodities.first.id : 'CNY';
 
       // Generate closing entries
