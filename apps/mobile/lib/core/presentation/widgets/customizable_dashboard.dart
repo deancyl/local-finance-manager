@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:database/database.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 import 'dashboard_config_provider.dart';
 import 'dashboard_widget_registry.dart';
 import 'package:finance_app/features/home/data/home_providers.dart';
+import 'package:finance_app/features/budgets/data/budget_provider.dart';
 
 /// Customizable dashboard with reorderable widgets.
 class CustomizableDashboard extends ConsumerStatefulWidget {
@@ -771,30 +773,98 @@ class _RecentTransactionsWidget extends ConsumerWidget {
   }
 }
 
-class _BudgetProgressWidget extends StatelessWidget {
+class _BudgetProgressWidget extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final budgetsAsync = ref.watch(budgetsProvider);
+    
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '预算进度',
-            style: Theme.of(context).textTheme.titleMedium,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '预算进度',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              TextButton(
+                onPressed: () => context.push('/budgets'),
+                child: const Text('查看全部'),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _buildBudgetItem(context, '餐饮', 0.75, Colors.orange),
-                  const SizedBox(height: 12),
-                  _buildBudgetItem(context, '交通', 0.45, Colors.blue),
-                  const SizedBox(height: 12),
-                  _buildBudgetItem(context, '购物', 0.90, Colors.purple),
-                ],
+          budgetsAsync.when(
+            data: (budgets) {
+              final activeBudgets = budgets.where((b) => b.isActive).take(3).toList();
+              
+              if (activeBudgets.isEmpty) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.savings_outlined,
+                            size: 48,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            '暂无预算设置',
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  color: Theme.of(context).colorScheme.outline,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '点击上方按钮添加预算',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.outline,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+              
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      for (int i = 0; i < activeBudgets.length; i++) ...[
+                        if (i > 0) const SizedBox(height: 12),
+                        _BudgetItemWidget(budget: activeBudgets[i]),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+            loading: () => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+            ),
+            error: (_, __) => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Center(
+                  child: Text(
+                    '加载失败',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -802,42 +872,92 @@ class _BudgetProgressWidget extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildBudgetItem(BuildContext context, String category, double progress, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+class _BudgetItemWidget extends ConsumerWidget {
+  final Budget budget;
+  
+  const _BudgetItemWidget({required this.budget});
+  
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final spendingAsync = ref.watch(budgetWithSpendingProvider(budget.id));
+    
+    return spendingAsync.when(
+      data: (data) {
+        final progress = data.progress.clamp(0.0, 1.0);
+        final isOverBudget = data.progress > 1.0;
+        final color = isOverBudget 
+            ? Colors.red 
+            : data.progress > 0.8 
+                ? Colors.orange 
+                : Theme.of(context).colorScheme.primary;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              category,
-              style: Theme.of(context).textTheme.bodyMedium,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    budget.name,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isOverBudget 
+                      ? '超支 ${(data.progress * 100).toInt()}%'
+                      : '${(data.progress * 100).toInt()}%',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: isOverBudget || data.progress > 0.8 ? Colors.red : null,
+                      ),
+                ),
+              ],
             ),
+            const SizedBox(height: 4),
+            LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+            const SizedBox(height: 4),
             Text(
-              '${(progress * 100).toInt()}%',
+              '¥${data.spentAmount.toStringAsFixed(0)} / ¥${(budget.amountNum / budget.amountDenom).toStringAsFixed(0)}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: progress > 0.8 ? Colors.red : null,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
           ],
-        ),
-        const SizedBox(height: 4),
-        LinearProgressIndicator(
-          value: progress,
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-          valueColor: AlwaysStoppedAnimation<Color>(
-            progress > 0.8 ? Colors.red : color,
-          ),
-        ),
-      ],
+        );
+      },
+      loading: () => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(budget.name, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 4),
+          const LinearProgressIndicator(),
+        ],
+      ),
+      error: (_, __) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(budget.name, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 4),
+          const LinearProgressIndicator(value: 0),
+        ],
+      ),
     );
   }
 }
 
-class _MonthlyTrendWidget extends StatelessWidget {
+class _MonthlyTrendWidget extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trendAsync = ref.watch(monthlySpendingTrendProvider);
+    
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
       child: Column(
@@ -852,24 +972,17 @@ class _MonthlyTrendWidget extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: SizedBox(
-                height: 150,
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.show_chart,
-                        size: 48,
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '图表功能开发中',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.outline,
-                            ),
-                      ),
-                    ],
+                height: 180,
+                child: trendAsync.when(
+                  data: (data) => _buildLineChart(context, data),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (_, __) => Center(
+                    child: Text(
+                      '加载失败',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                    ),
                   ),
                 ),
               ),
@@ -879,11 +992,165 @@ class _MonthlyTrendWidget extends StatelessWidget {
       ),
     );
   }
+  
+  Widget _buildLineChart(BuildContext context, List<MonthlySpending> data) {
+    if (data.isEmpty) {
+      return Center(
+        child: Text(
+          '暂无数据',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+        ),
+      );
+    }
+    
+    // Find max value for Y axis scaling
+    final maxValue = data.fold<double>(0, (max, d) => 
+      [d.expense, d.income].reduce((a, b) => a > b ? a : b) > max 
+        ? [d.expense, d.income].reduce((a, b) => a > b ? a : b) 
+        : max
+    );
+    
+    final yAxisMax = (maxValue * 1.2).ceilToDouble();
+    
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: yAxisMax / 4,
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3),
+            strokeWidth: 1,
+          ),
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 32,
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                if (value.toInt() >= data.length) return const SizedBox();
+                final monthData = data[value.toInt()];
+                final monthLabel = monthData.monthLabel.split('-')[1] + '月';
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    monthLabel,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                );
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 48,
+              interval: yAxisMax / 4,
+              getTitlesWidget: (value, meta) {
+                if (value == 0) return const SizedBox();
+                return Text(
+                  '¥${(value / 1000).toStringAsFixed(0)}k',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                );
+              },
+            ),
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        minX: 0,
+        maxX: (data.length - 1).toDouble(),
+        minY: 0,
+        maxY: yAxisMax,
+        lineBarsData: [
+          // Expense line (red/orange)
+          LineChartBarData(
+            spots: data.asMap().entries.map((e) => 
+              FlSpot(e.key.toDouble(), e.value.expense)
+            ).toList(),
+            isCurved: true,
+            curveSmoothness: 0.3,
+            color: Colors.red.shade400,
+            barWidth: 3,
+            isStrokeCapRound: true,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) => 
+                FlDotCirclePainter(
+                  radius: 4,
+                  color: Colors.red.shade400,
+                  strokeWidth: 0,
+                ),
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              color: Colors.red.shade100,
+            ),
+          ),
+          // Income line (green)
+          LineChartBarData(
+            spots: data.asMap().entries.map((e) => 
+              FlSpot(e.key.toDouble(), e.value.income)
+            ).toList(),
+            isCurved: true,
+            curveSmoothness: 0.3,
+            color: Colors.green.shade400,
+            barWidth: 3,
+            isStrokeCapRound: true,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) => 
+                FlDotCirclePainter(
+                  radius: 4,
+                  color: Colors.green.shade400,
+                  strokeWidth: 0,
+                ),
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              color: Colors.green.shade100,
+            ),
+          ),
+        ],
+        lineTouchData: LineTouchData(
+          enabled: true,
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipColor: (_) => Theme.of(context).colorScheme.surfaceContainerHigh,
+            tooltipPadding: const EdgeInsets.all(8),
+            getTooltipItems: (touchedSpots) {
+              return touchedSpots.map((spot) {
+                final index = spot.x.toInt();
+                if (index >= data.length) return null;
+                final monthData = data[index];
+                final isExpense = spot.barIndex == 0;
+                return LineTooltipItem(
+                  '${monthData.monthLabel}\n${isExpense ? '支出' : '收入'}: ¥${spot.y.toStringAsFixed(0)}',
+                  Theme.of(context).textTheme.bodySmall!,
+                );
+              }).toList();
+            },
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class _CategoryBreakdownWidget extends StatelessWidget {
+class _CategoryBreakdownWidget extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final breakdownAsync = ref.watch(categoryBreakdownProvider);
+    
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
       child: Column(
@@ -898,24 +1165,17 @@ class _CategoryBreakdownWidget extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: SizedBox(
-                height: 150,
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.pie_chart_outline,
-                        size: 48,
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '图表功能开发中',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.outline,
-                            ),
-                      ),
-                    ],
+                height: 220,
+                child: breakdownAsync.when(
+                  data: (data) => _buildPieChart(context, data),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (_, __) => Center(
+                    child: Text(
+                      '加载失败',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                    ),
                   ),
                 ),
               ),
@@ -923,6 +1183,102 @@ class _CategoryBreakdownWidget extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+  
+  Widget _buildPieChart(BuildContext context, List<CategorySpending> data) {
+    if (data.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.pie_chart_outline,
+              size: 48,
+              color: Theme.of(context).colorScheme.outline,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '本月暂无支出',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    final total = data.fold<double>(0, (sum, d) => sum + d.amount);
+    
+    return Row(
+      children: [
+        // Pie chart
+        Expanded(
+          flex: 2,
+          child: PieChart(
+            PieChartData(
+              sectionsSpace: 2,
+              centerSpaceRadius: 40,
+              sections: data.asMap().entries.map((entry) {
+                final index = entry.key;
+                final item = entry.value;
+                final percentage = total > 0 ? (item.amount / total * 100) : 0;
+                
+                return PieChartSectionData(
+                  value: item.amount,
+                  color: item.color,
+                  radius: 60,
+                  title: percentage > 5 ? '${percentage.toStringAsFixed(0)}%' : '',
+                  titleStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ) ?? const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                );
+              }).toList(),
+              pieTouchData: PieTouchData(
+                enabled: true,
+                touchCallback: (event, response) {
+                  // Touch handling for interactivity
+                },
+              ),
+            ),
+          ),
+        ),
+        // Legend
+        Expanded(
+          flex: 1,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: data.take(5).map((item) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: item.color,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        item.categoryName,
+                        style: Theme.of(context).textTheme.bodySmall,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 }

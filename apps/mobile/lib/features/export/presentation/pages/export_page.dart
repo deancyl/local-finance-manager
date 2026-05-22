@@ -147,6 +147,8 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                 Text(
                   '• CSV格式适合在Excel中查看和编辑\n'
                   '• JSON格式适合数据迁移和备份\n'
+                  '• QIF格式适合导入到Quicken、GnuCash等软件\n'
+                  '• OFX格式适合导入到Microsoft Money、QuickBooks等软件\n'
                   '• CSV文件使用UTF-8编码，兼容Excel\n'
                   '• 可通过筛选条件导出特定范围的数据',
                   style: TextStyle(color: Colors.grey[600]),
@@ -244,6 +246,16 @@ class _ExportPageState extends ConsumerState<ExportPage> {
             label: Text('JSON'),
             icon: Icon(Icons.code),
           ),
+          ButtonSegment(
+            value: ExportFormat.qif,
+            label: Text('QIF'),
+            icon: Icon(Icons.description),
+          ),
+          ButtonSegment(
+            value: ExportFormat.ofx,
+            label: Text('OFX'),
+            icon: Icon(Icons.account_balance),
+          ),
         ],
         selected: {_selectedFormat},
         onSelectionChanged: (Set<ExportFormat> selection) {
@@ -286,10 +298,19 @@ class _ExportPageState extends ConsumerState<ExportPage> {
   void _exportTransactions() {
     final notifier = ref.read(exportProvider.notifier);
 
-    if (_selectedFormat == ExportFormat.csv) {
-      notifier.exportTransactionsToCSV(_filters);
-    } else {
-      notifier.exportTransactionsToJSON(_filters);
+    switch (_selectedFormat) {
+      case ExportFormat.csv:
+        notifier.exportTransactionsToCSV(_filters);
+        break;
+      case ExportFormat.json:
+        notifier.exportTransactionsToJSON(_filters);
+        break;
+      case ExportFormat.qif:
+        notifier.exportTransactionsToQIF(_filters);
+        break;
+      case ExportFormat.ofx:
+        notifier.exportTransactionsToOFX(_filters);
+        break;
     }
   }
 
@@ -310,4 +331,6 @@ class _ExportPageState extends ConsumerState<ExportPage> {
 enum ExportFormat {
   csv,
   json,
+  qif,
+  ofx,
 }
