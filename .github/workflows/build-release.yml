@@ -19,11 +19,10 @@ env:
   FLUTTER_VERSION: '3.27.1'
 
 jobs:
-  # Quality gates - run before all builds (continue on error for now)
+  # Quality gates - run before all builds
   quality:
     name: Quality Gates
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -46,11 +45,9 @@ jobs:
       
       - name: Run analysis
         run: melos run analyze
-        continue-on-error: true
       
       - name: Run tests
         run: melos run test
-        continue-on-error: true
 
   # Android build
   build-android:
