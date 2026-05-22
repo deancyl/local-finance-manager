@@ -117,7 +117,7 @@ class BudgetNotificationService {
   Future<void> checkBudgetAlerts({
     required Budget budget,
     required double spentAmount,
-    required WidgetRef ref,
+    required Ref ref,
   }) async {
     if (!budget.alertEnabled) return;
 

@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ai/ai.dart';
-import 'package:core/core.dart';
+import 'package:core/core.dart' hide Category;
+import 'package:core/core.dart' as core;
 import 'package:finance_app/features/categories/data/category_provider.dart';
+import 'package:database/database.dart' as db;
 
 /// Provider for the AI service instance.
 ///
@@ -63,10 +65,22 @@ final categorySuggestionProvider = FutureProvider.family<CategorySuggestion?, St
         commodityId: 'CNY',
       );
       
+      // Convert database Category to core Category for AI service
+      final coreCategories = categories.map((c) => core.Category(
+        id: c.id,
+        name: c.name,
+        parentId: c.parentId,
+        icon: c.icon,
+        color: c.color,
+        isIncome: c.isIncome,
+        sortOrder: c.sortOrder,
+        createdAt: DateTime.fromMillisecondsSinceEpoch(c.createdAt),
+      )).toList();
+      
       try {
         return await ai.suggestCategory(
           transaction: tempTransaction,
-          availableCategories: categories,
+          availableCategories: coreCategories,
         );
       } catch (e) {
         // Graceful degradation - return null on any error
