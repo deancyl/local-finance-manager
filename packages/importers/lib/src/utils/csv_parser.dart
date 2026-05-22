@@ -1,5 +1,4 @@
 import 'package:csv/csv.dart';
-import 'dart:convert';
 import 'dart:typed_data';
 import 'encoding_detector.dart';
 

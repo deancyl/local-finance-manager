@@ -7,7 +7,6 @@ import '../utils/encoding_detector.dart';
 import '../utils/date_parser.dart';
 import '../utils/amount_parser.dart';
 import 'package:core/src/models/import_source.dart';
-import 'package:core/src/usecases/import_transactions.dart';
 
 /// ABC (农业银行) CSV importer.
 ///
@@ -36,24 +35,6 @@ class AbcImporter extends ImporterBase {
   static const List<String> _requiredHeaders = [
     '交易日期',
     '交易金额',
-  ];
-
-  /// Optional headers that may be present.
-  static const List<String> _optionalHeaders = [
-    '账户余额',
-    '交易摘要',
-    '摘要',
-    '对方户名',
-    '对方账号',
-    '交易类型',
-    '记账日期',
-    '币种',
-    '收入',
-    '支出',
-    '存入金额',
-    '取出金额',
-    '交易场所',
-    '交易渠道',
   ];
 
   @override

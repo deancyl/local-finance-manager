@@ -3,7 +3,6 @@ import 'package:core/core.dart';
 import '../base/importer_base.dart';
 import '../base/import_config.dart';
 import '../base/import_result.dart';
-import '../utils/csv_parser.dart';
 import '../utils/file_parser.dart';
 import '../utils/date_parser.dart';
 import '../utils/amount_parser.dart';
@@ -33,6 +32,7 @@ import '../utils/amount_parser.dart';
 /// - 理财通赎回
 class WeChatPayImporter extends ImporterBase {
   /// WeChat Pay CSV header columns (in Chinese).
+  // ignore: unused_field
   static const _expectedHeaders = [
     '交易时间',
     '交易类型',
@@ -48,6 +48,7 @@ class WeChatPayImporter extends ImporterBase {
   ];
 
   /// Alternative header variations.
+  // ignore: unused_field
   static const _alternativeHeaders = [
     '交易时间',
     '交易类型',

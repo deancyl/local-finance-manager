@@ -6,6 +6,7 @@ import '../utils/file_parser.dart';
 import '../utils/date_parser.dart';
 import '../utils/amount_parser.dart';
 import 'package:core/src/models/import_source.dart';
+import 'package:core/src/usecases/import_transactions.dart';
 
 /// CCB (建设银行) CSV importer.
 ///
@@ -34,22 +35,6 @@ class CcbImporter extends ImporterBase {
   static const List<String> _requiredHeaders = [
     '交易日期',
     '交易金额',
-  ];
-
-  /// Optional headers that may be present.
-  static const List<String> _optionalHeaders = [
-    '余额',
-    '摘要',
-    '交易摘要',
-    '对方户名',
-    '对方账号',
-    '交易类型',
-    '记账日期',
-    '币种',
-    '收入金额',
-    '支出金额',
-    '存入',
-    '取出',
   ];
 
   @override

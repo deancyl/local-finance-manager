@@ -220,13 +220,16 @@ class RecurringGenerationNotifier extends StateNotifier<AsyncValue<List<String>>
   RecurringGenerationNotifier(this._processor) : super(const AsyncValue.data([]));
 
   /// Process all due recurring transactions.
-  Future<void> processAll() async {
+  /// Returns the list of generated transaction IDs.
+  Future<List<String>> processAll() async {
     state = const AsyncValue.loading();
     try {
       final ids = await _processor.processDueTransactions();
       state = AsyncValue.data(ids);
+      return ids;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+      return [];
     }
   }
 

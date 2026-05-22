@@ -36,20 +36,6 @@ class IcbcImporter extends ImporterBase {
     '交易金额',
   ];
 
-  /// Optional headers that may be present.
-  static const List<String> _optionalHeaders = [
-    '账户余额',
-    '交易摘要',
-    '摘要',
-    '对方户名',
-    '对方账号',
-    '交易类型',
-    '记账日期',
-    '币种',
-    '收入',
-    '支出',
-  ];
-
   @override
   bool canParse({
     required String filename,

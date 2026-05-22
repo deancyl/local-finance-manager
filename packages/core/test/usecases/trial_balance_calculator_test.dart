@@ -90,10 +90,6 @@ class MockTrialBalanceCalculator {
 
   /// Calculates hierarchical balances (sums child balances into parent)
   List<AccountBalance> calculateHierarchicalBalances(List<AccountBalance> accounts) {
-    final accountMap = <String, AccountBalance>{
-      for (final acc in accounts) acc.accountId: acc,
-    };
-
     // Create a copy with children populated
     final result = <AccountBalance>[];
     final processedIds = <String>{};
@@ -345,7 +341,7 @@ void main() {
 
       // Should have root account with aggregated totals
       expect(result.length, equals(1));
-      expect(result.first.accountId, equals(1));
+      expect(result.first.accountId, equals('1'));
       // Total debit: 0 + 0 + 5000 + 10000 = 15000
       expect(result.first.debitNum, equals(15000));
       // Total credit: 0 + 0 + 500 + 1000 = 1500

@@ -7,7 +7,6 @@ import '../utils/encoding_detector.dart';
 import '../utils/date_parser.dart';
 import '../utils/amount_parser.dart';
 import 'package:core/src/models/import_source.dart';
-import 'package:core/src/usecases/import_transactions.dart';
 
 /// CITIC (中信银行) CSV importer.
 ///
@@ -36,29 +35,6 @@ class CiticImporter extends ImporterBase {
   static const List<String> _requiredHeaders = [
     '交易日期',
     '交易金额',
-  ];
-
-  /// Optional headers that may be present.
-  static const List<String> _optionalHeaders = [
-    '账户余额',
-    '交易摘要',
-    '摘要',
-    '对方户名',
-    '对方账号',
-    '交易类型',
-    '记账日期',
-    '币种',
-    '收入',
-    '支出',
-    '存入',
-    '取出',
-    '交易场所',
-    '交易渠道',
-    '交易流水号',
-    '参考号',
-    '借贷标志',
-    '中信卡',
-    '理财宝',
   ];
 
   @override

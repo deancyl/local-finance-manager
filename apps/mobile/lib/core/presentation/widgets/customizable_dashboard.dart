@@ -10,7 +10,6 @@ import 'dashboard_widget_registry.dart';
 import 'package:finance_app/features/home/data/home_providers.dart';
 import 'package:finance_app/features/budgets/data/budget_provider.dart';
 import 'package:finance_app/features/recurring/data/recurring_provider.dart';
-import 'package:finance_app/features/recurring/data/recurring_provider.dart';
 
 /// Customizable dashboard with reorderable widgets.
 class CustomizableDashboard extends ConsumerStatefulWidget {
@@ -1293,8 +1292,8 @@ class _UpcomingScheduledTransactionsWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final upcomingAsync = ref.watch(upcomingScheduledTransactionsProvider);
-    final overdueAsync = ref.watch(overdueRecurringProvider);
-    final processorNotifier = ref.watch(recurringProcessorNotifierProvider);
+    final overdueAsync = ref.watch(overdueTransactionsProvider);
+    final generationNotifier = ref.watch(recurringGenerationNotifierProvider);
     
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
@@ -1385,7 +1384,7 @@ class _UpcomingScheduledTransactionsWidget extends ConsumerWidget {
                             ),
                             TextButton(
                               onPressed: () async {
-                                final ids = await ref.read(recurringProcessorNotifierProvider.notifier).processAllDue();
+                                final ids = await ref.read(recurringGenerationNotifierProvider.notifier).processAll();
                                 if (ids.isNotEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(content: Text('已生成 ${ids.length} 笔交易')),
@@ -1458,8 +1457,8 @@ class _UpcomingScheduledTransactionsWidget extends ConsumerWidget {
                                   icon: const Icon(Icons.play_circle_outline, size: 20),
                                   onPressed: () async {
                                     final transactionId = await ref
-                                        .read(recurringProcessorNotifierProvider.notifier)
-                                        .generateSingle(recurring.id);
+                                        .read(recurringGenerationNotifierProvider.notifier)
+                                        .generateOne(recurring.id);
                                     if (transactionId != null) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(content: Text('已生成交易: $transactionId')),

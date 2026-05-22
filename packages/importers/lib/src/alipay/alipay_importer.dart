@@ -43,14 +43,6 @@ class AlipayImporter implements ImporterBase {
     '交易订单号',
   ];
 
-  /// Optional header fields.
-  // ignore: unused_field
-  static const _optionalHeaders = [
-    '备注',
-    '资金流向',
-    '已退款',
-  ];
-
   /// Alipay category mappings to standard categories.
   static const _categoryMappings = {
     // Food & Dining

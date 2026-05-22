@@ -94,8 +94,8 @@ class AmountParser {
     }
 
     // Apply sign
-    if (isNegative) {
-      amount = -amount!;
+    if (isNegative && amount != null) {
+      amount = -amount;
     }
 
     return amount;

@@ -45,42 +45,20 @@ class _FinanceAppState extends ConsumerState<FinanceApp> {
     // Here we would handle navigation when a notification is tapped
   }
   
-  void _processRecurringTransactions() {
+void _processRecurringTransactions() {
     // Process due recurring transactions on app startup
     Future.microtask(() async {
-      final processorNotifier = ref.read(recurringProcessorNotifierProvider.notifier);
-      final ids = await processorNotifier.processAllDue();
+      final generationNotifier = ref.read(recurringGenerationNotifierProvider.notifier);
+      final ids = await generationNotifier.processAll();
       if (ids.isNotEmpty) {
         print('Generated ${ids.length} recurring transactions on startup');
       }
     });
   }
-  } catch (e) {
-    print('Failed to process recurring transactions on startup: $e');
-  }
-  
-  runApp(ProviderScope(child: FinanceApp()));
-}
-
-class FinanceApp extends ConsumerStatefulWidget {
-  const FinanceApp({super.key});
-
-  @override
-  ConsumerState<FinanceApp> createState() => _FinanceAppState();
-}
-
-class _FinanceAppState extends ConsumerState<FinanceApp> {
-  @override
-  void initState() {
-    super.initState();
-    _setupNotificationHandler();
-  }
-
-  void _setupNotificationHandler() {
-    // Handle notification taps
-    final notificationService = BudgetNotificationService();
-    // The notification handler is set up in the service
-    // Here we would handle navigation when a notification is tapped
+      } catch (e) {
+        print('Failed to process recurring transactions on startup: $e');
+      }
+    });
   }
 
   @override
