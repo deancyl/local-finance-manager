@@ -4,6 +4,8 @@ import 'package:uuid/uuid.dart';
 
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
+import 'package:finance_app/features/budgets/data/budget_notification_service.dart';
+import 'package:core/core.dart' show BudgetPeriod, BudgetPeriodCalculator;
 import 'transaction_filter.dart';
 
 /// Page size for pagination
@@ -200,8 +202,9 @@ final filteredTransactionsWithSplitsProvider = FutureProvider<List<(Transaction,
 
 class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
   final LocalFinanceDatabase _db;
+  final Ref _ref;
 
-  TransactionNotifier(this._db) : super(const AsyncValue.data(null));
+  TransactionNotifier(this._db, this._ref) : super(const AsyncValue.data(null));
 
   Future<String?> createTransaction({
     required String accountId,
@@ -248,10 +251,92 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
       });
 
       state = const AsyncValue.data(null);
+      
+      // Check budget alerts after successful transaction creation
+      if (categoryId != null) {
+        _checkBudgetAlertsForCategory(categoryId, amount, date);
+      }
+      
       return transactionId;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       return null;
+    }
+  }
+  
+  /// Check budget alerts for a category after a transaction is created.
+  /// Errors are caught gracefully to not affect the transaction.
+  Future<void> _checkBudgetAlertsForCategory(
+    String categoryId,
+    double amount,
+    DateTime transactionDate,
+  ) async {
+    try {
+      // Only check for expense transactions (negative amount)
+      if (amount <= 0) return;
+      
+      final budgets = await _db.budgetsDao.getByCategory(categoryId);
+      final activeBudgets = budgets.where((b) => b.isActive).toList();
+      
+      if (activeBudgets.isEmpty) return;
+      
+      final notificationService = _ref.read(budgetNotificationServiceProvider);
+      await notificationService.initialize();
+      
+      final now = DateTime.now();
+      
+      for (final budget in activeBudgets) {
+        // Calculate period bounds
+        final period = _parseBudgetPeriod(budget.period);
+        final (start, end) = BudgetPeriodCalculator.getCurrentPeriodBounds(
+          period,
+          now,
+          customStart: DateTime.fromMillisecondsSinceEpoch(budget.startDate),
+          customEnd: budget.endDate != null 
+              ? DateTime.fromMillisecondsSinceEpoch(budget.endDate!) 
+              : null,
+        );
+        
+        // Check if transaction falls within budget period
+        if (transactionDate.isBefore(start) || transactionDate.isAfter(end)) {
+          continue;
+        }
+        
+        final startMs = start.millisecondsSinceEpoch;
+        final endMs = end.millisecondsSinceEpoch;
+        
+        // Calculate spending
+        final spentNum = await _db.budgetsDao.calculateSpentAmountNum(
+          categoryId: budget.categoryId,
+          startMs: startMs,
+          endMs: endMs,
+        );
+        
+        final spent = spentNum / 100.0;
+        
+        // Check alerts
+        await notificationService.checkBudgetAlerts(
+          budget: budget,
+          spentAmount: spent,
+          ref: _ref,
+        );
+      }
+    } catch (e) {
+      // Silently ignore notification errors - don't fail the transaction
+      // In production, you might want to log this to a crash reporting service
+    }
+  }
+  
+  BudgetPeriod _parseBudgetPeriod(String period) {
+    switch (period) {
+      case 'MONTHLY':
+        return BudgetPeriod.monthly;
+      case 'YEARLY':
+        return BudgetPeriod.yearly;
+      case 'CUSTOM':
+        return BudgetPeriod.custom;
+      default:
+        return BudgetPeriod.monthly;
     }
   }
 
@@ -373,7 +458,7 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
 
 final transactionNotifierProvider = StateNotifierProvider<TransactionNotifier, AsyncValue<void>>((ref) {
   final db = ref.watch(databaseProvider);
-  return TransactionNotifier(db);
+  return TransactionNotifier(db, ref);
 });
 
 // ============================================================
