@@ -70,8 +70,8 @@ class TransactionTemplatesDao extends DatabaseAccessor<LocalFinanceDatabase> {
     await (db.update(db.transactionTemplates)
       ..where((t) => t.id.equals(id)))
       .write(TransactionTemplatesCompanion(
-        useCount: drift.Value(template.useCount + 1),
-        lastUsedAt: drift.Value(DateTime.now()),
+        useCount: Value(template.useCount + 1),
+        lastUsedAt: Value(DateTime.now()),
       ));
   }
 
@@ -83,8 +83,8 @@ class TransactionTemplatesDao extends DatabaseAccessor<LocalFinanceDatabase> {
     await (db.update(db.transactionTemplates)
       ..where((t) => t.id.equals(id)))
       .write(TransactionTemplatesCompanion(
-        isFavorite: drift.Value(!template.isFavorite),
-        updatedAt: drift.Value(DateTime.now()),
+        isFavorite: Value(!template.isFavorite),
+        updatedAt: Value(DateTime.now()),
       ));
   }
 
@@ -93,8 +93,8 @@ class TransactionTemplatesDao extends DatabaseAccessor<LocalFinanceDatabase> {
     await (db.update(db.transactionTemplates)
       ..where((t) => t.id.equals(id)))
       .write(TransactionTemplatesCompanion(
-        sortOrder: drift.Value(sortOrder),
-        updatedAt: drift.Value(DateTime.now()),
+        sortOrder: Value(sortOrder),
+        updatedAt: Value(DateTime.now()),
       ));
   }
 
@@ -103,8 +103,8 @@ class TransactionTemplatesDao extends DatabaseAccessor<LocalFinanceDatabase> {
     await (db.update(db.transactionTemplates)
       ..where((t) => t.id.equals(id)))
       .write(TransactionTemplatesCompanion(
-        isActive: drift.Value(false),
-        updatedAt: drift.Value(DateTime.now()),
+        isActive: Value(false),
+        updatedAt: Value(DateTime.now()),
       ));
   }
 

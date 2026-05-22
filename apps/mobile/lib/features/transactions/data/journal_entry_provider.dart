@@ -67,7 +67,7 @@ class SplitLine {
 
 /// State for the journal entry editor.
 class JournalEntryState {
-  final DateTime date;
+  final DateTime? date;
   final String description;
   final String? referenceNumber;
   final String currencyId; // Transaction currency
@@ -79,7 +79,7 @@ class JournalEntryState {
   final bool isSaving;
 
   const JournalEntryState({
-    this.date = DateTime.now,
+    this.date,
     this.description = '',
     this.referenceNumber,
     this.currencyId = 'CNY', // Default to CNY
