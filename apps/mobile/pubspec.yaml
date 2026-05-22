@@ -58,6 +58,8 @@ dependencies:
     path: ../../packages/encryption
   importers:
     path: ../../packages/importers
+  ai:
+    path: ../../packages/ai
   # sync:  # Temporarily disabled due to PowerSync compatibility issues
   #   path: ../../packages/sync
 

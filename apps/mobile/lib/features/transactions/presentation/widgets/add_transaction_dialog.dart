@@ -1,14 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart' hide Split;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:drift/drift.dart' show Value;
 
 import 'package:database/database.dart';
+import 'package:ai/ai.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import 'package:finance_app/features/categories/data/category_provider.dart';
 import 'package:finance_app/features/tags/presentation/widgets/tag_selector.dart';
 import 'package:finance_app/features/attachments/presentation/widgets/attachment_section.dart';
 import '../../data/transaction_provider.dart';
+import '../../data/ai_provider.dart';
 import 'quick_amount_input.dart';
 
 class AddTransactionDialog extends ConsumerStatefulWidget {
@@ -34,6 +37,12 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
   bool _isLoading = false;
   Split? _existingSplit;
   List<String> _selectedTagIds = [];
+  
+  // AI suggestion state
+  Timer? _debounceTimer;
+  String _debouncedDescription = '';
+  CategorySuggestion? _currentSuggestion;
+  bool _showSuggestion = false;
 
   @override
   void initState() {
@@ -45,6 +54,61 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
       _selectedCurrency = widget.transaction!.currencyId;
       _loadSplitData();
     }
+    
+    // Add listener for AI suggestions
+    _descriptionController.addListener(_onDescriptionChanged);
+  }
+  
+  void _onDescriptionChanged() {
+    final description = _descriptionController.text.trim();
+    
+    // Cancel previous debounce timer
+    _debounceTimer?.cancel();
+    
+    // Hide suggestion if description is too short
+    if (description.length < 3) {
+      setState(() {
+        _showSuggestion = false;
+        _currentSuggestion = null;
+        _debouncedDescription = '';
+      });
+      return;
+    }
+    
+    // Debounce the AI suggestion request
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (description != _debouncedDescription && mounted) {
+        setState(() {
+          _debouncedDescription = description;
+        });
+      }
+    });
+  }
+  
+  void _acceptAISuggestion() {
+    if (_currentSuggestion != null) {
+      setState(() {
+        _selectedCategoryId = _currentSuggestion!.categoryId;
+        _showSuggestion = false;
+      });
+    }
+  }
+  
+  void _dismissSuggestion() {
+    setState(() {
+      _showSuggestion = false;
+    });
+  }
+  
+  List<Widget> _buildAISuggestionSection() {
+    if (!_showSuggestion || _currentSuggestion == null) {
+      return [];
+    }
+    
+    return [
+      const SizedBox(height: 8),
+      _buildAISuggestionChip(),
+    ];
   }
 
   Future<void> _loadSplitData() async {
@@ -72,6 +136,8 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _descriptionController.removeListener(_onDescriptionChanged);
     _amountController.dispose();
     _descriptionController.dispose();
     _notesController.dispose();
@@ -82,6 +148,41 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
   Widget build(BuildContext context) {
     final accountsAsync = ref.watch(accountsProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
+    
+    // Listen to AI suggestions when description changes
+    if (_debouncedDescription.isNotEmpty) {
+      ref.listen<AsyncValue<CategorySuggestion?>>(
+        categorySuggestionProvider(_debouncedDescription),
+        (previous, next) {
+          next.when(
+            data: (suggestion) {
+              if (suggestion != null && mounted && _currentSuggestion != suggestion) {
+                setState(() {
+                  _currentSuggestion = suggestion;
+                  _showSuggestion = true;
+                });
+              } else if (suggestion == null && _showSuggestion) {
+                setState(() {
+                  _showSuggestion = false;
+                  _currentSuggestion = null;
+                });
+              }
+            },
+            loading: () {
+              // Keep current state while loading
+            },
+            error: (_, __) {
+              if (_showSuggestion) {
+                setState(() {
+                  _showSuggestion = false;
+                  _currentSuggestion = null;
+                });
+              }
+            },
+          );
+        },
+      );
+    }
 
     return Padding(
       padding: EdgeInsets.only(
@@ -228,11 +329,27 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
               // 描述
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: '描述',
-                  prefixIcon: Icon(Icons.description_outlined),
+                  prefixIcon: const Icon(Icons.description_outlined),
+                  suffixIcon: _debouncedDescription.isNotEmpty
+                      ? ref.watch(categorySuggestionProvider(_debouncedDescription)).isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : null
+                      : null,
                 ),
               ),
+              
+              // AI Category Suggestion - use ref.listen in build to update state
+              ..._buildAISuggestionSection(),
+              
               const SizedBox(height: 16),
               
               // 备注
@@ -309,6 +426,117 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
               ),
         ),
       ),
+    );
+  }
+  
+  Widget _buildAISuggestionChip() {
+    final categoriesAsync = ref.watch(categoriesProvider);
+    
+    return categoriesAsync.when(
+      data: (categories) {
+        final suggestedCategory = categories.where(
+          (c) => c.id == _currentSuggestion!.categoryId
+        ).firstOrNull;
+        
+        if (suggestedCategory == null) {
+          return const SizedBox.shrink();
+        }
+        
+        // Check if suggestion matches current transaction type
+        if (suggestedCategory.isIncome != _isIncome) {
+          return const SizedBox.shrink();
+        }
+        
+        final confidence = _currentSuggestion!.confidence;
+        final confidencePercent = (confidence * 100).round();
+        final confidenceColor = confidence >= 0.8
+            ? Colors.green
+            : confidence >= 0.5
+                ? Colors.orange
+                : Colors.red;
+        
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.auto_awesome,
+                size: 16,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'AI 建议分类',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Text(
+                          suggestedCategory.name,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: confidenceColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '$confidencePercent%',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: confidenceColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: _acceptAISuggestion,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  minimumSize: const Size(0, 32),
+                ),
+                child: const Text('采纳'),
+              ),
+              IconButton(
+                onPressed: _dismissSuggestion,
+                icon: const Icon(Icons.close, size: 18),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: 32,
+                  minHeight: 32,
+                ),
+                tooltip: '忽略建议',
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 
