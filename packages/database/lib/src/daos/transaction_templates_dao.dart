@@ -20,7 +20,7 @@ class TransactionTemplatesDao extends DatabaseAccessor<LocalFinanceDatabase> {
   Future<List<TransactionTemplate>> getFavorites() async {
     return (db.select(db.transactionTemplates)
       ..where((t) => t.isFavorite.equals(true) & t.isActive.equals(true))
-      .orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+      ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
       .get();
   }
 
@@ -28,7 +28,7 @@ class TransactionTemplatesDao extends DatabaseAccessor<LocalFinanceDatabase> {
   Future<List<TransactionTemplate>> getByCategory(String category) async {
     return (db.select(db.transactionTemplates)
       ..where((t) => t.category.equals(category) & t.isActive.equals(true))
-      .orderBy([(t) => OrderingTerm.desc(t.useCount)]))
+      ..orderBy([(t) => OrderingTerm.desc(t.useCount)]))
       .get();
   }
 
@@ -36,7 +36,7 @@ class TransactionTemplatesDao extends DatabaseAccessor<LocalFinanceDatabase> {
   Future<List<TransactionTemplate>> getRecent({int limit = 10}) async {
     return (db.select(db.transactionTemplates)
       ..where((t) => t.isActive.equals(true) & t.lastUsedAt.isNotNull())
-      .orderBy([(t) => OrderingTerm.desc(t.lastUsedAt)])
+      ..orderBy([(t) => OrderingTerm.desc(t.lastUsedAt)])
       ..limit(limit))
       .get();
   }

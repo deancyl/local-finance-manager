@@ -113,9 +113,10 @@ class AuditLogsDao extends DatabaseAccessor<LocalFinanceDatabase> {
 
   /// Count total audit logs
   Future<int> count() async {
-    final result = await db.selectOnly(db.auditLogs)
+    final result = db.selectOnly(db.auditLogs)
       ..addColumns([db.auditLogs.id.count()]);
-    return result.getSingle().read(db.auditLogs.id.count()) ?? 0;
+    final row = await result.getSingle();
+    return row.read(db.auditLogs.id.count()) ?? 0;
   }
 
   /// Count audit logs by entity type
