@@ -53,13 +53,13 @@ class MockTrialBalanceCalculator {
     final accounts = rawBalances.map((raw) {
       final multiplier = commonDenom ~/ raw.denom;
       return AccountBalance(
-        accountId: raw.accountId,
+        accountId: raw.accountId.toString(),
         accountName: raw.accountName,
         accountType: _parseAccountType(raw.accountTypeCode),
         debitNum: raw.debitTotal * multiplier,
         creditNum: raw.creditTotal * multiplier,
         denom: commonDenom,
-        parentId: raw.parentId,
+        parentId: raw.parentId?.toString(),
       );
     }).toList();
 
@@ -90,13 +90,13 @@ class MockTrialBalanceCalculator {
 
   /// Calculates hierarchical balances (sums child balances into parent)
   List<AccountBalance> calculateHierarchicalBalances(List<AccountBalance> accounts) {
-    final accountMap = <int, AccountBalance>{
+    final accountMap = <String, AccountBalance>{
       for (final acc in accounts) acc.accountId: acc,
     };
 
     // Create a copy with children populated
     final result = <AccountBalance>[];
-    final processedIds = <int>{};
+    final processedIds = <String>{};
 
     void processAccount(AccountBalance account) {
       if (processedIds.contains(account.accountId)) return;
@@ -259,7 +259,7 @@ void main() {
     test('groups accounts by type correctly', () {
       final accounts = [
         AccountBalance(
-          accountId: 1,
+          accountId: '1',
           accountName: 'Cash',
           accountType: AccountType.asset,
           debitNum: 1000,
@@ -267,7 +267,7 @@ void main() {
           denom: 100,
         ),
         AccountBalance(
-          accountId: 2,
+          accountId: '2',
           accountName: 'Bank',
           accountType: AccountType.asset,
           debitNum: 5000,
@@ -275,7 +275,7 @@ void main() {
           denom: 100,
         ),
         AccountBalance(
-          accountId: 3,
+          accountId: '3',
           accountName: 'Accounts Payable',
           accountType: AccountType.liability,
           debitNum: 0,
@@ -283,7 +283,7 @@ void main() {
           denom: 100,
         ),
         AccountBalance(
-          accountId: 4,
+          accountId: '4',
           accountName: 'Sales',
           accountType: AccountType.income,
           debitNum: 0,
@@ -304,7 +304,7 @@ void main() {
     test('calculates hierarchical account balances', () {
       final accounts = [
         AccountBalance(
-          accountId: 1,
+          accountId: '1',
           accountName: 'Assets',
           accountType: AccountType.asset,
           debitNum: 0,
@@ -313,31 +313,31 @@ void main() {
           parentId: null,
         ),
         AccountBalance(
-          accountId: 2,
+          accountId: '2',
           accountName: 'Current Assets',
           accountType: AccountType.asset,
           debitNum: 0,
           creditNum: 0,
           denom: 100,
-          parentId: 1,
+          parentId: '1',
         ),
         AccountBalance(
-          accountId: 3,
+          accountId: '3',
           accountName: 'Cash',
           accountType: AccountType.asset,
           debitNum: 5000,
           creditNum: 500,
           denom: 100,
-          parentId: 2,
+          parentId: '2',
         ),
         AccountBalance(
-          accountId: 4,
+          accountId: '4',
           accountName: 'Bank',
           accountType: AccountType.asset,
           debitNum: 10000,
-          creditTotal: 1000,
+          creditNum: 1000,
           denom: 100,
-          parentId: 2,
+          parentId: '2',
         ),
       ];
 

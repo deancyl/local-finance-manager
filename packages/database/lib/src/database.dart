@@ -14,6 +14,7 @@ import 'tables/closing_entries.dart';
 import 'tables/exchange_rates.dart';
 import 'tables/cost_centers.dart';
 import 'tables/audit_logs.dart';
+import 'tables/transaction_templates.dart';
 
 part 'database.g.dart';
 part 'daos/accounts_dao.dart';
@@ -29,6 +30,7 @@ part 'daos/closing_entries_dao.dart';
 part 'daos/exchange_rates_dao.dart';
 part 'daos/cost_centers_dao.dart';
 part 'daos/audit_logs_dao.dart';
+part 'daos/transaction_templates_dao.dart';
 
 /// Local finance database with all tables.
 @DriftDatabase(
@@ -49,6 +51,7 @@ part 'daos/audit_logs_dao.dart';
     ExchangeRates,
     CostCenters,
     AuditLogs,
+    TransactionTemplates,
   ],
 )
 class LocalFinanceDatabase extends _$LocalFinanceDatabase {
@@ -69,9 +72,10 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final ExchangeRatesDao exchangeRatesDao = ExchangeRatesDao(this);
   late final CostCentersDao costCentersDao = CostCentersDao(this);
   late final AuditLogsDao auditLogsDao = AuditLogsDao(this);
+  late final TransactionTemplatesDao transactionTemplatesDao = TransactionTemplatesDao(this);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration {
@@ -313,6 +317,22 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
           await customStatement(
             'CREATE INDEX IF NOT EXISTS idx_audit_logs_session '
             'ON audit_logs(session_id)',
+          );
+        }
+        if (from < 12) {
+          // Version 12: Add transaction templates table for quick entry
+          await m.createTable(transactionTemplates);
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_templates_category '
+            'ON transaction_templates(category)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_templates_favorite '
+            'ON transaction_templates(is_favorite) WHERE is_favorite = 1',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_templates_use_count '
+            'ON transaction_templates(use_count DESC)',
           );
         }
       },

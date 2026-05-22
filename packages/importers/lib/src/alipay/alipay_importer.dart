@@ -3,7 +3,6 @@ import 'package:core/core.dart';
 import '../base/importer_base.dart';
 import '../base/import_result.dart';
 import '../base/import_config.dart';
-import '../utils/csv_parser.dart';
 import '../utils/file_parser.dart';
 import '../utils/date_parser.dart';
 import '../utils/amount_parser.dart';
@@ -45,6 +44,7 @@ class AlipayImporter implements ImporterBase {
   ];
 
   /// Optional header fields.
+  // ignore: unused_field
   static const _optionalHeaders = [
     '备注',
     '资金流向',

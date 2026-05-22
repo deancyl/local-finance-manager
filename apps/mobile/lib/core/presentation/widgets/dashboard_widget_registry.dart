@@ -76,6 +76,13 @@ class DashboardWidgetRegistry {
       description: '本月支出分类占比',
       size: WidgetSize.medium,
     ),
+    DashboardWidgetMetadata(
+      id: 'upcoming_scheduled',
+      title: '计划交易',
+      icon: Icons.event_repeat_outlined,
+      description: '未来7天的计划交易',
+      size: WidgetSize.large,
+    ),
   ];
 
   /// Get widget metadata by ID.

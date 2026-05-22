@@ -9,6 +9,8 @@ import 'dashboard_config_provider.dart';
 import 'dashboard_widget_registry.dart';
 import 'package:finance_app/features/home/data/home_providers.dart';
 import 'package:finance_app/features/budgets/data/budget_provider.dart';
+import 'package:finance_app/features/recurring/data/recurring_provider.dart';
+import 'package:finance_app/features/recurring/data/recurring_provider.dart';
 
 /// Customizable dashboard with reorderable widgets.
 class CustomizableDashboard extends ConsumerStatefulWidget {
@@ -247,9 +249,12 @@ class _CustomizableDashboardState extends ConsumerState<CustomizableDashboard> {
         return _MonthlyTrendWidget();
       case 'category_breakdown':
         return _CategoryBreakdownWidget();
+      case 'upcoming_scheduled':
+        return _UpcomingScheduledTransactionsWidget();
       default:
         return const SizedBox.shrink();
     }
+  }
   }
 
   void _toggleWidget(String widgetId) {
@@ -1280,5 +1285,486 @@ class _CategoryBreakdownWidget extends ConsumerWidget {
         ),
       ],
     );
+  }
+}
+
+/// Widget showing upcoming scheduled transactions for the next 7 days.
+class _UpcomingScheduledTransactionsWidget extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final upcomingAsync = ref.watch(upcomingScheduledTransactionsProvider);
+    final overdueAsync = ref.watch(overdueRecurringProvider);
+    final processorNotifier = ref.watch(recurringProcessorNotifierProvider);
+    
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '计划交易',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              TextButton(
+                onPressed: () => context.push('/recurring'),
+                child: const Text('管理'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          upcomingAsync.when(
+            data: (upcoming) {
+              final overdue = overdueAsync.when(
+                data: (list) => list,
+                loading: () => [],
+                error: (_, __) => [],
+              );
+              
+              if (upcoming.isEmpty && overdue.isEmpty) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.event_repeat_outlined,
+                            size: 48,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            '暂无计划交易',
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  color: Theme.of(context).colorScheme.outline,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '点击上方按钮创建周期性交易',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.outline,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+              
+              return Card(
+                child: Column(
+                  children: [
+                    // Overdue section (if any)
+                    if (overdue.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(12),
+                            topRight: Radius.circular(12),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '${overdue.length}笔待处理交易',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Colors.red.shade700,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () async {
+                                final ids = await ref.read(recurringProcessorNotifierProvider.notifier).processAllDue();
+                                if (ids.isNotEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('已生成 ${ids.length} 笔交易')),
+                                  );
+                                }
+                              },
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.red.shade700,
+                              ),
+                              child: const Text('立即生成'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1),
+                    ],
+                    // Upcoming transactions list
+                    if (upcoming.isNotEmpty)
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: upcoming.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final recurring = upcoming[index];
+                          final nextDate = DateTime.fromMillisecondsSinceEpoch(recurring.nextDate);
+                          final daysUntil = _daysUntilNext(nextDate);
+                          final amount = recurring.valueNum / recurring.valueDenom.toDouble();
+                          
+                          return ListTile(
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: daysUntil <= 1
+                                    ? Colors.orange.shade50
+                                    : Theme.of(context).colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                _getFrequencyIcon(recurring.frequency),
+                                color: daysUntil <= 1
+                                    ? Colors.orange.shade700
+                                    : Theme.of(context).colorScheme.onPrimaryContainer,
+                                size: 20,
+                              ),
+                            ),
+                            title: Text(
+                              recurring.name,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            subtitle: Text(
+                              _formatNextDate(nextDate, daysUntil),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: daysUntil <= 1
+                                        ? Colors.orange.shade700
+                                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '¥${amount.toStringAsFixed(2)}',
+                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.play_circle_outline, size: 20),
+                                  onPressed: () async {
+                                    final transactionId = await ref
+                                        .read(recurringProcessorNotifierProvider.notifier)
+                                        .generateSingle(recurring.id);
+                                    if (transactionId != null) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('已生成交易: $transactionId')),
+                                      );
+                                    }
+                                  },
+                                  tooltip: '立即生成',
+                                ),
+                              ],
+                            ),
+                            onTap: () => context.push('/recurring/${recurring.id}'),
+                          );
+                        },
+                      )
+                    else if (overdue.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Center(
+                          child: Text(
+                            '未来7天内无计划交易',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Theme.of(context).colorScheme.outline,
+                                ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+            loading: () => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+            ),
+            error: (_, __) => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Center(
+                  child: Text(
+                    '加载失败',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  int _daysUntilNext(DateTime nextDate) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final next = DateTime(nextDate.year, nextDate.month, nextDate.day);
+    return next.difference(today).inDays;
+  }
+  
+  String _formatNextDate(DateTime nextDate, int daysUntil) {
+    if (daysUntil < 0) {
+      return '已过期 ${daysUntil.abs()} 天';
+    } else if (daysUntil == 0) {
+      return '今天';
+    } else if (daysUntil == 1) {
+      return '明天';
+    } else if (daysUntil <= 7) {
+      final weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+      return '${weekdays[nextDate.weekday - 1]} (${DateFormat('MM/dd').format(nextDate)})';
+    } else {
+      return DateFormat('yyyy-MM-dd').format(nextDate);
+    }
+  }
+  
+  IconData _getFrequencyIcon(String frequency) {
+    switch (frequency) {
+      case 'daily':
+        return Icons.today;
+      case 'weekly':
+        return Icons.calendar_view_week;
+      case 'monthly':
+        return Icons.calendar_month;
+      case 'yearly':
+        return Icons.event;
+      default:
+        return Icons.repeat;
+    }
+  }
+}
+
+class _UpcomingScheduledTransactionsWidget extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final upcomingAsync = ref.watch(upcomingScheduledTransactionsProvider);
+    
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '即将到期交易',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              TextButton(
+                onPressed: () => context.push('/recurring'),
+                child: const Text('查看全部'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          upcomingAsync.when(
+            data: (transactions) {
+              if (transactions.isEmpty) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.event_available_outlined,
+                            size: 48,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            '未来7天无预定交易',
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  color: Theme.of(context).colorScheme.outline,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '设置周期交易以自动记账',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.outline,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+              
+              return Card(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: transactions.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final transaction = transactions[index];
+                    return _UpcomingTransactionTile(transaction: transaction);
+                  },
+                ),
+              );
+            },
+            loading: () => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+            ),
+            error: (_, __) => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Center(
+                  child: Text(
+                    '加载失败',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UpcomingTransactionTile extends ConsumerWidget {
+  final RecurringTransaction transaction;
+  
+  const _UpcomingTransactionTile({required this.transaction});
+  
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final amount = transaction.valueNum.toDouble() / transaction.valueDenom.toDouble();
+    final dueDate = DateTime.fromMillisecondsSinceEpoch(transaction.nextDate);
+    final daysUntil = dueDate.difference(DateTime.now()).inDays;
+    
+    String dueText;
+    Color dueColor;
+    
+    if (daysUntil < 0) {
+      dueText = '已逾期 ${-daysUntil} 天';
+      dueColor = Colors.red;
+    } else if (daysUntil == 0) {
+      dueText = '今天';
+      dueColor = Colors.orange;
+    } else if (daysUntil == 1) {
+      dueText = '明天';
+      dueColor = Theme.of(context).colorScheme.primary;
+    } else {
+      dueText = '$daysUntil 天后';
+      dueColor = Theme.of(context).colorScheme.onSurfaceVariant;
+    }
+    
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: amount >= 0 
+              ? Colors.green.withOpacity(0.1)
+              : Colors.red.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          amount >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
+          color: amount >= 0 ? Colors.green : Colors.red,
+          size: 20,
+        ),
+      ),
+      title: Text(
+        transaction.name,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+            ),
+      ),
+      subtitle: Text(
+        DateFormat('MM-dd').format(dueDate),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: dueColor,
+            ),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '¥${amount.abs().toStringAsFixed(2)}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: amount >= 0 ? Colors.green : Colors.red,
+                    ),
+              ),
+              Text(
+                dueText,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: dueColor,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: Icon(
+              Icons.play_circle_outline,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            tooltip: '立即生成',
+            onPressed: () => _generateNow(context, ref),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Future<void> _generateNow(BuildContext context, WidgetRef ref) async {
+    final notifier = ref.read(recurringNotifierProvider.notifier);
+    
+    try {
+      await notifier.generateNow(transaction.id);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已生成交易: ${transaction.name}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('生成失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

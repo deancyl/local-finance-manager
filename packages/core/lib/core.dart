@@ -23,4 +23,5 @@ export 'src/usecases/cash_flow_calculator.dart';
 export 'src/usecases/general_ledger_calculator.dart';
 export 'src/usecases/reconciliation_service.dart';
 export 'src/usecases/closing_entry_service.dart';
+export 'src/usecases/recurring_processor.dart';
 export 'src/utils/budget_period_calculator.dart';

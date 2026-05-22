@@ -10,6 +10,7 @@ import 'core/theme/app_theme.dart';
 import 'features/settings/data/theme_provider.dart';
 import 'features/settings/data/locale_provider.dart';
 import 'features/budgets/data/budget_notification_service.dart';
+import 'features/recurring/data/recurring_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +21,45 @@ void main() async {
   await notificationService.requestPermissions();
   
   runApp(const ProviderScope(child: FinanceApp()));
+}
+
+class FinanceApp extends ConsumerStatefulWidget {
+  const FinanceApp({super.key});
+
+  @override
+  ConsumerState<FinanceApp> createState() => _FinanceAppState();
+}
+
+class _FinanceAppState extends ConsumerState<FinanceApp> {
+  @override
+  void initState() {
+    super.initState();
+    _setupNotificationHandler();
+    _processRecurringTransactions();
+  }
+
+  void _setupNotificationHandler() {
+    // Handle notification taps
+    final notificationService = BudgetNotificationService();
+    // The notification handler is set up in the service
+    // Here we would handle navigation when a notification is tapped
+  }
+  
+  void _processRecurringTransactions() {
+    // Process due recurring transactions on app startup
+    Future.microtask(() async {
+      final processorNotifier = ref.read(recurringProcessorNotifierProvider.notifier);
+      final ids = await processorNotifier.processAllDue();
+      if (ids.isNotEmpty) {
+        print('Generated ${ids.length} recurring transactions on startup');
+      }
+    });
+  }
+  } catch (e) {
+    print('Failed to process recurring transactions on startup: $e');
+  }
+  
+  runApp(ProviderScope(child: FinanceApp()));
 }
 
 class FinanceApp extends ConsumerStatefulWidget {

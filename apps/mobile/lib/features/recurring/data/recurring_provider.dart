@@ -5,6 +5,12 @@ import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import 'package:core/core.dart';
 
+/// Provider for the RecurringProcessor service.
+final recurringProcessorProvider = Provider<RecurringProcessor>((ref) {
+  final db = ref.watch(databaseProvider);
+  return RecurringProcessor(db);
+});
+
 /// Provider that watches all non-deleted recurring transactions.
 final recurringTransactionsProvider = StreamProvider<List<RecurringTransaction>>((ref) {
   final db = ref.watch(databaseProvider);
@@ -27,6 +33,18 @@ final dueTransactionsProvider = FutureProvider<List<RecurringTransaction>>((ref)
 final recurringByIdProvider = FutureProvider.family<RecurringTransaction?, String>((ref, id) async {
   final db = ref.watch(databaseProvider);
   return db.recurringTransactionsDao.getById(id);
+});
+
+/// Provider that watches upcoming scheduled transactions (next 7 days).
+final upcomingScheduledTransactionsProvider = StreamProvider<List<RecurringTransaction>>((ref) {
+  final processor = ref.watch(recurringProcessorProvider);
+  return processor.watchUpcomingTransactions(days: 7);
+});
+
+/// Provider for overdue transactions (past due date but not yet generated).
+final overdueTransactionsProvider = FutureProvider<List<RecurringTransaction>>((ref) async {
+  final processor = ref.watch(recurringProcessorProvider);
+  return processor.getOverdueTransactions();
 });
 
 /// Notifier for recurring transaction CRUD operations.
@@ -193,4 +211,37 @@ class RecurringNotifier extends StateNotifier<AsyncValue<void>> {
 final recurringNotifierProvider = StateNotifierProvider<RecurringNotifier, AsyncValue<void>>((ref) {
   final db = ref.watch(databaseProvider);
   return RecurringNotifier(db);
+});
+
+/// Notifier for triggering recurring transaction generation.
+class RecurringGenerationNotifier extends StateNotifier<AsyncValue<List<String>>> {
+  final RecurringProcessor _processor;
+
+  RecurringGenerationNotifier(this._processor) : super(const AsyncValue.data([]));
+
+  /// Process all due recurring transactions.
+  Future<void> processAll() async {
+    state = const AsyncValue.loading();
+    try {
+      final ids = await _processor.processDueTransactions();
+      state = AsyncValue.data(ids);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  /// Generate a single recurring transaction manually.
+  Future<String?> generateOne(String recurringId) async {
+    try {
+      return await _processor.generateSingle(recurringId);
+    } catch (e) {
+      return null;
+    }
+  }
+}
+
+/// Provider for the generation notifier.
+final recurringGenerationNotifierProvider = StateNotifierProvider<RecurringGenerationNotifier, AsyncValue<List<String>>>((ref) {
+  final processor = ref.watch(recurringProcessorProvider);
+  return RecurringGenerationNotifier(processor);
 });
