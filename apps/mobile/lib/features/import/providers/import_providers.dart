@@ -391,4 +391,23 @@ class TransactionRepositoryImpl implements TransactionRepository {
     final result = await q.getSingle();
     return result.read(_db.transactions.id.count()) ?? 0;
   }
+
+  @override
+  Future<List<SplitWithTransactionData>> getSplitsForAccount(
+    String accountId, {
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    // Not implemented for import use case
+    return [];
+  }
+
+  @override
+  Future<void> updateSplitReconcileState(
+    String splitId,
+    String reconcileState,
+    int? reconcileDate,
+  ) async {
+    // Not implemented for import use case
+  }
 }

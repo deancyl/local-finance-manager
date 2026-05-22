@@ -412,23 +412,49 @@ class _DatabaseAccountRepository implements AccountRepository {
   _DatabaseAccountRepository(this._db);
 
   @override
-  Future<Account?> getById(String id) async {
-    return await _db.accountsDao.getById(id);
+  Future<core.Account?> getById(String id) async {
+    final dbAccount = await _db.accountsDao.getById(id);
+    return dbAccount != null ? _convertDbToAccount(dbAccount) : null;
   }
 
   @override
-  Future<List<Account>> getAll() async {
-    return await _db.accountsDao.getAll();
+  Future<List<core.Account>> getAll() async {
+    final dbAccounts = await _db.accountsDao.getAll();
+    return dbAccounts.map(_convertDbToAccount).toList();
   }
 
   @override
-  Future<List<Account>> getByType(AccountType type) async {
-    return await _db.accountsDao.getByType(type.name.toUpperCase());
+  Future<List<core.Account>> getByType(AccountType type) async {
+    final dbAccounts = await _db.accountsDao.getByType(type.name.toUpperCase());
+    return dbAccounts.map(_convertDbToAccount).toList();
   }
 
   @override
-  Future<List<Account>> getChildren(String parentId) async {
-    return await _db.accountsDao.getChildren(parentId);
+  Future<List<core.Account>> getChildren(String parentId) async {
+    final dbAccounts = await _db.accountsDao.getChildren(parentId);
+    return dbAccounts.map(_convertDbToAccount).toList();
+  }
+
+  @override
+  Future<List<AccountNode>> getHierarchy() async {
+    final dbAccounts = await _db.accountsDao.getAll();
+    final accounts = dbAccounts.map(_convertDbToAccount).toList();
+    
+    // Build hierarchy
+    final Map<String?, List<core.Account>> byParent = {};
+    for (final account in accounts) {
+      byParent.putIfAbsent(account.parentId, () => []).add(account);
+    }
+    
+    AccountNode buildNode(core.Account account) {
+      final children = (byParent[account.id] ?? [])
+          .map((child) => buildNode(child))
+          .toList();
+      return AccountNode(account: account, children: children);
+    }
+    
+    final roots = byParent[null] ?? [];
+    return roots.map((root) => buildNode(root)).toList();
   }
 
   @override
@@ -445,12 +471,12 @@ class _DatabaseAccountRepository implements AccountRepository {
   }
 
   @override
-  Future<Account> create(Account account) async {
+  Future<core.Account> create(core.Account account) async {
     throw UnimplementedError('Use AccountNotifier for creating accounts');
   }
 
   @override
-  Future<Account> update(Account account) async {
+  Future<core.Account> update(core.Account account) async {
     throw UnimplementedError('Use AccountNotifier for updating accounts');
   }
 
@@ -458,6 +484,28 @@ class _DatabaseAccountRepository implements AccountRepository {
   Future<void> delete(String id) async {
     throw UnimplementedError('Use AccountNotifier for deleting accounts');
   }
+}
+
+// Account conversion helper
+core.Account _convertDbToAccount(DbAccount a) {
+  return core.Account(
+    id: a.id,
+    name: a.name,
+    accountType: core.AccountType.values.firstWhere(
+      (t) => t.name.toUpperCase() == a.accountType.toUpperCase(),
+      orElse: () => core.AccountType.asset,
+    ),
+    commodityId: a.commodityId,
+    parentId: a.parentId,
+    description: a.description,
+    isPlaceholder: a.isPlaceholder,
+    isHidden: a.isHidden,
+    sortOrder: a.sortOrder,
+    version: a.version,
+    createdAt: DateTime.fromMillisecondsSinceEpoch(a.createdAt),
+    updatedAt: DateTime.fromMillisecondsSinceEpoch(a.updatedAt),
+    deletedAt: a.deletedAt != null ? DateTime.fromMillisecondsSinceEpoch(a.deletedAt!) : null,
+  );
 }
 
 /// Internal transaction repository implementation using database.

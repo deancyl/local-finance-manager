@@ -101,7 +101,7 @@ class _AddCurrencyDialogState extends ConsumerState<AddCurrencyDialog> {
               controller: _nameController,
               decoration: const InputDecoration(
                 labelText: 'Symbol/Short Name',
-                hintText: 'e.g., $',
+                hintText: 'e.g., \$',
                 border: OutlineInputBorder(),
               ),
             ),
