@@ -1,5 +1,51 @@
 import 'package:core/core.dart';
 
+/// Represents a parsed transaction from an import file.
+class ParsedTransaction {
+  /// Account ID for the transaction.
+  final String accountId;
+
+  /// Transaction amount (positive for income, negative for expense).
+  final double amount;
+
+  /// Transaction date.
+  final DateTime date;
+
+  /// Currency ID (e.g., 'CNY').
+  final String currencyId;
+
+  /// Transaction description.
+  final String? description;
+
+  /// Transaction notes.
+  final String? notes;
+
+  /// External ID for duplicate detection.
+  final String? externalId;
+
+  /// Category name from source.
+  final String? category;
+
+  /// Payee name.
+  final String? payee;
+
+  /// Memo field.
+  final String? memo;
+
+  const ParsedTransaction({
+    required this.accountId,
+    required this.amount,
+    required this.date,
+    required this.currencyId,
+    this.description,
+    this.notes,
+    this.externalId,
+    this.category,
+    this.payee,
+    this.memo,
+  });
+}
+
 /// Result of parsing an import file.
 class ImportResult {
   /// Successfully parsed transactions.

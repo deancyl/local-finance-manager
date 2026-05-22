@@ -339,11 +339,11 @@ class JournalEntryNotifier extends StateNotifier<JournalEntryState> {
 
     state = state.copyWith(isSaving: true);
 
-    try {
-      final db = _ref.read(databaseProvider);
-      final transactionId = _uuid.v4();
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final postDate = state.date.millisecondsSinceEpoch;
+try {
+        final db = _ref.read(databaseProvider);
+        final transactionId = _uuid.v4();
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final postDate = state.date?.millisecondsSinceEpoch ?? now;
 
       // Create splits for the transaction
       final splitsData = <SplitsCompanion>[];
