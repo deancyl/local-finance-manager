@@ -12,6 +12,9 @@ dependencies:
   equatable: ^2.0.5
   json_annotation: ^4.9.0
   decimal: ^3.0.2
+  database:
+    path: ../database
+  drift: ^2.20.3
 
 dev_dependencies:
   test: ^1.25.7
