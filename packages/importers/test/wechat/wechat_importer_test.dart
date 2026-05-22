@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:test/test.dart';
 import 'package:importers/importers.dart';
 import 'package:core/core.dart';
-import 'package:core/core.dart';
 
 void main() {
   group('WeChatPayImporter', () {
