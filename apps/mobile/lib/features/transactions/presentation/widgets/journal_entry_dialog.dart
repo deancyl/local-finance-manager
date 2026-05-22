@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import 'package:database/database.dart';
+import 'package:database/database.dart' hide Account;
 import 'package:finance_app/features/currency/data/currency_provider.dart';
 import 'package:finance_app/features/transactions/data/journal_entry_provider.dart';
 import 'journal_account_selector.dart';
@@ -216,7 +216,7 @@ class _JournalEntryDialogState extends ConsumerState<JournalEntryDialog> {
           ),
         ),
         child: Text(
-          DateFormat('yyyy年MM月dd日').format(state.date),
+          DateFormat('yyyy年MM月dd日').format(state.date ?? DateTime.now()),
           style: theme.textTheme.bodyLarge,
         ),
       ),

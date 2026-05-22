@@ -1,4 +1,4 @@
-import 'package:core/core.dart';
+import 'package:core/core.dart' hide ParsedTransaction;
 
 /// Represents a parsed transaction from an import file.
 class ParsedTransaction {
