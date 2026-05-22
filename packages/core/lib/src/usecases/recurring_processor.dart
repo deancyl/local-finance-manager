@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide isNotNull;
 import 'package:database/database.dart';
 
 /// Service for processing recurring transactions and generating due transactions.
@@ -62,10 +63,10 @@ class RecurringProcessor {
     final upcoming = await (_db.select(_db.recurringTransactions)
           ..where((r) =>
               r.isActive.equals(true) &
-              r.deletedAt.isNull() &
-              r.nextDate.isBiggerOrEqualValue(now) &
-              r.nextDate.isSmallerOrEqualValue(endDate)))
-        .get();
+              r.deletedAt.isNull()))
+          .get()
+          .then((list) => list.where((r) => 
+              r.nextDate >= now && r.nextDate <= endDate).toList());
     
     return upcoming;
   }
@@ -82,11 +83,11 @@ class RecurringProcessor {
     return (_db.select(_db.recurringTransactions)
           ..where((r) =>
               r.isActive.equals(true) &
-              r.deletedAt.isNull() &
-              r.nextDate.isBiggerOrEqualValue(now) &
-              r.nextDate.isSmallerOrEqualValue(endDate))
+              r.deletedAt.isNull())
           ..orderBy([(r) => OrderingTerm.asc(r.nextDate)]))
-        .watch();
+        .watch()
+        .map((list) => list.where((r) => 
+            r.nextDate >= now && r.nextDate <= endDate).toList());
   }
 
   /// Get count of transactions that will be due in the next N days.

@@ -3,7 +3,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
 
 import 'package:core/core.dart';
-import 'package:database/database.dart';
+import 'package:database/database.dart' hide Account;
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import 'package:finance_app/features/currency/data/currency_provider.dart';
 

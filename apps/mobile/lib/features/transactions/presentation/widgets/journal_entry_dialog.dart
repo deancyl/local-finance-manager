@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 
 import 'package:database/database.dart';
 import 'package:finance_app/features/currency/data/currency_provider.dart';
-import '../data/journal_entry_provider.dart';
+import 'package:finance_app/features/transactions/data/journal_entry_provider.dart';
 import 'journal_account_selector.dart';
 
 /// Dialog for creating/editing double-entry journal transactions.
