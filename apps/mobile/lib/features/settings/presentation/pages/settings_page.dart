@@ -69,6 +69,14 @@ class SettingsPage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/tags'),
           ),
+          // Currency & Exchange Rates
+          ListTile(
+            leading: const Icon(Icons.currency_exchange),
+            title: const Text('货币与汇率'),
+            subtitle: const Text('管理货币和汇率'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/currency'),
+          ),
           // Import history
           ListTile(
             leading: const Icon(Icons.history),
@@ -91,7 +99,7 @@ class SettingsPage extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('关于'),
-            subtitle: const Text('版本 0.3.43'),
+            subtitle: const Text('版本 0.3.44'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/about'),
           ),

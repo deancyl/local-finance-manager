@@ -11,6 +11,7 @@ import 'tables/recurring.dart';
 import 'tables/attachments.dart';
 import 'tables/tags.dart';
 import 'tables/closing_entries.dart';
+import 'tables/exchange_rates.dart';
 
 part 'database.g.dart';
 part 'daos/accounts_dao.dart';
@@ -23,6 +24,7 @@ part 'daos/recurring_dao.dart';
 part 'daos/attachments_dao.dart';
 part 'daos/splits_dao.dart';
 part 'daos/closing_entries_dao.dart';
+part 'daos/exchange_rates_dao.dart';
 
 /// Local finance database with all tables.
 @DriftDatabase(
@@ -40,6 +42,7 @@ part 'daos/closing_entries_dao.dart';
     Tags,
     TransactionTags,
     ClosingEntries,
+    ExchangeRates,
   ],
 )
 class LocalFinanceDatabase extends _$LocalFinanceDatabase {
@@ -57,9 +60,10 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final AttachmentsDao attachmentsDao = AttachmentsDao(this);
   late final SplitsDao splitsDao = SplitsDao(this);
   late final ClosingEntriesDao closingEntriesDao = ClosingEntriesDao(this);
+  late final ExchangeRatesDao exchangeRatesDao = ExchangeRatesDao(this);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration {
@@ -239,6 +243,26 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
           await customStatement(
             'CREATE INDEX IF NOT EXISTS idx_closing_entries_status '
             'ON closing_entries(status)',
+          );
+        }
+        if (from < 9) {
+          // Version 9: Add exchange rates table for multi-currency support
+          await m.createTable(exchangeRates);
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_exchange_rates_from_currency '
+            'ON exchange_rates(from_currency)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_exchange_rates_to_currency '
+            'ON exchange_rates(to_currency)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_exchange_rates_date '
+            'ON exchange_rates(date)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_exchange_rates_currencies_date '
+            'ON exchange_rates(from_currency, to_currency, date)',
           );
         }
       },

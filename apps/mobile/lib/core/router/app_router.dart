@@ -26,6 +26,7 @@ import '../../features/recurring/presentation/pages/recurring_page.dart';
 import '../../features/attachments/presentation/pages/attachments_page.dart';
 import '../../features/reconciliation/presentation/pages/reconciliation_page.dart';
 import '../../features/closing/presentation/pages/period_closing_page.dart';
+import '../../features/currency/presentation/pages/exchange_rates_page.dart';
 // Sync temporarily disabled - PowerSync compatibility issues
 // import '../../features/sync/presentation/pages/sync_settings_page.dart';
 // import '../../features/sync/presentation/pages/sync_login_page.dart';
@@ -159,6 +160,11 @@ class AppRouter {
         path: '/settings/recurring',
         name: 'recurring',
         builder: (context, state) => const RecurringPage(),
+      ),
+      GoRoute(
+        path: '/settings/currency',
+        name: 'currency',
+        builder: (context, state) => const ExchangeRatesPage(),
       ),
       GoRoute(
         path: '/import',

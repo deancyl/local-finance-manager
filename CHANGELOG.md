@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.44] - 2026-05-22
+
+### Added
+- **Multi-Currency Foundation**: Exchange rates management
+  - Exchange rates table with historical rate tracking
+  - Support for multiple rate sources (manual, bank, market, API)
+  - Currency management with quick-add presets (USD, EUR, GBP, JPY, etc.)
+  - Exchange rates page with grouped display by currency pair
+  - Add/Edit/Delete exchange rates
+  - Add new currencies with decimal place configuration
+  - Currency conversion helper service
+
+### Technical Details
+- `packages/database/lib/src/tables/exchange_rates.dart` - Exchange rates table definition
+- `packages/database/lib/src/daos/exchange_rates_dao.dart` - DAO with CRUD and conversion methods
+- `apps/mobile/lib/features/currency/data/currency_provider.dart` - Riverpod providers
+- `apps/mobile/lib/features/currency/presentation/pages/exchange_rates_page.dart` - Rates UI
+- `apps/mobile/lib/features/currency/presentation/widgets/add_exchange_rate_dialog.dart` - Rate form
+- `apps/mobile/lib/features/currency/presentation/widgets/add_currency_dialog.dart` - Currency form
+- Database schema v9 with exchange_rates table and indexes
+- Added `/settings/currency` route
+
 ## [v0.3.19] - 2026-05-21
 
 ### Added
