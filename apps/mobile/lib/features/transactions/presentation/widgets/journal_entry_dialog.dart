@@ -524,6 +524,7 @@ class _SplitLineCard extends StatefulWidget {
   final void Function(double) onDebitChanged;
   final void Function(double) onCreditChanged;
   final void Function(String?) onMemoChanged;
+  final void Function(CostCenter?)? onCostCenterChanged; // Cost center callback
 
   const _SplitLineCard({
     super.key,
@@ -535,6 +536,7 @@ class _SplitLineCard extends StatefulWidget {
     required this.onDebitChanged,
     required this.onCreditChanged,
     required this.onMemoChanged,
+    this.onCostCenterChanged,
   });
 
   @override
@@ -695,9 +697,59 @@ class _SplitLineCardState extends State<_SplitLineCard> {
               style: theme.textTheme.bodySmall,
               onChanged: widget.onMemoChanged,
             ),
+            
+            // Cost center selector (optional)
+            if (widget.onCostCenterChanged != null) ...[
+              const SizedBox(height: 12),
+              _buildCostCenterSelector(theme),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCostCenterSelector(ThemeData theme) {
+    // Get cost centers from provider - need to wrap in Consumer for this
+    return Builder(
+      builder: (context) {
+        // This will be implemented with Consumer widget when used in journal_entry_dialog
+        return InkWell(
+          onTap: widget.onCostCenterChanged == null ? null : () async {
+            // Cost center selection will be implemented in the parent widget
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: InputDecorator(
+            decoration: InputDecoration(
+              labelText: '成本中心（可选）',
+              prefixIcon: Icon(
+                Icons.account_tree_outlined,
+                size: 18,
+                color: widget.split.costCenterName != null
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.outline,
+              ),
+              suffixIcon: const Icon(Icons.arrow_drop_down),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              widget.split.costCenterName ?? '未选择',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: widget.split.costCenterName != null
+                    ? null
+                    : theme.colorScheme.outline,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

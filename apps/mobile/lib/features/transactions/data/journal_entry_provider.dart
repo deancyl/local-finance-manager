@@ -16,6 +16,8 @@ class SplitLine {
   final double debit;
   final double credit;
   final String? memo;
+  final String? costCenterId; // Cost center for expense allocation
+  final String? costCenterName; // Cost center name for display
 
   const SplitLine({
     required this.id,
@@ -25,6 +27,8 @@ class SplitLine {
     this.debit = 0,
     this.credit = 0,
     this.memo,
+    this.costCenterId,
+    this.costCenterName,
   });
 
   /// Returns true if this split has an account selected.
@@ -44,6 +48,8 @@ class SplitLine {
     double? debit,
     double? credit,
     String? memo,
+    String? costCenterId,
+    String? costCenterName,
   }) {
     return SplitLine(
       id: id ?? this.id,
@@ -53,6 +59,8 @@ class SplitLine {
       debit: debit ?? this.debit,
       credit: credit ?? this.credit,
       memo: memo ?? this.memo,
+      costCenterId: costCenterId ?? this.costCenterId,
+      costCenterName: costCenterName ?? this.costCenterName,
     );
   }
 }
@@ -232,6 +240,20 @@ class JournalEntryNotifier extends StateNotifier<JournalEntryState> {
     _updateSplits(newSplits);
   }
 
+  /// Updates a specific split's cost center.
+  void updateSplitCostCenter(String splitId, CostCenter? costCenter) {
+    final newSplits = state.splits.map((s) {
+      if (s.id == splitId) {
+        return s.copyWith(
+          costCenterId: costCenter?.id,
+          costCenterName: costCenter?.name,
+        );
+      }
+      return s;
+    }).toList();
+    _updateSplits(newSplits);
+  }
+
   /// Clears a split's account selection.
   void clearSplitAccount(String splitId) {
     final newSplits = state.splits.map((s) {
@@ -337,6 +359,7 @@ class JournalEntryNotifier extends StateNotifier<JournalEntryState> {
           transactionId: transactionId,
           accountId: line.accountId!,
           memo: drift.Value(line.memo),
+          costCenterId: drift.Value(line.costCenterId), // Cost center for expense allocation
           valueNum: valueNum,
           valueDenom: const drift.Value(100),
           quantityNum: valueNum,
