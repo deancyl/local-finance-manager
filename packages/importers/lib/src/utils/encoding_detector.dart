@@ -2,6 +2,35 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:gbk_codec/gbk_codec.dart' as gbk_pkg;
 
+/// Result of a decode operation with metadata.
+class DecodeResult {
+  /// The decoded string content.
+  final String content;
+
+  /// The encoding that was used to decode.
+  final String usedEncoding;
+
+  /// Whether the decode was successful without fallback.
+  final bool success;
+
+  /// Error message if decoding failed or used fallback.
+  final String? errorMessage;
+
+  /// Whether fallback encoding was used.
+  final bool usedFallback;
+
+  const DecodeResult({
+    required this.content,
+    required this.usedEncoding,
+    required this.success,
+    this.errorMessage,
+    this.usedFallback = false,
+  });
+
+  /// Returns true if decoding used a fallback method.
+  bool get isFallback => usedFallback || !success;
+}
+
 /// Detects and handles file encoding for Chinese financial institution exports.
 ///
 /// Chinese banks often export CSV files in GBK or GB2312 encoding,
@@ -19,6 +48,28 @@ class EncodingDetector {
   static const _utf8Bom = [0xEF, 0xBB, 0xBF];
   static const _utf16LeBom = [0xFF, 0xFE];
   static const _utf16BeBom = [0xFE, 0xFF];
+
+  /// Normalize line endings to LF (\n).
+  ///
+  /// Handles:
+  /// - Windows-style CRLF (\r\n)
+  /// - Old Mac-style CR (\r)
+  /// - Mixed line endings
+  ///
+  /// This is critical for Android compatibility as banking apps
+  /// often export files with Windows-style line endings.
+  static String normalizeLineEndings(String content) {
+    // First replace CRLF with LF (Windows style)
+    // Then replace standalone CR with LF (old Mac style)
+    return content.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+  }
+
+  /// Split content into lines, handling all line ending styles.
+  ///
+  /// This is a convenience method that normalizes line endings first.
+  static List<String> splitLines(String content) {
+    return normalizeLineEndings(content).split('\n');
+  }
 
   /// Detects the encoding of the given bytes.
   ///
@@ -76,6 +127,110 @@ class EncodingDetector {
       } catch (_) {}
       // Last resort: decode as Latin-1 (always succeeds)
       return latin1.decode(bytes);
+    }
+  }
+
+  /// Decodes bytes to string with detailed result information.
+  ///
+  /// This method provides more context about the decode operation,
+  /// including which encoding was used and whether fallback was needed.
+  static DecodeResult decodeWithDetails(Uint8List bytes, [String? encoding]) {
+    final detectedEncoding = encoding ?? detect(bytes);
+
+    try {
+      String result;
+      switch (detectedEncoding.toLowerCase()) {
+        case utf8:
+          result = const Utf8Codec().decode(bytes);
+          return DecodeResult(
+            content: result,
+            usedEncoding: utf8,
+            success: true,
+          );
+        case gbk:
+        case gb2312:
+          result = gbk_pkg.gbk.decode(bytes);
+          return DecodeResult(
+            content: result,
+            usedEncoding: gbk,
+            success: true,
+          );
+        case utf16:
+        case utf16le:
+          result = _decodeUtf16Le(bytes);
+          return DecodeResult(
+            content: result,
+            usedEncoding: utf16le,
+            success: true,
+          );
+        case utf16be:
+          result = _decodeUtf16Be(bytes);
+          return DecodeResult(
+            content: result,
+            usedEncoding: utf16be,
+            success: true,
+          );
+        default:
+          // Unknown encoding, try UTF-8 first, then GBK
+          try {
+            result = const Utf8Codec().decode(bytes);
+            return DecodeResult(
+              content: result,
+              usedEncoding: utf8,
+              success: true,
+              usedFallback: true,
+              errorMessage: 'Unknown encoding, fell back to UTF-8',
+            );
+          } catch (e) {
+            try {
+              result = gbk_pkg.gbk.decode(bytes);
+              return DecodeResult(
+                content: result,
+                usedEncoding: gbk,
+                success: true,
+                usedFallback: true,
+                errorMessage: 'Unknown encoding, fell back to GBK: $e',
+              );
+            } catch (e2) {
+              // Both failed
+              return DecodeResult(
+                content: latin1.decode(bytes),
+                usedEncoding: 'latin1',
+                success: false,
+                errorMessage: 'UTF-8 and GBK decode failed: $e, $e2',
+              );
+            }
+          }
+      }
+    } catch (e) {
+      // Primary decode failed, try fallbacks
+      try {
+        final result = const Utf8Codec().decode(bytes);
+        return DecodeResult(
+          content: result,
+          usedEncoding: utf8,
+          success: true,
+          usedFallback: true,
+          errorMessage: 'Primary decode failed, fell back to UTF-8: $e',
+        );
+      } catch (_) {}
+      try {
+        final result = gbk_pkg.gbk.decode(bytes);
+        return DecodeResult(
+          content: result,
+          usedEncoding: gbk,
+          success: true,
+          usedFallback: true,
+          errorMessage: 'Primary decode failed, fell back to GBK: $e',
+        );
+      } catch (_) {}
+      // Last resort: decode as Latin-1 (always succeeds)
+      return DecodeResult(
+        content: latin1.decode(bytes),
+        usedEncoding: 'latin1',
+        success: false,
+        errorMessage: 'All decodings failed, using Latin-1: $e',
+      );
     }
   }
 

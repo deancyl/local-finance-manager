@@ -76,8 +76,8 @@ class CiticImporter extends ImporterBase {
     // Decode content
     final decoded = EncodingDetector.decode(content, encoding);
 
-    // Check for CITIC-specific headers
-    final lines = decoded.split('\n');
+    // Check for CITIC-specific headers (normalize line endings for Android compatibility)
+    final lines = EncodingDetector.splitLines(decoded);
     if (lines.isEmpty) return false;
 
     // Check first few lines for headers

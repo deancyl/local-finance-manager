@@ -40,8 +40,11 @@ class CsvParser {
     // Handle backtick prefix (common in WeChat Pay)
     final cleaned = _cleanBacktickPrefix(decoded);
 
+    // Normalize line endings (fix Android/Windows compatibility)
+    final normalized = _normalizeLineEndings(cleaned);
+
     // Parse CSV
-    final rows = _parseCsvRows(cleaned, delim);
+    final rows = _parseCsvRows(normalized, delim);
 
     // Extract header and data
     final header = hasHeader && rows.isNotEmpty ? rows.first : null;
@@ -111,6 +114,21 @@ class CsvParser {
       return ';';
     }
     return defaultDelimiter;
+  }
+
+  /// Normalize line endings to LF (\n).
+  ///
+  /// Handles:
+  /// - Windows-style CRLF (\r\n)
+  /// - Old Mac-style CR (\r)
+  /// - Mixed line endings
+  ///
+  /// This is critical for Android compatibility as banking apps
+  /// often export files with Windows-style line endings.
+  static String _normalizeLineEndings(String content) {
+    // First replace CRLF with LF (Windows style)
+    // Then replace standalone CR with LF (old Mac style)
+    return content.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
   }
 
   /// Clean backtick prefix from CSV content.

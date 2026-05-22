@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -10,6 +11,9 @@ import 'package:core/core.dart' show ImportBatchStatus;
 import '../../providers/import_providers.dart';
 import '../../../accounts/data/account_provider.dart';
 import '../widgets/field_mapping_dialog.dart';
+
+/// Helper to check if running on Android.
+bool get _isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
 /// Import page for importing transactions from financial institutions.
 class ImportPage extends ConsumerStatefulWidget {
@@ -404,7 +408,18 @@ Text(
       final file = result.files.first;
       if (file.bytes == null) {
         setState(() {
-          _error = '无法读取文件内容';
+          _error = _isAndroid
+              ? '无法读取文件内容。\n\n可能原因：\n1. 文件权限不足\n2. 文件被其他应用占用\n3. 文件路径不可访问\n\n建议：尝试将文件复制到下载目录后重试'
+              : '无法读取文件内容';
+        });
+        return;
+      }
+
+      // Check file size for Android memory safety
+      if (_isAndroid && file.bytes!.length > 10 * 1024 * 1024) {
+        setState(() {
+          _error = '文件过大 (${(file.bytes!.length / 1024 / 1024).toStringAsFixed(1)}MB)，\n建议分批导出较小的文件。\n\n最大支持：10MB';
+          _isLoading = false;
         });
         return;
       }
@@ -423,9 +438,9 @@ Text(
 
       if (importer == null) {
 setState(() {
-           _error = '不支持的文件格式。\n支持：支付宝、微信支付、工商银行、建设银行、中国银行的CSV、XLS、XLSX文件';
-           _isLoading = false;
-         });
+             _error = '不支持的文件格式。\n支持：支付宝、微信支付、工商银行、建设银行、中国银行的CSV、XLS、XLSX文件';
+             _isLoading = false;
+           });
         return;
       }
 
@@ -455,8 +470,18 @@ setState(() {
         _isLoading = false;
       });
     } catch (e) {
+      // Provide more helpful error messages for Android
+      String errorMessage = e.toString();
+      if (_isAndroid) {
+        if (errorMessage.contains('GBK') || errorMessage.contains('gbk')) {
+          errorMessage = '文件编码解析失败。\n\n可能原因：\n1. 文件使用特殊编码\n2. 文件损坏\n\n建议：\n1. 尝试用Excel打开后另存为UTF-8格式\n2. 联系开发者反馈此问题\n\n错误详情：$errorMessage';
+        } else if (errorMessage.contains('permission') || errorMessage.contains('Permission')) {
+          errorMessage = '文件权限不足。\n\n请尝试：\n1. 将文件复制到"下载"目录\n2. 重新选择文件';
+        }
+      }
+      
       setState(() {
-        _error = e.toString();
+        _error = errorMessage;
         _isLoading = false;
       });
     }

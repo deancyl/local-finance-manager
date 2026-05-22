@@ -71,8 +71,8 @@ class AbcImporter extends ImporterBase {
     // Decode content
     final decoded = EncodingDetector.decode(content, encoding);
 
-    // Check for ABC-specific headers
-    final lines = decoded.split('\n');
+    // Check for ABC-specific headers (normalize line endings for Android compatibility)
+    final lines = EncodingDetector.splitLines(decoded);
     if (lines.isEmpty) return false;
 
     // Check first few lines for headers
