@@ -43,6 +43,9 @@ jobs:
       - name: Bootstrap workspace
         run: melos bootstrap
       
+      - name: Generate code (Drift)
+        run: melos run generate
+      
       - name: Run analysis
         run: melos run analyze
       
