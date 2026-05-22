@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:core/core.dart';
+import 'package:core/core.dart' hide ParsedTransaction;
 import '../base/importer_base.dart';
 import '../base/import_config.dart';
 import '../base/import_result.dart';
