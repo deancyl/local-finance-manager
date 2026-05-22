@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:database/database.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -39,7 +39,7 @@ void main() {
     });
 
     test('creates default commodities on initialization', () async {
-      final commodities = await db.commodities.get().get();
+      final commodities = await db.select(db.commodities).get();
       
       expect(commodities.length, greaterThanOrEqualTo(2));
       
@@ -51,7 +51,7 @@ void main() {
     });
 
     test('creates default categories on initialization', () async {
-      final allCategories = await db.categories.get().get();
+      final allCategories = await db.select(db.categories).get();
       
       expect(allCategories.length, greaterThan(0));
       
@@ -66,7 +66,7 @@ void main() {
     });
 
     test('creates default account groups on initialization', () async {
-      final allAccounts = await db.accounts.get().get();
+      final allAccounts = await db.select(db.accounts).get();
       
       expect(allAccounts.length, greaterThan(0));
       
@@ -80,7 +80,7 @@ void main() {
     });
 
     test('creates default tags on initialization', () async {
-      final allTags = await db.tags.get().get();
+      final allTags = await db.select(db.tags).get();
       
       expect(allTags.length, greaterThan(0));
       
@@ -443,12 +443,12 @@ void main() {
   group('Database migrations', () {
     test('database starts at latest schema version', () async {
       // Verify we can access all tables without errors
-      await db.commodities.get().get();
-      await db.accounts.get().get();
-      await db.categories.get().get();
-      await db.tags.get().get();
-      await db.budgets.get().get();
-      await db.exchangeRates.get().get();
+      await db.select(db.commodities).get();
+      await db.select(db.accounts).get();
+      await db.select(db.categories).get();
+      await db.select(db.tags).get();
+      await db.select(db.budgets).get();
+      await db.select(db.exchangeRates).get();
       await db.costCenters.get().get();
       await db.closingEntries.get().get();
     });
