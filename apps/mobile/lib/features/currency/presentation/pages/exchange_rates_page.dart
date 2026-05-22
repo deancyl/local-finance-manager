@@ -58,8 +58,9 @@ class ExchangeRatesPage extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  currenciesAsync.when(
-                    data: (currencies) {
+                  Builder(
+                    builder: (context) {
+                      final currencies = currenciesAsync;
                       if (currencies.isEmpty) {
                         return const Text('No currencies configured');
                       }
@@ -76,8 +77,6 @@ class ExchangeRatesPage extends ConsumerWidget {
                         }).toList(),
                       );
                     },
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Text('Error: $e'),
                   ),
                 ],
               ),

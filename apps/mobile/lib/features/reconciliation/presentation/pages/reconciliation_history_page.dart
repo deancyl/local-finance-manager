@@ -160,8 +160,8 @@ class _ReconciliationHistoryPageState extends ConsumerState<ReconciliationHistor
     // Query splits that are reconciled for this account
     // Group by reconcile date to show reconciliation sessions
     final query = db.select(db.splits).join([
-      db.innerJoin(db.transactions, db.transactions.id.equalsExp(db.splits.transactionId)),
-      db.innerJoin(db.accounts, db.accounts.id.equalsExp(db.splits.accountId)),
+      drift.innerJoin(db.transactions, db.transactions.id.equalsExp(db.splits.transactionId)),
+      drift.innerJoin(db.accounts, db.accounts.id.equalsExp(db.splits.accountId)),
     ])
       ..where(db.splits.accountId.equals(_selectedAccountId) & 
               db.splits.reconcileState.equals('y') &

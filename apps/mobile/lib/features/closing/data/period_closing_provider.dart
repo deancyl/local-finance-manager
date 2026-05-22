@@ -4,7 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:database/database.dart' as db;
 import 'package:core/core.dart' as core;
-import 'package:core/src/models/trial_balance.dart' show AccountBalanceRaw;
+import 'package:core/src/usecases/trial_balance_calculator.dart' show AccountBalanceRaw;
 import '../../accounts/data/account_provider.dart';
 
 // Type aliases to distinguish database types from core types
@@ -264,22 +264,57 @@ class PeriodClosingNotifier extends StateNotifier<PeriodClosingState> {
     state = state.copyWith(isLoading: true, clearError: true, clearSuccess: true);
 
     try {
+      // Get accounts and balances for the period
+      final accountRepo = _DatabaseAccountRepository(_db);
+      final transactionRepo = _DatabaseTransactionRepository(_db);
+      
+      final accounts = await accountRepo.getAll();
+      
+      // Calculate balances from splits in the period
+      final balances = <AccountBalanceRaw>[];
+      for (final account in accounts) {
+        final splitsData = await transactionRepo.getSplitsForAccount(
+          account.id,
+          startDate: period.startDate,
+          endDate: period.endDate,
+        );
+        
+        int debitNum = 0;
+        int creditNum = 0;
+        int denom = 1;
+        
+        for (final splitData in splitsData) {
+          final commonDenom = denom * splitData.valueDenom;
+          debitNum = debitNum * splitData.valueDenom + (splitData.valueNum < 0 ? splitData.valueNum.abs() : 0) * denom;
+          creditNum = creditNum * splitData.valueDenom + (splitData.valueNum > 0 ? splitData.valueNum : 0) * denom;
+          denom = commonDenom;
+        }
+        
+        balances.add(AccountBalanceRaw(
+          accountId: account.id,
+          debitNum: debitNum,
+          creditNum: creditNum,
+          denom: denom,
+        ));
+      }
+      
       // Get trial balance for the period
-      final trialBalanceCalculator = core.TrialBalanceCalculator(
-        accountRepository: _DatabaseAccountRepository(_db),
-        transactionRepository: _DatabaseTransactionRepository(_db),
-      );
+      final trialBalanceCalculator = core.TrialBalanceCalculator();
 
       final trialBalance = await trialBalanceCalculator.calculate(
+        accounts: accounts,
+        balances: balances,
         startDate: period.startDate,
         endDate: period.endDate,
       );
 
       // Validate trial balance
       if (!trialBalance.isBalanced) {
+        final totalDebit = trialBalance.totalDebits / trialBalance.commonDenom.toDouble();
+        final totalCredit = trialBalance.totalCredits / trialBalance.commonDenom.toDouble();
         state = state.copyWith(
           isLoading: false,
-          error: '试算不平衡，无法结账。借方: ${trialBalance.totalDebit.toStringAsFixed(2)}, 贷方: ${trialBalance.totalCredit.toStringAsFixed(2)}',
+          error: '试算不平衡，无法结账。借方: ${totalDebit.toStringAsFixed(2)}, 贷方: ${totalCredit.toStringAsFixed(2)}',
         );
         return false;
       }
@@ -293,9 +328,9 @@ class PeriodClosingNotifier extends StateNotifier<PeriodClosingState> {
         fiscalPeriodId: period.id,
         balances: trialBalance.accounts.map((a) => AccountBalanceRaw(
           accountId: a.accountId,
-          debitNum: (a.debit * 100).round(),
-          creditNum: (a.credit * 100).round(),
-          denom: 100,
+          debitNum: a.debitNum,
+          creditNum: a.creditNum,
+          denom: a.denom,
         )).toList(),
         commodityId: commodityId,
         postDate: period.endDate,
