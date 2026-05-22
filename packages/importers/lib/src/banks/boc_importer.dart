@@ -6,7 +6,6 @@ import '../utils/file_parser.dart';
 import '../utils/date_parser.dart';
 import '../utils/amount_parser.dart';
 import 'package:core/src/models/import_source.dart';
-import 'package:core/src/usecases/import_transactions.dart';
 
 /// BOC (中国银行) CSV importer.
 ///
