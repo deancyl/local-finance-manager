@@ -2,6 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/backup_provider.dart';
+import '../../../accounts/data/account_provider.dart';
+import '../../../export/data/export_service.dart';
+import '../../../export/data/import_service.dart';
+import 'package:database/database.dart';
 
 class BackupSettingsPage extends ConsumerWidget {
   const BackupSettingsPage({super.key});
@@ -141,18 +145,36 @@ class BackupSettingsPage extends ConsumerWidget {
   }
 
   Future<void> _exportData(BuildContext context, WidgetRef ref) async {
-    // TODO: Get actual data from database
-    // For now, export sample data structure
-    final data = {
-      'version': '0.3.12',
-      'exportedAt': DateTime.now().toIso8601String(),
-      'accounts': <Map<String, dynamic>>[],
-      'transactions': <Map<String, dynamic>>[],
-      'categories': <Map<String, dynamic>>[],
-      'budgets': <Map<String, dynamic>>[],
-    };
+    try {
+      final db = ref.read(databaseProvider);
+      final exportService = ExportService(db);
 
-    await ref.read(backupProvider.notifier).exportData(data);
+      // Export all data using exportFullBackup
+      final result = await exportService.exportFullBackup();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '导出成功！\n'
+              '交易: ${result.transactionCount}条\n'
+              '账户: ${result.accountCount}个\n'
+              '分类: ${result.categoryCount}个',
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('导出失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _importData(BuildContext context, WidgetRef ref) async {
@@ -176,12 +198,63 @@ class BackupSettingsPage extends ConsumerWidget {
               child: const Text('取消'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
-                // TODO: Implement actual import
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('导入功能开发中')),
-                );
+                
+                // Perform the actual import
+                final filePath = ref.read(backupProvider).filePath;
+                if (filePath == null) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('文件路径无效')),
+                    );
+                  }
+                  return;
+                }
+
+                try {
+                  final db = ref.read(databaseProvider);
+                  final importService = ImportService(db);
+                  
+                  final result = await importService.importFromJSON(
+                    filePath,
+                    skipDuplicates: true,
+                  );
+
+                  if (context.mounted) {
+                    if (result.hasErrors) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('导入完成但有错误:\n${result.errors.join("\n")}'),
+                          backgroundColor: Colors.orange,
+                          duration: const Duration(seconds: 5),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '导入成功！\n'
+                            '交易: ${result.transactionsImported}条\n'
+                            '账户: ${result.accountsImported}个\n'
+                            '分类: ${result.categoriesImported}个\n'
+                            '跳过: ${result.skippedCount}条',
+                          ),
+                          duration: const Duration(seconds: 3),
+                        ),
+                      );
+                    }
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('导入失败: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
               },
               child: const Text('导入'),
             ),
