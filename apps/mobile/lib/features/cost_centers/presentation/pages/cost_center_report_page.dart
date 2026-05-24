@@ -59,7 +59,7 @@ final costCenterExpenseReportProvider = FutureProvider<List<CostCenterExpense>>(
   // Group by cost center
   final Map<String, List<db.Split>> groupedSplits = {};
   for (final row in results) {
-    final split = row.readTable(db.splits);
+    final split = row.readTable(database.splits);
     final costCenterId = split.costCenterId;
     if (costCenterId != null) {
       groupedSplits.putIfAbsent(costCenterId, () => []).add(split);

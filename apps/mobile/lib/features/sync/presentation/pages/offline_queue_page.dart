@@ -1,3 +1,5 @@
+// DISABLED: sync package is temporarily disabled
+/*
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/pending_operations_provider.dart';
@@ -230,3 +232,4 @@ class OfflineQueuePage extends ConsumerWidget {
            '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 }
+*/
