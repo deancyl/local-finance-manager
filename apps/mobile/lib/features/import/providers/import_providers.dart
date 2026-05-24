@@ -2,7 +2,8 @@ import 'dart:typed_data';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:importers/importers.dart';
-import 'package:core/core.dart';
+import 'package:core/core.dart' hide ParsedTransaction;
+import 'package:core/core.dart' as core show ParsedTransaction;
 import 'package:database/database.dart' as db;
 
 import 'package:finance_app/features/accounts/data/account_provider.dart';
@@ -11,6 +12,22 @@ import '../data/importer_registry.dart';
 // ============================================================
 // TOP-LEVEL MAPPER FUNCTIONS
 // ============================================================
+
+/// Convert ParsedTransaction from importers to core
+core.ParsedTransaction _mapToCoreParsedTransaction(ParsedTransaction t) {
+  return core.ParsedTransaction(
+    accountId: t.accountId,
+    amount: t.amount,
+    date: t.date,
+    currencyId: t.currencyId,
+    description: t.description,
+    notes: t.notes,
+    memo: t.memo,
+    externalId: t.externalId,
+    category: t.category,
+    payee: t.payee,
+  );
+}
 
 Account _mapDbToAccount(db.Account dbAccount) {
   return Account(
@@ -190,7 +207,7 @@ class ImportNotifier extends StateNotifier<ImportState> {
       
       final batch = await useCase.import(
         sourceId: importer.sourceId,
-        transactions: result.transactions,
+        transactions: result.transactions.map(_mapToCoreParsedTransaction).toList(),
         filename: filename,
         skipDuplicates: true,
       );
@@ -230,7 +247,7 @@ class ImportNotifier extends StateNotifier<ImportState> {
       
       final batch = await useCase.import(
         sourceId: importer.sourceId,
-        transactions: result.transactions,
+        transactions: result.transactions.map(_mapToCoreParsedTransaction).toList(),
         filename: filename,
         skipDuplicates: mergedConfig.skipDuplicates,
       );

@@ -52,7 +52,7 @@ class CategoryNotifier extends StateNotifier<AsyncValue<void>> {
           icon: drift.Value(icon),
           color: drift.Value(color),
           createdAt: DateTime.now().millisecondsSinceEpoch,
-          updatedAt: DateTime.now().millisecondsSinceEpoch,
+          updatedAt: DateTime.now(),
         ),
       );
       state = const AsyncValue.data(null);
@@ -78,7 +78,7 @@ class CategoryNotifier extends StateNotifier<AsyncValue<void>> {
           parentId: drift.Value(parentId),
           icon: drift.Value(icon),
           color: drift.Value(color),
-          updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+          updatedAt: drift.Value(DateTime.now()),
         ),
       );
       state = const AsyncValue.data(null);
