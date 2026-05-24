@@ -1,3 +1,5 @@
+// DISABLED: sync package is temporarily disabled due to PowerSync compatibility issues
+/*
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -286,3 +288,4 @@ class SyncStatusCard extends StatelessWidget {
     }
   }
 }
+*/

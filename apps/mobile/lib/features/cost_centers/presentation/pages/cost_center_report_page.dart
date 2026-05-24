@@ -37,7 +37,7 @@ class CostCenterExpense {
 
 /// Provider for cost center expense report
 final costCenterExpenseReportProvider = FutureProvider<List<CostCenterExpense>>((ref) async {
-  final db = ref.watch(databaseProvider);
+  final database = ref.watch(databaseProvider);
   final startDate = ref.watch(costCenterReportStartDateProvider);
   final endDate = ref.watch(costCenterReportEndDateProvider);
   final costCenters = ref.watch(activeCostCentersProvider);
@@ -47,12 +47,12 @@ final costCenterExpenseReportProvider = FutureProvider<List<CostCenterExpense>>(
 
   // Query splits with cost center, grouped by cost center
   // Join with transactions to filter by date
-  final query = db.select(db.splits).join([
-    drift.innerJoin(db.transactions, db.transactions.id.equalsExp(db.splits.transactionId)),
+  final query = database.select(database.splits).join([
+    drift.innerJoin(database.transactions, database.transactions.id.equalsExp(database.splits.transactionId)),
   ])
-    ..where(db.splits.costCenterId.isNotNull() &
-            db.transactions.postDate.isBiggerOrEqualValue(startTs) &
-            db.transactions.postDate.isSmallerOrEqualValue(endTs));
+    ..where(database.splits.costCenterId.isNotNull() &
+            database.transactions.postDate.isBiggerOrEqualValue(startTs) &
+            database.transactions.postDate.isSmallerOrEqualValue(endTs));
 
   final results = await query.get();
 

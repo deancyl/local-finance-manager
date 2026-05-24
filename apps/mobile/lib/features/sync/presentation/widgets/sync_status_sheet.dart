@@ -1,3 +1,5 @@
+// DISABLED: sync package is temporarily disabled due to PowerSync compatibility issues
+/*
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/sync_provider.dart';
@@ -170,3 +172,4 @@ class SyncStatusSheet extends ConsumerWidget {
     return '${diff.inDays} 天前';
   }
 }
+*/
