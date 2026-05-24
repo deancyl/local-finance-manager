@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:core/core.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../data/balance_sheet_provider.dart';
 import '../../data/currency_conversion_service.dart';
 import '../../../currency/data/currency_provider.dart';
 import '../widgets/balance_sheet_section.dart';
 import '../widgets/balance_verification_card.dart';
+import '../../../export/data/export_service.dart';
+import '../../../export/data/export_provider.dart';
 
 /// Balance sheet report page with as-of date selection.
 ///
@@ -64,9 +67,13 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
   }
 
   void _handleExport() {
-    // TODO: Implement export functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('导出功能开发中...')),
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => _ExportOptionsSheet(
+        reportName: '资产负债表',
+        startDate: null, // Balance sheet uses as-of date, not range
+        endDate: _asOfDate,
+      ),
     );
   }
 
@@ -344,6 +351,205 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
               onPressed: _handleRefresh,
               icon: const Icon(Icons.refresh),
               label: const Text('重试'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Export options bottom sheet for reports
+class _ExportOptionsSheet extends ConsumerStatefulWidget {
+  final String reportName;
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  const _ExportOptionsSheet({
+    required this.reportName,
+    this.startDate,
+    this.endDate,
+  });
+
+  @override
+  ConsumerState<_ExportOptionsSheet> createState() => _ExportOptionsSheetState();
+}
+
+class _ExportOptionsSheetState extends ConsumerState<_ExportOptionsSheet> {
+  bool _isExporting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.download,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '导出${widget.reportName}',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            if (_isExporting)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: _ExportOptionButton(
+                      icon: Icons.picture_as_pdf,
+                      label: 'PDF',
+                      color: Colors.red,
+                      onTap: () => _exportToPDF(),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _ExportOptionButton(
+                      icon: Icons.table_chart,
+                      label: 'CSV',
+                      color: Colors.green,
+                      onTap: () => _exportToCSV(),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportToPDF() async {
+    setState(() => _isExporting = true);
+
+    try {
+      final exportService = ref.read(exportServiceProvider);
+      final filters = ExportFilters(
+        startDate: widget.startDate,
+        endDate: widget.endDate,
+      );
+
+      final result = await exportService.exportTransactionsToPDF(filters: filters);
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('导出成功：${result.transactionCount} 条记录'),
+            action: SnackBarAction(
+              label: '分享',
+              onPressed: () => Share.shareXFiles([XFile(result.filePath)]),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导出失败: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
+  Future<void> _exportToCSV() async {
+    setState(() => _isExporting = true);
+
+    try {
+      final exportService = ref.read(exportServiceProvider);
+      final filters = ExportFilters(
+        startDate: widget.startDate,
+        endDate: widget.endDate,
+      );
+
+      final result = await exportService.exportTransactionsToCSV(filters: filters);
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('导出成功：${result.transactionCount} 条记录'),
+            action: SnackBarAction(
+              label: '分享',
+              onPressed: () => Share.shareXFiles([XFile(result.filePath)]),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导出失败: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+}
+
+/// Export option button widget
+class _ExportOptionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ExportOptionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 32, color: color),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
             ),
           ],
         ),
