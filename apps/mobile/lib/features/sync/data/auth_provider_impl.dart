@@ -1,3 +1,7 @@
+// DISABLED: sync package is temporarily disabled due to PowerSync compatibility issues
+// Original content commented out below
+
+/*
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -268,3 +272,4 @@ class SyncAuthProviderImpl implements AuthProvider {
     _httpClient.close();
   }
 }
+*/

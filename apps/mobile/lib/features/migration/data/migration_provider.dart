@@ -165,7 +165,7 @@ class MigrationService {
         icon: drift.Value(data['icon'] as String?),
         color: drift.Value(data['color'] as String?),
         createdAt: DateTime.now().millisecondsSinceEpoch,
-        updatedAt: DateTime.now().millisecondsSinceEpoch,
+        updatedAt: DateTime.now(),
       ),
       mode: drift.InsertMode.insertOrReplace,
     );

@@ -1,3 +1,7 @@
+// DISABLED: sync package is temporarily disabled due to PowerSync compatibility issues
+// Original content commented out below
+
+/*
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 
@@ -180,3 +184,4 @@ final isSyncConnectedProvider = Provider<bool>((ref) {
     error: (_, __) => false,
   );
 });
+*/

@@ -338,8 +338,9 @@ class BackupService {
     // Simple CRC32 checksum using archive package
     final crc = Crc32();
     crc.add(bytes);
-    final checksum = crc.close();
-    return checksum.toRadixString(16).padLeft(8, '0');
+    final checksumBytes = crc.close();
+    // Convert list of bytes to hex string
+    return checksumBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
   }
 }
 

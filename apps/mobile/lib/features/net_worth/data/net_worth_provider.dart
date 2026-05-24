@@ -146,6 +146,6 @@ final netWorthTrendProvider = FutureProvider<NetWorthTrend>((ref) async {
   return NetWorthTrend(
     snapshots: history,
     change: change,
-    changePercent: changePercent,
+    changePercent: changePercent.toDouble(),
   );
 });

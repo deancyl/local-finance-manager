@@ -1,3 +1,7 @@
+// DISABLED: sync package is temporarily disabled due to PowerSync compatibility issues
+// Original content commented out below
+
+/*
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sync/sync.dart';
 import 'sync_provider.dart';
@@ -120,3 +124,4 @@ final pendingOperationsNotifierProvider = StateNotifierProvider<PendingOperation
   final client = ref.watch(syncClientProvider);
   return PendingOperationsNotifier(client!);
 });
+*/

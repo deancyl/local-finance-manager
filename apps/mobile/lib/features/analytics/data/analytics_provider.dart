@@ -178,7 +178,7 @@ final spendingTrendsProvider = FutureProvider<List<SpendingTrend>>((ref) async {
       period: current.period,
       amount: current.amount,
       change: change,
-      changePercent: changePercent,
+      changePercent: changePercent.toDouble(),
     );
   }
 

@@ -34,7 +34,7 @@ class QuickEntryState {
   final String currencyId;
   final String? templateId;
 
-  const QuickEntryState({
+  QuickEntryState({
     this.mode = QuickEntryMode.simple,
     this.fromAccountId,
     this.toAccountId,
@@ -99,7 +99,7 @@ class QuickEntryNotifier extends StateNotifier<QuickEntryState> {
   final LocalFinanceDatabase _db;
   final Ref _ref;
 
-  QuickEntryNotifier(this._db, this._ref) : super(const QuickEntryState());
+  QuickEntryNotifier(this._db, this._ref) : super(QuickEntryState());
 
   void setMode(QuickEntryMode mode) {
     state = state.copyWith(mode: mode);
@@ -138,7 +138,7 @@ class QuickEntryNotifier extends StateNotifier<QuickEntryState> {
   }
 
   void reset() {
-    state = const QuickEntryState();
+    state = QuickEntryState();
   }
 
   /// Submit the quick entry

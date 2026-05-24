@@ -34,7 +34,7 @@ class AuditLogFilter {
     );
   }
 
-  const AuditLogFilter clear() => AuditLogFilter();
+  AuditLogFilter clear() => const AuditLogFilter();
 }
 
 /// Provider for audit log filter state

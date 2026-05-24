@@ -70,7 +70,7 @@ class QuickEntryPage extends ConsumerWidget {
 
   Widget _buildSimpleEntry(BuildContext context, WidgetRef ref, QuickEntryState state) {
     final accountsAsync = ref.watch(accountsProvider);
-    final categoriesAsync = ref.watch(expenseCategoriesProvider);
+    final categories = ref.watch(expenseCategoriesProvider);
 
     return Column(
       children: [
@@ -94,15 +94,11 @@ class QuickEntryPage extends ConsumerWidget {
         const SizedBox(height: 16),
 
         // Category selector
-        categoriesAsync.when(
-          data: (categories) => _buildCategoryDropdown(
-            context,
-            ref,
-            state.categoryId,
-            categories,
-          ),
-          loading: () => const CircularProgressIndicator(),
-          error: (_, __) => const Text('加载分类失败'),
+        _buildCategoryDropdown(
+          context,
+          ref,
+          state.categoryId,
+          categories,
         ),
         const SizedBox(height: 16),
 
