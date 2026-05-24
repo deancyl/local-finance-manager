@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:database/database.dart';
 import 'qif_export_service.dart';
 import 'ofx_export_service.dart';
+import 'pdf_export_service.dart';
 
 /// Export filter options
 class ExportFilters {
@@ -511,6 +512,18 @@ class ExportService {
       accountId: accountId,
       filters: filters,
       bankId: bankId,
+      customPath: customPath,
+    );
+  }
+
+  /// Exports financial report to PDF format
+  Future<PdfExportResult> exportTransactionsToPDF({
+    required ExportFilters filters,
+    String? customPath,
+  }) async {
+    final pdfService = PdfExportService(_db);
+    return pdfService.exportToPDF(
+      filters: filters,
       customPath: customPath,
     );
   }
