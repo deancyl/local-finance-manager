@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../data/backup_provider.dart';
+import '../../data/backup_provider.dart';
 
 /// Backup management page.
 /// 

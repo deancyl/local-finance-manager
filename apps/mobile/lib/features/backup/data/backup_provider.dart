@@ -338,7 +338,7 @@ class BackupService {
     // Simple CRC32 checksum
     final crc = Crc32();
     crc.add(bytes);
-    return crc.getValue().toRadixString(16).padLeft(8, '0');
+    return crc.value.toRadixString(16).padLeft(8, '0');
   }
 }
 

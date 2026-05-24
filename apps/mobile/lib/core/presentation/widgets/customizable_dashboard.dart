@@ -254,7 +254,6 @@ class _CustomizableDashboardState extends ConsumerState<CustomizableDashboard> {
         return const SizedBox.shrink();
     }
   }
-  }
 
   void _toggleWidget(String widgetId) {
     final config = ref.read(dashboardConfigProvider);
@@ -1549,104 +1548,6 @@ class _UpcomingScheduledTransactionsWidget extends ConsumerWidget {
       default:
         return Icons.repeat;
     }
-  }
-}
-
-class _UpcomingScheduledTransactionsWidget extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final upcomingAsync = ref.watch(upcomingScheduledTransactionsProvider);
-    
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '即将到期交易',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              TextButton(
-                onPressed: () => context.push('/recurring'),
-                child: const Text('查看全部'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          upcomingAsync.when(
-            data: (transactions) {
-              if (transactions.isEmpty) {
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.event_available_outlined,
-                            size: 48,
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            '未来7天无预定交易',
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                  color: Theme.of(context).colorScheme.outline,
-                                ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '设置周期交易以自动记账',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.outline,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }
-              
-              return Card(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: transactions.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final transaction = transactions[index];
-                    return _UpcomingTransactionTile(transaction: transaction);
-                  },
-                ),
-              );
-            },
-            loading: () => Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: const Center(child: CircularProgressIndicator()),
-              ),
-            ),
-            error: (_, __) => Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Center(
-                  child: Text(
-                    '加载失败',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.outline,
-                        ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
