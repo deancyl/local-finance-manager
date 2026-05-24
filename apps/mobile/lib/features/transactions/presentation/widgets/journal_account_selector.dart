@@ -234,53 +234,45 @@ class _JournalAccountSelectorState extends ConsumerState<JournalAccountSelector>
   }
   
   Widget _buildAccountTree() {
-    final hierarchyAsync = ref.watch(filteredAccountHierarchyProvider);
+    final hierarchy = ref.watch(filteredAccountHierarchyProvider);
     
-    return hierarchyAsync.when(
-      data: (hierarchy) {
-        if (hierarchy.isEmpty) {
-          return const Center(
-            child: Text('没有找到账户'),
-          );
-        }
+    if (hierarchy.isEmpty) {
+      return const Center(
+        child: Text('没有找到账户'),
+      );
+    }
+    
+    final types = widget.accountTypeFilter ?? 
+        ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE'];
+    
+    // Filter by selected type
+    final displayTypes = _selectedTypeFilter != null 
+        ? [_selectedTypeFilter!]
+        : types;
+    
+    final filteredHierarchy = <String, List<AccountTreeNode>>{};
+    for (final type in displayTypes) {
+      if (hierarchy.containsKey(type)) {
+        filteredHierarchy[type] = hierarchy[type]!;
+      }
+    }
+    
+    if (filteredHierarchy.isEmpty) {
+      return const Center(
+        child: Text('没有找到匹配的账户'),
+      );
+    }
+    
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      itemCount: filteredHierarchy.length,
+      itemBuilder: (context, index) {
+        final type = displayTypes[index];
+        final nodes = filteredHierarchy[type];
+        if (nodes == null || nodes.isEmpty) return const SizedBox.shrink();
         
-        final types = widget.accountTypeFilter ?? 
-            ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE'];
-        
-        // Filter by selected type
-        final displayTypes = _selectedTypeFilter != null 
-            ? [_selectedTypeFilter!]
-            : types;
-        
-        final filteredHierarchy = <String, List<AccountTreeNode>>{};
-        for (final type in displayTypes) {
-          if (hierarchy.containsKey(type)) {
-            filteredHierarchy[type] = hierarchy[type]!;
-          }
-        }
-        
-        if (filteredHierarchy.isEmpty) {
-          return const Center(
-            child: Text('没有找到匹配的账户'),
-          );
-        }
-        
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          itemCount: filteredHierarchy.length,
-          itemBuilder: (context, index) {
-            final type = displayTypes[index];
-            final nodes = filteredHierarchy[type];
-            if (nodes == null || nodes.isEmpty) return const SizedBox.shrink();
-            
-            return _buildTypeSection(type, nodes);
-          },
-        );
+        return _buildTypeSection(type, nodes);
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(
-        child: Text('加载失败: $error'),
-      ),
     );
   }
   
