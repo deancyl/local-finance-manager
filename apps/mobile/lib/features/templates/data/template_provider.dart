@@ -203,7 +203,7 @@ class TemplateNotifier extends StateNotifier<AsyncValue<void>> {
           ),
           isFavorite: drift.Value(template.isFavorite),
           sortOrder: drift.Value(template.sortOrder),
-          updatedAt: drift.Value(DateTime.now()),
+          updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
         ),
       );
 

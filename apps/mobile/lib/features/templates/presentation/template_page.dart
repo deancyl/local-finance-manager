@@ -30,7 +30,7 @@ class TemplateListPage extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.template, size: 64, color: Colors.grey),
+                  const Icon(Icons.description, size: 64, color: Colors.grey),
                   const SizedBox(height: 16),
                   const Text('暂无模板'),
                   const SizedBox(height: 16),

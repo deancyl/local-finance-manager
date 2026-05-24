@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
@@ -152,12 +153,12 @@ class PlatformService {
 
 /// Provider for platform type
 final platformTypeProvider = Provider<PlatformType>((ref) {
-  if (Platform.isAndroid || Platform.isIOS) {
+  if (kIsWeb) {
+    return PlatformType.web;
+  } else if (Platform.isAndroid || Platform.isIOS) {
     return PlatformType.mobile;
   } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     return PlatformType.desktop;
-  } else if (Platform.isWeb) {
-    return PlatformType.web;
   }
   return PlatformType.unknown;
 });

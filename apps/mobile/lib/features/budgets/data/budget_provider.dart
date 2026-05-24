@@ -169,7 +169,7 @@ class BudgetNotifier extends StateNotifier<AsyncValue<void>> {
           alertAt75: drift.Value(budget.alertAt75),
           alertAt90: drift.Value(budget.alertAt90),
           alertAt100: drift.Value(budget.alertAt100),
-          updatedAt: drift.Value(DateTime.now()),
+          updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
           version: drift.Value(budget.version + 1),
         ),
       );

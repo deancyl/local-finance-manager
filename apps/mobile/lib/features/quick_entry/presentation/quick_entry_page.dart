@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../data/quick_entry_provider.dart';
 import '../../templates/data/template_provider.dart';
 import '../../accounts/data/account_provider.dart';
+import '../../categories/data/category_provider.dart';
 
 /// Quick entry page for fast transaction creation
 class QuickEntryPage extends ConsumerWidget {
@@ -216,7 +217,7 @@ class QuickEntryPage extends ConsumerWidget {
                               Icon(
                                 template.isFavorite
                                     ? Icons.star
-                                    : Icons.template,
+                                    : Icons.description,
                                 color: template.isFavorite
                                     ? Colors.amber
                                     : null,

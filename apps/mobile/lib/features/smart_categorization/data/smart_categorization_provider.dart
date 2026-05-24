@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:drift/drift.dart' as drift;
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import 'package:ai/ai.dart' as ai;
@@ -37,7 +38,7 @@ class SmartCategorizationService {
     double? amount,
   ) async {
     // Find similar descriptions in past transactions
-    final allTxns = await (db.select(db.transactions)
+    final allTxns = await (_db.select(_db.transactions)
       ..where((t) => t.description.isNotNull()))
       .get();
 
@@ -51,7 +52,7 @@ class SmartCategorizationService {
 
     // Get the most recent similar transaction's splits
     final mostRecent = similar.first;
-    final splits = await (db.select(db.splits)
+    final splits = await (_db.select(_db.splits)
       ..where((s) => s.transactionId.equals(mostRecent.id)))
       .get();
 
