@@ -9,7 +9,7 @@ import 'package:finance_app/features/transactions/presentation/widgets/add_trans
 import 'package:database/database.dart';
 
 // Mock classes
-class MockDatabase extends Mock implements AppDatabase {}
+class MockDatabase extends Mock implements LocalFinanceDatabase {}
 
 class MockGoRouter extends Mock implements GoRouter {}
 

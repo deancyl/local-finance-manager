@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import 'package:core/core.dart' hide Account, Transaction;
-import 'package:database/database.dart';
+import 'package:core/core.dart' hide Transaction;
+import 'package:database/database.dart' hide Account;
 import 'package:finance_app/features/currency/data/currency_provider.dart';
 import 'package:finance_app/features/transactions/data/journal_entry_provider.dart';
 import 'journal_account_selector.dart';
