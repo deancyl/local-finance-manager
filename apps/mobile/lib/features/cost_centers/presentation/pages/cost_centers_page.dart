@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:database/database.dart';
-import '../data/cost_center_provider.dart';
+import '../../data/cost_center_provider.dart';
 import '../widgets/add_cost_center_dialog.dart';
 
 /// Cost centers management page.
