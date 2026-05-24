@@ -3,24 +3,24 @@ import 'package:postgres/postgres.dart';
 import 'package:sync_server/src/models/sync_models.dart';
 
 /// Mock PostgreSQL connection for testing
-class MockPostgreSQLConnection extends Mock implements PostgreSQLConnection {}
+class MockConnection extends Mock implements Connection {}
 
 /// Mock PostgreSQL result for testing
-class MockPostgreSQLResult extends Mock implements PostgreSQLResult {}
+class MockResult extends Mock implements Result {}
 
 /// Mock PostgreSQL result row
-class MockPostgreSQLResultRow extends Mock implements PostgreSQLResultRow {}
+class MockResultRow extends Mock implements ResultRow {}
 
 /// Test helper for creating mock database responses
 class TestHelper {
   /// Create a mock user row
-  static MockPostgreSQLResultRow createUserRow({
+  static MockResultRow createUserRow({
     required String id,
     required String email,
     String? encryptedKey,
     DateTime? createdAt,
   }) {
-    final row = MockPostgreSQLResultRow();
+    final row = MockResultRow();
     when(() => row[0]).thenReturn(id);
     when(() => row[1]).thenReturn(email);
     when(() => row[2]).thenReturn(encryptedKey);
@@ -29,7 +29,7 @@ class TestHelper {
   }
 
   /// Create a mock device row
-  static MockPostgreSQLResultRow createDeviceRow({
+  static MockResultRow createDeviceRow({
     required String id,
     required String userId,
     required String name,
@@ -37,7 +37,7 @@ class TestHelper {
     DateTime? createdAt,
     DateTime? lastSyncAt,
   }) {
-    final row = MockPostgreSQLResultRow();
+    final row = MockResultRow();
     when(() => row[0]).thenReturn(id);
     when(() => row[1]).thenReturn(userId);
     when(() => row[2]).thenReturn(name);
@@ -48,7 +48,7 @@ class TestHelper {
   }
 
   /// Create a mock sync record row
-  static MockPostgreSQLResultRow createSyncRecordRow({
+  static MockResultRow createSyncRecordRow({
     required String id,
     required String deviceId,
     required String tableName,
@@ -59,7 +59,7 @@ class TestHelper {
     DateTime? syncedAt,
     int version = 1,
   }) {
-    final row = MockPostgreSQLResultRow();
+    final row = MockResultRow();
     when(() => row[0]).thenReturn(id);
     when(() => row[1]).thenReturn(deviceId);
     when(() => row[2]).thenReturn(tableName);
@@ -73,14 +73,14 @@ class TestHelper {
   }
 
   /// Create a mock conflict row
-  static MockPostgreSQLResultRow createConflictRow({
+  static MockResultRow createConflictRow({
     required String id,
     required String tableName,
     required String recordId,
     bool resolved = false,
     DateTime? createdAt,
   }) {
-    final row = MockPostgreSQLResultRow();
+    final row = MockResultRow();
     when(() => row[0]).thenReturn(id);
     when(() => row[1]).thenReturn(tableName);
     when(() => row[2]).thenReturn(recordId);
@@ -90,33 +90,33 @@ class TestHelper {
   }
 
   /// Create a mock result with rows
-  static MockPostgreSQLResult createResult(List<MockPostgreSQLResultRow> rows) {
-    final result = MockPostgreSQLResult();
+  static MockResult createResult(List<MockResultRow> rows) {
+    final result = MockResult();
     when(() => result.toList()).thenReturn(rows);
     when(() => result.isEmpty).thenReturn(rows.isEmpty);
     when(() => result.isNotEmpty).thenReturn(rows.isNotEmpty);
-    when(() => result.first).thenReturn(rows.isNotEmpty ? rows.first : MockPostgreSQLResultRow());
+    when(() => result.first).thenReturn(rows.isNotEmpty ? rows.first : MockResultRow());
     when(() => result.length).thenReturn(rows.length);
     when(() => result.map<dynamic>(any())).thenReturn(rows.map((r) => r as dynamic).toList());
-    when(() => result.affectedRowCount).thenReturn(rows.length);
+    when(() => result.affectedRows).thenReturn(rows.length);
     return result;
   }
 
   /// Create an empty result
-  static MockPostgreSQLResult createEmptyResult() {
-    final result = MockPostgreSQLResult();
+  static MockResult createEmptyResult() {
+    final result = MockResult();
     when(() => result.toList()).thenReturn([]);
     when(() => result.isEmpty).thenReturn(true);
     when(() => result.isNotEmpty).thenReturn(false);
     when(() => result.length).thenReturn(0);
-    when(() => result.affectedRowCount).thenReturn(0);
+    when(() => result.affectedRows).thenReturn(0);
     return result;
   }
 
   /// Create a result with affected row count
-  static MockPostgreSQLResult createUpdateResult(int affectedRows) {
-    final result = MockPostgreSQLResult();
-    when(() => result.affectedRowCount).thenReturn(affectedRows);
+  static MockResult createUpdateResult(int affectedRows) {
+    final result = MockResult();
+    when(() => result.affectedRows).thenReturn(affectedRows);
     when(() => result.isEmpty).thenReturn(true);
     return result;
   }
@@ -198,9 +198,9 @@ class TestFixtures {
 
 /// Register fallback values for mocktail
 void registerFallbackValues() {
-  registerFallbackValue(MockPostgreSQLConnection());
-  registerFallbackValue(MockPostgreSQLResult());
-  registerFallbackValue(MockPostgreSQLResultRow());
+  registerFallbackValue(MockConnection());
+  registerFallbackValue(MockResult());
+  registerFallbackValue(MockResultRow());
   registerFallbackValue('');
   registerFallbackValue(<String, dynamic>{});
   registerFallbackValue(DateTime.now());

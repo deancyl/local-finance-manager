@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import 'package:postgres/postgres.dart';
 import '../database/connection.dart';
 
 class PairingService {
@@ -15,12 +16,12 @@ class PairingService {
     final token = 'PAIR-${_generateTokenCode()}';
     final expiresAt = DateTime.now().add(const Duration(minutes: 5));
     
-    await conn.query(
-      '''
+    await conn.execute(
+      Sql.named('''
       INSERT INTO pairing_tokens (id, user_id, device_id, token, expires_at)
       VALUES (@id, @userId, @deviceId, @token, @expiresAt)
-      ''',
-      substitutionValues: {
+      '''),
+      parameters: {
         'id': tokenId,
         'userId': userId,
         'deviceId': deviceId,
@@ -49,12 +50,12 @@ class PairingService {
     final conn = await DatabaseConnection.connection;
     
     // Find valid token
-    final result = await conn.query(
-      '''
+    final result = await conn.execute(
+      Sql.named('''
       SELECT id, device_id FROM pairing_tokens
       WHERE token = @token AND user_id = @userId AND expires_at > @now
-      ''',
-      substitutionValues: {
+      '''),
+      parameters: {
         'token': token,
         'userId': userId,
         'now': DateTime.now(),
@@ -66,9 +67,9 @@ class PairingService {
     final pairingId = result.first[0] as String;
     
     // Delete the token (one-time use)
-    await conn.query(
-      'DELETE FROM pairing_tokens WHERE id = @id',
-      substitutionValues: {'id': pairingId},
+    await conn.execute(
+      Sql.named('DELETE FROM pairing_tokens WHERE id = @id'),
+      parameters: {'id': pairingId},
     );
     
     return newDeviceId;
@@ -78,11 +79,11 @@ class PairingService {
   Future<PairingStatus> checkStatus(String tokenId) async {
     final conn = await DatabaseConnection.connection;
     
-    final result = await conn.query(
-      '''
+    final result = await conn.execute(
+      Sql.named('''
       SELECT expires_at FROM pairing_tokens WHERE id = @id
-      ''',
-      substitutionValues: {'id': tokenId},
+      '''),
+      parameters: {'id': tokenId},
     );
     
     if (result.isEmpty) {
@@ -100,9 +101,9 @@ class PairingService {
   /// Clean up expired tokens.
   Future<void> cleanupExpired() async {
     final conn = await DatabaseConnection.connection;
-    await conn.query(
-      'DELETE FROM pairing_tokens WHERE expires_at < @now',
-      substitutionValues: {'now': DateTime.now()},
+    await conn.execute(
+      Sql.named('DELETE FROM pairing_tokens WHERE expires_at < @now'),
+      parameters: {'now': DateTime.now()},
     );
   }
   

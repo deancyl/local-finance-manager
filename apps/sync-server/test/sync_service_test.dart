@@ -8,12 +8,12 @@ import 'test_helper.dart';
 
 class MockEncryptionService extends Mock implements EncryptionService {}
 
-class MockPostgreSQLConnection extends Mock implements PostgreSQLConnection {}
+class MockConnection extends Mock implements Connection {}
 
 void main() {
   late SyncService syncService;
   late MockEncryptionService mockEncryption;
-  late MockPostgreSQLConnection mockConnection;
+  late MockConnection mockConnection;
 
   setUpAll(() {
     registerFallbackValues();
@@ -21,7 +21,7 @@ void main() {
 
   setUp(() {
     mockEncryption = MockEncryptionService();
-    mockConnection = MockPostgreSQLConnection();
+    mockConnection = MockConnection();
     syncService = SyncService(mockEncryption, null);
   });
 

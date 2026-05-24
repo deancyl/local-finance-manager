@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:dart_frog/dart_frog.dart';
+import 'package:shelf/shelf.dart' show Pipeline, Router, logRequests;
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import 'package:dotenv/dotenv.dart' as dotenv;
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 
 import 'src/services/auth_service.dart';
 import 'src/services/sync_service.dart';
@@ -19,12 +21,16 @@ Future<HttpServer> run(InternetAddress ip, int port) async {
   dotenv.load();
   
   // Initialize services
-  final jwtSecret = dotenv.env['JWT_SECRET'] ?? 'default-secret-change-in-production';
-  final encryptionKey = dotenv.env['ENCRYPTION_KEY'] ?? 'default-encryption-key-32-chars';
+  final jwtSecret = dotenv.env.containsKey('JWT_SECRET')
+      ? dotenv.env['JWT_SECRET']!
+      : 'default-secret-change-in-production';
+  final encryptionKey = dotenv.env.containsKey('ENCRYPTION_KEY')
+      ? dotenv.env['ENCRYPTION_KEY']!
+      : 'default-encryption-key-32-chars';
   
   final encryption = EncryptionService(encryptionKey);
   _authService = AuthService(encryption, jwtSecret);
-  _syncService = SyncService(encryption);
+  _syncService = SyncService(encryption, null);
   _deviceService = DeviceService();
 
   final handler = const Pipeline()
@@ -35,23 +41,23 @@ Future<HttpServer> run(InternetAddress ip, int port) async {
   return serve(handler, ip, port);
 }
 
-Handler _router = Router()
+final _router = Router()
     .get('/health', _healthHandler)
     // Auth routes (no auth required)
     .post('/api/v1/auth/register', _authRegisterHandler)
     .post('/api/v1/auth/login', _authLoginHandler)
     // Sync routes (auth required)
-    .post('/api/v1/sync/upload', authMiddleware(), _syncUploadHandler)
-    .get('/api/v1/sync/download', authMiddleware(), _syncDownloadHandler)
-    .get('/api/v1/sync/conflicts', authMiddleware(), _syncConflictsHandler)
-    .post('/api/v1/sync/conflicts/<conflictId>/resolve', authMiddleware(), _syncConflictResolveHandler)
+    .post('/api/v1/sync/upload', _syncUploadHandler)
+    .get('/api/v1/sync/download', _syncDownloadHandler)
+    .get('/api/v1/sync/conflicts', _syncConflictsHandler)
+    .post('/api/v1/sync/conflicts/<conflictId>/resolve', _syncConflictResolveHandler)
     // Device routes (auth required)
-    .get('/api/v1/devices', authMiddleware(), _devicesHandler)
-    .post('/api/v1/devices/register', authMiddleware(), _deviceRegisterHandler)
-    .delete('/api/v1/devices/<deviceId>', authMiddleware(), _deviceDeleteHandler);
+    .get('/api/v1/devices', _devicesHandler)
+    .post('/api/v1/devices/register', _deviceRegisterHandler)
+    .delete('/api/v1/devices/<deviceId>', _deviceDeleteHandler);
 
 // Health check
-Response _healthHandler(RequestContext context) {
+Response _healthHandler(Request request) {
   return Response.json(body: {
     'status': 'healthy',
     'version': '0.1.0',
@@ -60,11 +66,12 @@ Response _healthHandler(RequestContext context) {
 }
 
 // Auth: Register
-Future<Response> _authRegisterHandler(RequestContext context) async {
+Future<Response> _authRegisterHandler(Request request) async {
   try {
-    final body = await context.request.json() as Map<String, dynamic>;
-    final email = body['email'] as String?;
-    final password = body['password'] as String?;
+    final body = await request.body();
+    final data = jsonDecode(body) as Map<String, dynamic>;
+    final email = data['email'] as String?;
+    final password = data['password'] as String?;
 
     if (email == null || password == null) {
       return Response.json(
@@ -84,11 +91,12 @@ Future<Response> _authRegisterHandler(RequestContext context) async {
 }
 
 // Auth: Login
-Future<Response> _authLoginHandler(RequestContext context) async {
+Future<Response> _authLoginHandler(Request request) async {
   try {
-    final body = await context.request.json() as Map<String, dynamic>;
-    final email = body['email'] as String?;
-    final password = body['password'] as String?;
+    final body = await request.body();
+    final data = jsonDecode(body) as Map<String, dynamic>;
+    final email = data['email'] as String?;
+    final password = data['password'] as String?;
 
     if (email == null || password == null) {
       return Response.json(
@@ -116,12 +124,21 @@ Future<Response> _authLoginHandler(RequestContext context) async {
 }
 
 // Sync: Upload
-Future<Response> _syncUploadHandler(RequestContext context) async {
+Future<Response> _syncUploadHandler(Request request) async {
   try {
-    final userId = context.userId;
-    final body = await context.request.json() as Map<String, dynamic>;
-    final deviceId = body['device_id'] as String?;
-    final records = body['records'] as List<dynamic>?;
+    // Get userId from auth header
+    final userId = _getUserIdFromRequest(request);
+    if (userId == null) {
+      return Response.json(
+        statusCode: 401,
+        body: {'error': 'Unauthorized'},
+      );
+    }
+    
+    final body = await request.body();
+    final data = jsonDecode(body) as Map<String, dynamic>;
+    final deviceId = data['device_id'] as String?;
+    final records = data['records'] as List<dynamic>?;
 
     if (deviceId == null || records == null) {
       return Response.json(
@@ -163,12 +180,19 @@ Future<Response> _syncUploadHandler(RequestContext context) async {
 }
 
 // Sync: Download
-Future<Response> _syncDownloadHandler(RequestContext context) async {
+Future<Response> _syncDownloadHandler(Request request) async {
   try {
-    final userId = context.userId;
-    final deviceId = context.request.uri.queryParameters['device_id'];
-    final sinceStr = context.request.uri.queryParameters['since'];
-    final tablesStr = context.request.uri.queryParameters['tables'];
+    final userId = _getUserIdFromRequest(request);
+    if (userId == null) {
+      return Response.json(
+        statusCode: 401,
+        body: {'error': 'Unauthorized'},
+      );
+    }
+    
+    final deviceId = request.url.queryParameters['device_id'];
+    final sinceStr = request.url.queryParameters['since'];
+    final tablesStr = request.url.queryParameters['tables'];
 
     if (deviceId == null) {
       return Response.json(
@@ -217,9 +241,16 @@ Future<Response> _syncDownloadHandler(RequestContext context) async {
 }
 
 // Sync: Get conflicts
-Future<Response> _syncConflictsHandler(RequestContext context) async {
+Future<Response> _syncConflictsHandler(Request request) async {
   try {
-    final userId = context.userId;
+    final userId = _getUserIdFromRequest(request);
+    if (userId == null) {
+      return Response.json(
+        statusCode: 401,
+        body: {'error': 'Unauthorized'},
+      );
+    }
+    
     final conflicts = await _syncService.getConflicts(userId);
     return Response.json(body: {
       'conflicts': conflicts.map((c) => c.toJson()).toList(),
@@ -233,11 +264,12 @@ Future<Response> _syncConflictsHandler(RequestContext context) async {
 }
 
 // Sync: Resolve conflict
-Future<Response> _syncConflictResolveHandler(RequestContext context, String conflictId) async {
+Future<Response> _syncConflictResolveHandler(Request request, String conflictId) async {
   try {
-    final body = await context.request.json() as Map<String, dynamic>;
-    final resolution = body['resolution'] as String?;
-    final resolvedData = body['data'] as String?;
+    final body = await request.body();
+    final data = jsonDecode(body) as Map<String, dynamic>;
+    final resolution = data['resolution'] as String?;
+    final resolvedData = data['data'] as String?;
 
     if (resolution == null || resolvedData == null) {
       return Response.json(
@@ -262,9 +294,16 @@ Future<Response> _syncConflictResolveHandler(RequestContext context, String conf
 }
 
 // Devices: List
-Future<Response> _devicesHandler(RequestContext context) async {
+Future<Response> _devicesHandler(Request request) async {
   try {
-    final userId = context.userId;
+    final userId = _getUserIdFromRequest(request);
+    if (userId == null) {
+      return Response.json(
+        statusCode: 401,
+        body: {'error': 'Unauthorized'},
+      );
+    }
+    
     final devices = await _deviceService.getDevices(userId);
     return Response.json(body: {
       'devices': devices.map((d) => {
@@ -284,12 +323,20 @@ Future<Response> _devicesHandler(RequestContext context) async {
 }
 
 // Devices: Register
-Future<Response> _deviceRegisterHandler(RequestContext context) async {
+Future<Response> _deviceRegisterHandler(Request request) async {
   try {
-    final userId = context.userId;
-    final body = await context.request.json() as Map<String, dynamic>;
-    final name = body['name'] as String?;
-    final publicKey = body['public_key'] as String?;
+    final userId = _getUserIdFromRequest(request);
+    if (userId == null) {
+      return Response.json(
+        statusCode: 401,
+        body: {'error': 'Unauthorized'},
+      );
+    }
+    
+    final body = await request.body();
+    final data = jsonDecode(body) as Map<String, dynamic>;
+    final name = data['name'] as String?;
+    final publicKey = data['public_key'] as String?;
 
     if (name == null) {
       return Response.json(
@@ -320,9 +367,15 @@ Future<Response> _deviceRegisterHandler(RequestContext context) async {
 }
 
 // Devices: Delete
-Future<Response> _deviceDeleteHandler(RequestContext context, String deviceId) async {
+Future<Response> _deviceDeleteHandler(Request request, String deviceId) async {
   try {
-    final userId = context.userId;
+    final userId = _getUserIdFromRequest(request);
+    if (userId == null) {
+      return Response.json(
+        statusCode: 401,
+        body: {'error': 'Unauthorized'},
+      );
+    }
     
     // Verify device belongs to user
     final isOwner = await _deviceService.isDeviceOwnedByUser(
@@ -344,5 +397,25 @@ Future<Response> _deviceDeleteHandler(RequestContext context, String deviceId) a
       statusCode: 500,
       body: {'error': 'Failed to delete device: ${e.toString()}'},
     );
+  }
+}
+
+/// Helper to extract userId from JWT token in Authorization header
+String? _getUserIdFromRequest(Request request) {
+  final authHeader = request.headers['authorization'];
+  if (authHeader == null || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  
+  final token = authHeader.substring(7);
+  final jwtSecret = dotenv.env.containsKey('JWT_SECRET')
+      ? dotenv.env['JWT_SECRET']!
+      : 'default-secret-change-in-production';
+  
+  try {
+    final jwt = JWT.verify(token, SecretKey(jwtSecret));
+    return jwt.payload['sub'] as String?;
+  } catch (e) {
+    return null;
   }
 }

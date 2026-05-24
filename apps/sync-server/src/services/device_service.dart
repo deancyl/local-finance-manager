@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import 'package:postgres/postgres.dart';
 import '../database/connection.dart';
 import '../models/sync_models.dart';
 
@@ -13,12 +14,12 @@ class DeviceService {
     final deviceId = const Uuid().v4();
     final now = DateTime.now();
 
-    await conn.query(
-      '''
+    await conn.execute(
+      Sql.named('''
       INSERT INTO devices (id, user_id, name, public_key, created_at, last_sync_at)
       VALUES (@id, @userId, @name, @publicKey, @createdAt, @lastSyncAt)
-      ''',
-      substitutionValues: {
+      '''),
+      parameters: {
         'id': deviceId,
         'userId': userId,
         'name': name,
@@ -42,14 +43,14 @@ class DeviceService {
   Future<List<Device>> getDevices(String userId) async {
     final conn = await DatabaseConnection.connection;
 
-    final result = await conn.query(
-      '''
+    final result = await conn.execute(
+      Sql.named('''
       SELECT id, user_id, name, public_key, created_at, last_sync_at
       FROM devices
       WHERE user_id = @userId
       ORDER BY last_sync_at DESC
-      ''',
-      substitutionValues: {'userId': userId},
+      '''),
+      parameters: {'userId': userId},
     );
 
     return result.map((row) => Device.fromRow(row)).toList();
@@ -59,13 +60,13 @@ class DeviceService {
   Future<Device?> getDevice(String deviceId) async {
     final conn = await DatabaseConnection.connection;
 
-    final result = await conn.query(
-      '''
+    final result = await conn.execute(
+      Sql.named('''
       SELECT id, user_id, name, public_key, created_at, last_sync_at
       FROM devices
       WHERE id = @deviceId
-      ''',
-      substitutionValues: {'deviceId': deviceId},
+      '''),
+      parameters: {'deviceId': deviceId},
     );
 
     if (result.isEmpty) return null;
@@ -79,50 +80,50 @@ class DeviceService {
   }) async {
     final conn = await DatabaseConnection.connection;
 
-    final result = await conn.query(
-      '''
+    final result = await conn.execute(
+      Sql.named('''
       UPDATE devices
       SET public_key = @publicKey
       WHERE id = @deviceId
-      ''',
-      substitutionValues: {
+      '''),
+      parameters: {
         'deviceId': deviceId,
         'publicKey': publicKey,
       },
     );
 
-    return result.affectedRowCount > 0;
+    return result.affectedRows > 0;
   }
 
   /// Update device's last sync time
   Future<bool> updateLastSync(String deviceId) async {
     final conn = await DatabaseConnection.connection;
 
-    final result = await conn.query(
-      '''
+    final result = await conn.execute(
+      Sql.named('''
       UPDATE devices
       SET last_sync_at = @lastSyncAt
       WHERE id = @deviceId
-      ''',
-      substitutionValues: {
+      '''),
+      parameters: {
         'deviceId': deviceId,
         'lastSyncAt': DateTime.now(),
       },
     );
 
-    return result.affectedRowCount > 0;
+    return result.affectedRows > 0;
   }
 
   /// Delete a device
   Future<bool> deleteDevice(String deviceId) async {
     final conn = await DatabaseConnection.connection;
 
-    final result = await conn.query(
-      'DELETE FROM devices WHERE id = @deviceId',
-      substitutionValues: {'deviceId': deviceId},
+    final result = await conn.execute(
+      Sql.named('DELETE FROM devices WHERE id = @deviceId'),
+      parameters: {'deviceId': deviceId},
     );
 
-    return result.affectedRowCount > 0;
+    return result.affectedRows > 0;
   }
 
   /// Check if a device belongs to a user
@@ -132,12 +133,12 @@ class DeviceService {
   }) async {
     final conn = await DatabaseConnection.connection;
 
-    final result = await conn.query(
-      '''
+    final result = await conn.execute(
+      Sql.named('''
       SELECT COUNT(*) FROM devices
       WHERE id = @deviceId AND user_id = @userId
-      ''',
-      substitutionValues: {
+      '''),
+      parameters: {
         'deviceId': deviceId,
         'userId': userId,
       },

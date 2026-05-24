@@ -12,10 +12,12 @@ class MockEncryptionService extends Mock implements EncryptionService {}
 
 class MockDatabaseConnection extends Mock implements DatabaseConnection {}
 
+class MockConnection extends Mock implements Connection {}
+
 void main() {
   late AuthService authService;
   late MockEncryptionService mockEncryption;
-  late MockPostgreSQLConnection mockConnection;
+  late MockConnection mockConnection;
 
   setUpAll(() {
     registerFallbackValues();
@@ -23,7 +25,7 @@ void main() {
 
   setUp(() {
     mockEncryption = MockEncryptionService();
-    mockConnection = MockPostgreSQLConnection();
+    mockConnection = MockConnection();
     authService = AuthService(mockEncryption, TestFixtures.testJwtSecret);
 
     // Override DatabaseConnection.connection to return mock

@@ -21,7 +21,7 @@ class SyncRecord {
     this.syncedAt,
   });
 
-  factory SyncRecord.fromRow(PostgreSQLResultRow row) {
+  factory SyncRecord.fromRow(ResultRow row) {
     return SyncRecord(
       id: row[0] as String,
       deviceId: row[1] as String,
@@ -52,7 +52,7 @@ class Device {
     required this.lastSyncAt,
   });
 
-  factory Device.fromRow(PostgreSQLResultRow row) {
+  factory Device.fromRow(ResultRow row) {
     return Device(
       id: row[0] as String,
       userId: row[1] as String,
@@ -77,7 +77,7 @@ class User {
     required this.createdAt,
   });
 
-  factory User.fromRow(PostgreSQLResultRow row) {
+  factory User.fromRow(ResultRow row) {
     return User(
       id: row[0] as String,
       email: row[1] as String,

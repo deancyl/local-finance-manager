@@ -21,10 +21,18 @@ Handler get onRequest => webSocketHandler(
 Future<void> _handleWebSocket(
   WebSocketChannel channel,
   Protocol? protocol,
-  RequestContext context,
 ) async {
-  final wsService = context.read<WebSocketService>();
-  final jwtSecret = dotenv.env['JWT_SECRET'] ?? 'default-secret';
+  // Load dotenv
+  dotenv.load();
+  
+  final jwtSecret = dotenv.env.containsKey('JWT_SECRET')
+      ? dotenv.env['JWT_SECRET']!
+      : 'default-secret';
+  final encryptionKey = dotenv.env.containsKey('ENCRYPTION_KEY')
+      ? dotenv.env['ENCRYPTION_KEY']!
+      : 'default-key';
+  final encryption = EncryptionService(encryptionKey);
+  final wsService = WebSocketService(AuthService(encryption, jwtSecret));
   
   String? userId;
   bool authenticated = false;

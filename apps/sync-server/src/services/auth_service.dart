@@ -1,5 +1,6 @@
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:uuid/uuid.dart';
+import 'package:postgres/postgres.dart';
 import '../database/connection.dart';
 import '../models/sync_models.dart';
 import 'encryption_service.dart';
@@ -19,12 +20,12 @@ class AuthService {
     final salt = _encryption.generateSalt();
     final passwordHash = _encryption.hashPassword(password, salt);
 
-    await conn.query(
-      '''
+    await conn.execute(
+      Sql.named('''
       INSERT INTO users (id, email, encrypted_key, created_at)
       VALUES (@id, @email, @encryptedKey, @createdAt)
-      ''',
-      substitutionValues: {
+      '''),
+      parameters: {
         'id': userId,
         'email': email,
         'encryptedKey': '$salt:$passwordHash',
@@ -44,9 +45,9 @@ class AuthService {
     required String password,
   }) async {
     final conn = await DatabaseConnection.connection;
-    final result = await conn.query(
-      'SELECT id, encrypted_key FROM users WHERE email = @email',
-      substitutionValues: {'email': email},
+    final result = await conn.execute(
+      Sql.named('SELECT id, encrypted_key FROM users WHERE email = @email'),
+      parameters: {'email': email},
     );
 
     if (result.isEmpty) return null;
@@ -71,9 +72,9 @@ class AuthService {
 
   Future<User?> getUser(String userId) async {
     final conn = await DatabaseConnection.connection;
-    final result = await conn.query(
-      'SELECT id, email, encrypted_key, created_at FROM users WHERE id = @id',
-      substitutionValues: {'id': userId},
+    final result = await conn.execute(
+      Sql.named('SELECT id, email, encrypted_key, created_at FROM users WHERE id = @id'),
+      parameters: {'id': userId},
     );
 
     if (result.isEmpty) return null;

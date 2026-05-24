@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:uuid/uuid.dart';
+import 'package:postgres/postgres.dart';
 import '../database/connection.dart';
 import '../models/sync_models.dart';
 import 'encryption_service.dart';
@@ -23,9 +24,9 @@ class SyncService {
 
     for (final record in records) {
       // Check for existing record with same ID
-      final existing = await conn.query(
-        'SELECT id, data, version FROM sync_records WHERE record_id = @recordId AND table_name = @tableName',
-        substitutionValues: {
+      final existing = await conn.execute(
+        Sql.named('SELECT id, data, version FROM sync_records WHERE record_id = @recordId AND table_name = @tableName'),
+        parameters: {
           'recordId': record.recordId,
           'tableName': record.tableName,
         },
@@ -40,12 +41,12 @@ class SyncService {
         if (existingData != record.data && record.version <= existingVersion) {
           // Conflict detected
           final conflictId = const Uuid().v4();
-          await conn.query(
-            '''
+          await conn.execute(
+            Sql.named('''
             INSERT INTO conflicts (id, table_name, record_id, device_id_1, device_id_2, data_1, data_2)
             VALUES (@id, @tableName, @recordId, @deviceId1, @deviceId2, @data1, @data2)
-            ''',
-            substitutionValues: {
+            '''),
+            parameters: {
               'id': conflictId,
               'tableName': record.tableName,
               'recordId': record.recordId,
@@ -76,14 +77,14 @@ class SyncService {
 
       // Insert or update the record
       final syncRecordId = const Uuid().v4();
-      await conn.query(
-        '''
+      await conn.execute(
+        Sql.named('''
         INSERT INTO sync_records (id, device_id, table_name, record_id, operation, data, version, created_at)
         VALUES (@id, @deviceId, @tableName, @recordId, @operation, @data, @version, @createdAt)
         ON CONFLICT (record_id, table_name) 
         DO UPDATE SET data = @data, version = @version, synced_at = @syncedAt
-        ''',
-        substitutionValues: {
+        '''),
+        parameters: {
           'id': syncRecordId,
           'deviceId': deviceId,
           'tableName': record.tableName,
@@ -99,9 +100,9 @@ class SyncService {
     }
 
     // Update device last sync time
-    await conn.query(
-      'UPDATE devices SET last_sync_at = @lastSyncAt WHERE id = @deviceId',
-      substitutionValues: {
+    await conn.execute(
+      Sql.named('UPDATE devices SET last_sync_at = @lastSyncAt WHERE id = @deviceId'),
+      parameters: {
         'deviceId': deviceId,
         'lastSyncAt': DateTime.now(),
       },
@@ -134,9 +135,9 @@ class SyncService {
     final conn = await DatabaseConnection.connection;
 
     // Get all devices for this user
-    final devices = await conn.query(
-      'SELECT id FROM devices WHERE user_id = @userId',
-      substitutionValues: {'userId': userId},
+    final devices = await conn.execute(
+      Sql.named('SELECT id FROM devices WHERE user_id = @userId'),
+      parameters: {'userId': userId},
     );
 
     final deviceIds = devices.map((r) => r[0] as String).toList();
@@ -163,7 +164,7 @@ class SyncService {
 
     query += ' ORDER BY created_at ASC LIMIT 1000';
 
-    final result = await conn.query(query, substitutionValues: params);
+    final result = await conn.execute(Sql.named(query), parameters: params);
 
     final records = result.map((row) {
       return SyncRecord(
@@ -188,13 +189,14 @@ class SyncService {
   Future<List<ConflictInfo>> getConflicts(String userId) async {
     final conn = await DatabaseConnection.connection;
 
-    final result = await conn.query('''
+    final result = await conn.execute(
+      Sql.named('''
       SELECT c.id, c.table_name, c.record_id, c.resolved, c.created_at
       FROM conflicts c
       JOIN devices d ON c.device_id_1 = d.id
       WHERE d.user_id = @userId AND c.resolved = false
       ORDER BY c.created_at DESC
-    ''', substitutionValues: {'userId': userId});
+    '''), parameters: {'userId': userId});
 
     return result.map((row) {
       return ConflictInfo(
@@ -215,13 +217,13 @@ class SyncService {
   }) async {
     final conn = await DatabaseConnection.connection;
 
-    await conn.query(
-      '''
+    await conn.execute(
+      Sql.named('''
       UPDATE conflicts 
       SET resolved = true, resolution = @resolution, resolved_at = @resolvedAt
       WHERE id = @conflictId
-      ''',
-      substitutionValues: {
+      '''),
+      parameters: {
         'conflictId': conflictId,
         'resolution': resolution,
         'resolvedAt': DateTime.now(),
@@ -229,22 +231,22 @@ class SyncService {
     );
 
     // Apply the resolved data to sync_records
-    final conflict = await conn.query(
-      'SELECT table_name, record_id FROM conflicts WHERE id = @conflictId',
-      substitutionValues: {'conflictId': conflictId},
+    final conflict = await conn.execute(
+      Sql.named('SELECT table_name, record_id FROM conflicts WHERE id = @conflictId'),
+      parameters: {'conflictId': conflictId},
     );
 
     if (conflict.isNotEmpty) {
       final tableName = conflict.first[0] as String;
       final recordId = conflict.first[1] as String;
 
-      await conn.query(
-        '''
+      await conn.execute(
+        Sql.named('''
         UPDATE sync_records 
         SET data = @data, version = version + 1, synced_at = @syncedAt
         WHERE table_name = @tableName AND record_id = @recordId
-        ''',
-        substitutionValues: {
+        '''),
+        parameters: {
           'tableName': tableName,
           'recordId': recordId,
           'data': resolvedData,

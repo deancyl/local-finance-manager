@@ -1,38 +1,43 @@
-import 'package:dart_frog/dart_frog.dart';
+import 'package:shelf/shelf.dart' as shelf;
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:dotenv/dotenv.dart' as dotenv;
 
-/// Middleware for JWT authentication
-Middleware authMiddleware() {
+/// Middleware for JWT authentication using shelf
+shelf.Middleware authMiddleware() {
   return (handler) {
-    return (context) async {
-      final authHeader = context.request.headers['authorization'];
+    return (request) async {
+      final authHeader = request.headers['authorization'];
       
       if (authHeader == null || !authHeader.startsWith('Bearer ')) {
-        return Response.json(
+        return shelf.Response.json(
           statusCode: 401,
           body: {'error': 'Missing or invalid authorization header'},
         );
       }
 
       final token = authHeader.substring(7);
-      final jwtSecret = dotenv.env['JWT_SECRET'] ?? 'default-secret-change-in-production';
+      dotenv.load();
+      final jwtSecret = dotenv.env.containsKey('JWT_SECRET')
+          ? dotenv.env['JWT_SECRET']!
+          : 'default-secret-change-in-production';
       
       try {
         final jwt = JWT.verify(token, SecretKey(jwtSecret));
         final userId = jwt.payload['sub'] as String?;
         
         if (userId == null) {
-          return Response.json(
+          return shelf.Response.json(
             statusCode: 401,
             body: {'error': 'Invalid token payload'},
           );
         }
 
-        // Add user ID to context for use in handlers
-        return handler(context.provide<String>(() => userId));
+        // Add user ID to request context for use in handlers
+        // In shelf, we use request.context to store values
+        final newRequest = request.change(context: {'userId': userId});
+        return handler(newRequest);
       } catch (e) {
-        return Response.json(
+        return shelf.Response.json(
           statusCode: 401,
           body: {'error': 'Invalid or expired token'},
         );
@@ -41,13 +46,7 @@ Middleware authMiddleware() {
   };
 }
 
-/// Extension to easily get user ID from context
-extension RequestContextX on RequestContext {
-  String get userId {
-    final id = read<String>();
-    if (id == null) {
-      throw StateError('User ID not found in context. Did you forget to use authMiddleware?');
-    }
-    return id;
-  }
+/// Helper to get userId from request context
+String? getUserIdFromRequest(shelf.Request request) {
+  return request.context['userId'] as String?;
 }

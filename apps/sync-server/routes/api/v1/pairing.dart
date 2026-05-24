@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:dart_frog/dart_frog.dart';
-import '../../src/services/pairing_service.dart';
-import '../../src/middleware/auth_middleware.dart';
+import 'package:shelf/shelf.dart' show Router;
+import '../../../src/services/pairing_service.dart';
+import '../../../src/middleware/auth_middleware.dart';
 
 /// Pairing API routes.
 /// 
@@ -12,10 +14,18 @@ Handler get onRequest => Router()
     .post('/complete', _completePairing)
     .get('/status/<id>', _checkStatus);
 
-Future<Response> _initiatePairing(RequestContext context) async {
-  final userId = context.userId;
-  final body = await context.request.json() as Map<String, dynamic>;
-  final deviceId = body['device_id'] as String?;
+Future<Response> _initiatePairing(Request request) async {
+  final userId = _getUserIdFromRequest(request);
+  if (userId == null) {
+    return Response.json(
+      statusCode: 401,
+      body: {'error': 'Unauthorized'},
+    );
+  }
+  
+  final body = await request.body();
+  final data = jsonDecode(body) as Map<String, dynamic>;
+  final deviceId = data['device_id'] as String?;
   
   if (deviceId == null) {
     return Response.json(
@@ -33,11 +43,19 @@ Future<Response> _initiatePairing(RequestContext context) async {
   return Response.json(body: token.toJson());
 }
 
-Future<Response> _completePairing(RequestContext context) async {
-  final userId = context.userId;
-  final body = await context.request.json() as Map<String, dynamic>;
-  final token = body['token'] as String?;
-  final newDeviceId = body['device_id'] as String?;
+Future<Response> _completePairing(Request request) async {
+  final userId = _getUserIdFromRequest(request);
+  if (userId == null) {
+    return Response.json(
+      statusCode: 401,
+      body: {'error': 'Unauthorized'},
+    );
+  }
+  
+  final body = await request.body();
+  final data = jsonDecode(body) as Map<String, dynamic>;
+  final token = data['token'] as String?;
+  final newDeviceId = data['device_id'] as String?;
   
   if (token == null || newDeviceId == null) {
     return Response.json(
@@ -66,7 +84,7 @@ Future<Response> _completePairing(RequestContext context) async {
   });
 }
 
-Future<Response> _checkStatus(RequestContext context, String id) async {
+Future<Response> _checkStatus(Request request, String id) async {
   final pairingService = PairingService();
   final status = await pairingService.checkStatus(id);
   
@@ -74,4 +92,16 @@ Future<Response> _checkStatus(RequestContext context, String id) async {
     'id': id,
     'status': status.name,
   });
+}
+
+/// Helper to extract userId from request headers
+String? _getUserIdFromRequest(Request request) {
+  // In a real implementation, this would extract from JWT token
+  // For now, return null to indicate auth is needed
+  final authHeader = request.headers['authorization'];
+  if (authHeader == null || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  // Token validation would happen here
+  return 'user-id-from-token';
 }

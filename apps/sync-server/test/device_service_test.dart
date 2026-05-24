@@ -5,18 +5,18 @@ import 'package:sync_server/src/services/device_service.dart';
 import 'package:sync_server/src/models/sync_models.dart';
 import 'test_helper.dart';
 
-class MockPostgreSQLConnection extends Mock implements PostgreSQLConnection {}
+class MockConnection extends Mock implements Connection {}
 
 void main() {
   late DeviceService deviceService;
-  late MockPostgreSQLConnection mockConnection;
+  late MockConnection mockConnection;
 
   setUpAll(() {
     registerFallbackValues();
   });
 
   setUp(() {
-    mockConnection = MockPostgreSQLConnection();
+    mockConnection = MockConnection();
     deviceService = DeviceService();
   });
 

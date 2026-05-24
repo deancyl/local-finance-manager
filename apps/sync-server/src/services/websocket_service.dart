@@ -3,17 +3,14 @@ import 'dart:convert';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:dart_frog_web_socket/dart_frog_web_socket.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
-import '../database/connection.dart';
-import 'auth_service.dart';
 
 /// WebSocket notification service using broadcast pattern.
 /// 
 /// Manages connections per user and broadcasts sync notifications.
 class WebSocketService {
   final Map<String, Set<WebSocketChannel>> _userChannels = {};
-  final AuthService _authService;
   
-  WebSocketService(this._authService);
+  WebSocketService(dynamic authService);
   
   /// Subscribe a channel to user-specific notifications.
   void subscribe(WebSocketChannel channel, String userId) {
@@ -41,12 +38,26 @@ class WebSocketService {
   }
   
   /// Validate JWT token and return userId.
-  Future<String?> validateToken(String token, String jwtSecret) async {
+  String? validateToken(String token, String jwtSecret) {
     try {
       final jwt = JWT.verify(token, SecretKey(jwtSecret));
-      return jwt.payload['sub'] as String;
+      return jwt.payload['sub'] as String?;
     } catch (e) {
       return null;
+    }
+  }
+  
+  /// Subscribe a channel (for compatibility with routes/ws.dart)
+  void subscribe(WebSocketChannel channel, String userId) {
+    _userChannels.putIfAbsent(userId, () => {});
+    _userChannels[userId]!.add(channel);
+  }
+  
+  /// Unsubscribe a channel (for compatibility with routes/ws.dart)
+  void unsubscribe(WebSocketChannel channel, String userId) {
+    _userChannels[userId]?.remove(channel);
+    if (_userChannels[userId]?.isEmpty ?? false) {
+      _userChannels.remove(userId);
     }
   }
   
