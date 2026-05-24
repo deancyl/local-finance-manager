@@ -1,30 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mocktail/mocktail.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:finance_app/features/transactions/presentation/pages/add_transaction_page.dart';
 import 'package:finance_app/features/transactions/presentation/widgets/add_transaction_dialog.dart';
-import 'package:database/database.dart';
-
-// Mock classes
-class MockDatabase extends Mock implements LocalFinanceDatabase {}
-
-class MockGoRouter extends Mock implements GoRouter {}
 
 void main() {
   group('AddTransactionPage', () {
     testWidgets('renders without errors', (WidgetTester tester) async {
       // Arrange
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [],
-          child: const MaterialApp(
+        const ProviderScope(
+          child: MaterialApp(
             home: AddTransactionPage(),
           ),
         ),
       );
+      await tester.pumpAndSettle(const Duration(seconds: 2));
 
       // Act & Assert - should render without throwing
       expect(find.byType(AddTransactionPage), findsOneWidget);
@@ -34,13 +26,13 @@ void main() {
     testWidgets('AppBar has correct title "记一笔"', (WidgetTester tester) async {
       // Arrange
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [],
-          child: const MaterialApp(
+        const ProviderScope(
+          child: MaterialApp(
             home: AddTransactionPage(),
           ),
         ),
       );
+      await tester.pumpAndSettle(const Duration(seconds: 2));
 
       // Act & Assert
       expect(find.text('记一笔'), findsOneWidget);
@@ -50,13 +42,13 @@ void main() {
     testWidgets('back button exists in AppBar', (WidgetTester tester) async {
       // Arrange
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [],
-          child: const MaterialApp(
+        const ProviderScope(
+          child: MaterialApp(
             home: AddTransactionPage(),
           ),
         ),
       );
+      await tester.pumpAndSettle(const Duration(seconds: 2));
 
       // Act & Assert
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
@@ -66,13 +58,13 @@ void main() {
     testWidgets('AddTransactionDialog is displayed in body', (WidgetTester tester) async {
       // Arrange
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [],
-          child: const MaterialApp(
+        const ProviderScope(
+          child: MaterialApp(
             home: AddTransactionPage(),
           ),
         ),
       );
+      await tester.pumpAndSettle(const Duration(seconds: 2));
 
       // Act & Assert
       expect(find.byType(AddTransactionDialog), findsOneWidget);
@@ -85,13 +77,13 @@ void main() {
       const transactionId = 'test-transaction-id';
       
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [],
-          child: const MaterialApp(
+        const ProviderScope(
+          child: MaterialApp(
             home: AddTransactionPage(transactionId: transactionId),
           ),
         ),
       );
+      await tester.pumpAndSettle(const Duration(seconds: 2));
 
       // Act & Assert - should render without throwing
       expect(find.byType(AddTransactionPage), findsOneWidget);
