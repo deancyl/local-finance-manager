@@ -342,7 +342,7 @@ class _TransactionFilterDialogState extends ConsumerState<TransactionFilterDialo
           : double.tryParse(_maxAmountController.text),
     );
     
-    ref.read(transactionFilterProvider.notifier).state = filter;
+    ref.read(transactionFilterProvider.notifier).setFilter(filter);
     Navigator.pop(context);
   }
 }

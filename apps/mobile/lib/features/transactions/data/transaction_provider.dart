@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
@@ -59,9 +61,39 @@ final allSplitsWithAccountsProvider = FutureProvider<List<(Split, Account)>>((re
 // FILTER PROVIDERS - Transaction search and filtering
 // ============================================================
 
+/// Notifier for managing transaction filter state with persistence.
+class TransactionFilterNotifier extends StateNotifier<TransactionFilter> {
+  static const _key = 'transaction_filter';
+
+  TransactionFilterNotifier() : super(const TransactionFilter()) {
+    _loadFilter();
+  }
+
+  Future<void> _loadFilter() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedFilter = prefs.getString(_key);
+    
+    if (savedFilter != null) {
+      try {
+        final json = jsonDecode(savedFilter) as Map<String, dynamic>;
+        state = TransactionFilter.fromJson(json);
+      } catch (_) {
+        // If loading fails, use default empty filter
+        state = const TransactionFilter();
+      }
+    }
+  }
+
+  Future<void> setFilter(TransactionFilter filter) async {
+    state = filter;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, jsonEncode(filter.toJson()));
+  }
+}
+
 /// Provider for transaction filter state.
-final transactionFilterProvider = StateProvider<TransactionFilter>((ref) {
-  return const TransactionFilter();
+final transactionFilterProvider = StateNotifierProvider<TransactionFilterNotifier, TransactionFilter>((ref) {
+  return TransactionFilterNotifier();
 });
 
 /// Provider for filtered transactions based on current filter state.

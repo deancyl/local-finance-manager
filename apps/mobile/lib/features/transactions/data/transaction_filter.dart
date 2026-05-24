@@ -68,4 +68,34 @@ class TransactionFilter {
 
   /// Returns a cleared filter (all fields null).
   static const TransactionFilter empty = TransactionFilter();
+
+  /// Serializes the filter to JSON.
+  Map<String, dynamic> toJson() {
+    return {
+      'startDate': startDate?.toIso8601String(),
+      'endDate': endDate?.toIso8601String(),
+      'categoryId': categoryId,
+      'accountId': accountId,
+      'searchQuery': searchQuery,
+      'minAmount': minAmount,
+      'maxAmount': maxAmount,
+    };
+  }
+
+  /// Creates a filter from JSON.
+  factory TransactionFilter.fromJson(Map<String, dynamic> json) {
+    return TransactionFilter(
+      startDate: json['startDate'] != null
+          ? DateTime.parse(json['startDate'] as String)
+          : null,
+      endDate: json['endDate'] != null
+          ? DateTime.parse(json['endDate'] as String)
+          : null,
+      categoryId: json['categoryId'] as String?,
+      accountId: json['accountId'] as String?,
+      searchQuery: json['searchQuery'] as String?,
+      minAmount: json['minAmount'] as double?,
+      maxAmount: json['maxAmount'] as double?,
+    );
+  }
 }
