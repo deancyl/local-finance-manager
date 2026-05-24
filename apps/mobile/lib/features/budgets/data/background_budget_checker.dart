@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:isolate';
 import 'dart:ui';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -203,7 +204,7 @@ Future<dynamic> _openDatabase() async {
   // This is a simplified version - in production, use the actual database setup
   // with proper encryption support
   final dbFolder = await getApplicationDocumentsDirectory();
-  final file = dbFolder.child('finance.db');
+  final file = File('${dbFolder.path}/finance.db');
   
   // Note: For encrypted database, you'd need to handle the key retrieval
   // This is a placeholder for the background isolate database access

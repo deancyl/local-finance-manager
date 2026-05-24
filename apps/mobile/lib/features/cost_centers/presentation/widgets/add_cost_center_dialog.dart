@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:database/database.dart';
 import 'package:uuid/uuid.dart';
-import '../data/cost_center_provider.dart';
+import '../../data/cost_center_provider.dart';
 
 /// Dialog for adding/editing cost centers.
 class AddCostCenterDialog extends ConsumerStatefulWidget {

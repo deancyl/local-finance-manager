@@ -67,8 +67,8 @@ final spendingByCategoryProvider =
   // Get all expense splits in range
   final transactions = await (db.select(db.transactions)
     ..where((t) =>
-        t.postDate.isBiggerOrEqual(range.start.millisecondsSinceEpoch) &
-        t.postDate.isSmallerOrEqual(range.end.millisecondsSinceEpoch)))
+        t.postDate.isBiggerOrEqualValue(range.start.millisecondsSinceEpoch) &
+        t.postDate.isSmallerOrEqualValue(range.end.millisecondsSinceEpoch)))
       .get();
 
   final categoryTotals = <String?, double>{};
@@ -134,8 +134,8 @@ final spendingTrendsProvider = FutureProvider<List<SpendingTrend>>((ref) async {
     // Calculate spending for this week
     final transactions = await (db.select(db.transactions)
       ..where((t) =>
-          t.postDate.isBiggerOrEqual(weekStart.millisecondsSinceEpoch) &
-          t.postDate.isSmallerOrEqual(weekEnd.millisecondsSinceEpoch)))
+          t.postDate.isBiggerOrEqualValue(weekStart.millisecondsSinceEpoch) &
+          t.postDate.isSmallerOrEqualValue(weekEnd.millisecondsSinceEpoch)))
         .get();
 
     double weekSpending = 0;
@@ -195,7 +195,7 @@ final financialInsightsProvider = FutureProvider<List<FinancialInsight>>((ref) a
 
   final transactions = await (db.select(db.transactions)
     ..where((t) =>
-        t.postDate.isBiggerOrEqual(monthStart.millisecondsSinceEpoch)))
+        t.postDate.isBiggerOrEqualValue(monthStart.millisecondsSinceEpoch)))
       .get();
 
   // Analyze spending patterns
