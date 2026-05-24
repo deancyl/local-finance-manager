@@ -45,19 +45,19 @@ class EncryptionService {
       ));
 
     final ciphertext = Uint8List(plaintextBytes.length + _tagLength);
-    final len = cipher.processBytes(
+    var len = cipher.processBytes(
       Uint8List.fromList(plaintextBytes),
       0,
       plaintextBytes.length,
       ciphertext,
       0,
     );
-    cipher.doFinal(ciphertext, len);
+    len += cipher.doFinal(ciphertext, len);
 
-    // Combine nonce + ciphertext
-    final result = Uint8List(nonce.length + ciphertext.length);
+    // Combine nonce + ciphertext (only use actual output length)
+    final result = Uint8List(nonce.length + len);
     result.setAll(0, nonce);
-    result.setAll(nonce.length, ciphertext);
+    result.setAll(nonce.length, Uint8List.sublistView(ciphertext, 0, len));
 
     return base64Url.encode(result);
   }
@@ -78,8 +78,8 @@ class EncryptionService {
       ));
 
     final plaintext = Uint8List(ciphertext.length);
-    final len = cipher.processBytes(ciphertext, 0, ciphertext.length, plaintext, 0);
-    cipher.doFinal(plaintext, len);
+    var len = cipher.processBytes(ciphertext, 0, ciphertext.length, plaintext, 0);
+    len += cipher.doFinal(plaintext, len);
 
     return utf8.decode(Uint8List.sublistView(plaintext, 0, len));
   }
