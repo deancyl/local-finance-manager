@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-
-import 'package:database/database.dart';
+import 'package:drift/drift.dart' as drift;
+import 'package:database/database.dart' as db;
 import '../../data/cost_center_provider.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 
@@ -48,15 +48,16 @@ final costCenterExpenseReportProvider = FutureProvider<List<CostCenterExpense>>(
   // Query splits with cost center, grouped by cost center
   // Join with transactions to filter by date
   final query = db.select(db.splits).join([
-    db.innerJoin(db.transactions, db.transactions.id.equalsExp(db.splits.transactionId)),
+    drift.innerJoin(db.transactions, db.transactions.id.equalsExp(db.splits.transactionId)),
   ])
     ..where(db.splits.costCenterId.isNotNull() &
-            db.transactions.postDate.isBetweenValues(startTs, endTs));
+            db.transactions.postDate.isBiggerOrEqualValue(startTs) &
+            db.transactions.postDate.isSmallerOrEqualValue(endTs));
 
   final results = await query.get();
 
   // Group by cost center
-  final Map<String, List<Split>> groupedSplits = {};
+  final Map<String, List<db.Split>> groupedSplits = {};
   for (final row in results) {
     final split = row.readTable(db.splits);
     final costCenterId = split.costCenterId;

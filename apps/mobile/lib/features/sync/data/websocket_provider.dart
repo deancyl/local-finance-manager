@@ -1,3 +1,5 @@
+// DISABLED: sync package is temporarily disabled due to PowerSync compatibility issues
+/*
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sync/sync.dart';
@@ -118,3 +120,4 @@ final notificationHandlerProvider = Provider<void>((ref) {
     error: (_, __) {},
   );
 });
+*/

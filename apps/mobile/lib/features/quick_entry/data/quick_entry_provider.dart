@@ -278,9 +278,9 @@ final suggestedAccountsProvider = FutureProvider<List<String>>((ref) async {
   final db = ref.watch(databaseProvider);
   
   // Get accounts from recent splits
-  final recentSplits = await db.select(db.splits)
-      .orderBy([(s) => drift.OrderingTerm.desc(s.createdAt)])
-      .limit(10)
+  final recentSplits = await (db.select(db.splits)
+      ..orderBy([(s) => drift.OrderingTerm.desc(s.createdAt)])
+      ..limit(10))
       .get();
 
   return recentSplits.map((s) => s.accountId).toSet().toList();
@@ -290,10 +290,10 @@ final suggestedAccountsProvider = FutureProvider<List<String>>((ref) async {
 final suggestedCategoriesProvider = FutureProvider<List<String>>((ref) async {
   final db = ref.watch(databaseProvider);
   
-  final recentSplits = await db.select(db.splits)
-      .where((s) => s.categoryId.isNotNull())
-      .orderBy([(s) => drift.OrderingTerm.desc(s.createdAt)])
-      .limit(10)
+  final recentSplits = await (db.select(db.splits)
+      ..where((s) => s.categoryId.isNotNull())
+      ..orderBy([(s) => drift.OrderingTerm.desc(s.createdAt)])
+      ..limit(10))
       .get();
 
   return recentSplits
