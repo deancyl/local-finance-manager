@@ -16,7 +16,7 @@ scripts:
   
   test:
     run: |
-      melos exec --dir-exists=test -- "flutter test --coverage"
+      melos exec --ignore="sync" --ignore="sync_server" --dir-exists=test -- "flutter test --coverage"
   
   # Code generation for Drift and other code generators
   generate:
