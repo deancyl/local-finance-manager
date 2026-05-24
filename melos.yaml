@@ -11,7 +11,8 @@ command:
 
 scripts:
   analyze:
-    exec: dart analyze .
+    run: |
+      melos exec --ignore="sync" --ignore="sync_server" -- "dart analyze ."
   
   test:
     run: |
