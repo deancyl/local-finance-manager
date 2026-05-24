@@ -45,16 +45,15 @@ class _FinanceAppState extends ConsumerState<FinanceApp> {
     // Here we would handle navigation when a notification is tapped
   }
   
-void _processRecurringTransactions() {
+  void _processRecurringTransactions() {
     // Process due recurring transactions on app startup
     Future.microtask(() async {
-      final generationNotifier = ref.read(recurringGenerationNotifierProvider.notifier);
-      final ids = await generationNotifier.processAll();
-      if (ids.isNotEmpty) {
-        print('Generated ${ids.length} recurring transactions on startup');
-      }
-    });
-  }
+      try {
+        final generationNotifier = ref.read(recurringGenerationNotifierProvider.notifier);
+        final ids = await generationNotifier.processAll();
+        if (ids.isNotEmpty) {
+          print('Generated ${ids.length} recurring transactions on startup');
+        }
       } catch (e) {
         print('Failed to process recurring transactions on startup: $e');
       }
