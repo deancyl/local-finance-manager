@@ -16,6 +16,10 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const ProviderScope(child: FinanceApp()));
 
+    // Pump and settle to wait for async operations in initState
+    // Use a reasonable timeout for async initialization
+    await tester.pumpAndSettle(const Duration(seconds: 5));
+
     // Verify that the app builds without errors
     expect(find.byType(FinanceApp), findsOneWidget);
   });

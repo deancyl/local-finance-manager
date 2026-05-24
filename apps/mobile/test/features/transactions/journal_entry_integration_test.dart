@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:database/database.dart';
-import 'package:core/core.dart';
+import 'package:core/core.dart' hide Account;
 import 'package:finance_app/features/transactions/data/journal_entry_provider.dart';
 import 'package:finance_app/features/transactions/presentation/widgets/journal_entry_dialog.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';

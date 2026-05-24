@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:database/database.dart';
+import 'package:core/core.dart' as domain;
 import '../../../accounts/data/account_provider.dart';
 
 /// Account selector widget for journal entries.
@@ -40,7 +41,7 @@ class JournalAccountSelector extends ConsumerStatefulWidget {
   });
 
   /// Shows the account selector as a modal bottom sheet and returns the selected account.
-  static Future<Account?> show(
+  static Future<domain.Account?> show(
     BuildContext context, {
     String? selectedAccountId,
     List<String>? accountTypeFilter,
@@ -64,7 +65,30 @@ class JournalAccountSelector extends ConsumerStatefulWidget {
         ),
       ),
     );
-    return result;
+    // Convert database Account to domain Account
+    if (result == null) return null;
+    return domain.Account(
+      id: result.id,
+      name: result.name,
+      accountType: domain.AccountType.values.firstWhere(
+        (e) => e.code == result.accountType,
+        orElse: () => domain.AccountType.asset,
+      ),
+      parentId: result.parentId,
+      commodityId: result.commodityId,
+      code: result.code,
+      description: result.description,
+      isPlaceholder: result.isPlaceholder,
+      isHidden: result.isHidden,
+      sortOrder: result.sortOrder,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(result.createdAt),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(result.updatedAt),
+      version: result.version,
+      liquidityType: domain.LiquidityType.values.firstWhere(
+        (e) => e.code == result.liquidityType,
+        orElse: () => domain.LiquidityType.current,
+      ),
+    );
   }
 
   @override
