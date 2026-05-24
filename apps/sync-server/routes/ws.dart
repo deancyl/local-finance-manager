@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:dart_frog_web_socket/dart_frog_web_socket.dart';
-import 'package:dotenv/dotenv.dart' as dotenv;
+import 'package:dotenv/dotenv.dart';
 import '../src/services/websocket_service.dart';
 import '../src/services/auth_service.dart';
 import '../src/services/encryption_service.dart';
@@ -20,16 +20,16 @@ Handler get onRequest => webSocketHandler(
 
 Future<void> _handleWebSocket(
   WebSocketChannel channel,
-  Protocol? protocol,
+  String? protocol,
 ) async {
   // Load dotenv
-  dotenv.load();
+  final env = DotEnv(includePlatformEnvironment: true)..load();
   
-  final jwtSecret = dotenv.env.containsKey('JWT_SECRET')
-      ? dotenv.env['JWT_SECRET']!
+  final jwtSecret = env.containsKey('JWT_SECRET')
+      ? env['JWT_SECRET']!
       : 'default-secret';
-  final encryptionKey = dotenv.env.containsKey('ENCRYPTION_KEY')
-      ? dotenv.env['ENCRYPTION_KEY']!
+  final encryptionKey = env.containsKey('ENCRYPTION_KEY')
+      ? env['ENCRYPTION_KEY']!
       : 'default-key';
   final encryption = EncryptionService(encryptionKey);
   final wsService = WebSocketService(AuthService(encryption, jwtSecret));

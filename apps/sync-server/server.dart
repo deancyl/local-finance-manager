@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:dart_frog/dart_frog.dart';
-import 'package:shelf/shelf.dart' show Pipeline, Router, logRequests;
+import 'package:shelf/shelf.dart' hide Pipeline, show Router, logRequests;
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
-import 'package:dotenv/dotenv.dart' as dotenv;
+import 'package:dotenv/dotenv.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 
 import 'src/services/auth_service.dart';
@@ -18,14 +18,14 @@ late SyncService _syncService;
 late DeviceService _deviceService;
 
 Future<HttpServer> run(InternetAddress ip, int port) async {
-  dotenv.load();
+  final env = DotEnv(includePlatformEnvironment: true)..load();
   
   // Initialize services
-  final jwtSecret = dotenv.env.containsKey('JWT_SECRET')
-      ? dotenv.env['JWT_SECRET']!
+  final jwtSecret = env.containsKey('JWT_SECRET')
+      ? env['JWT_SECRET']!
       : 'default-secret-change-in-production';
-  final encryptionKey = dotenv.env.containsKey('ENCRYPTION_KEY')
-      ? dotenv.env['ENCRYPTION_KEY']!
+  final encryptionKey = env.containsKey('ENCRYPTION_KEY')
+      ? env['ENCRYPTION_KEY']!
       : 'default-encryption-key-32-chars';
   
   final encryption = EncryptionService(encryptionKey);
@@ -33,7 +33,7 @@ Future<HttpServer> run(InternetAddress ip, int port) async {
   _syncService = SyncService(encryption, null);
   _deviceService = DeviceService();
 
-  final handler = const Pipeline()
+  final handler = const dart_frog.Pipeline()
       .addMiddleware(logRequests())
       .addMiddleware(corsHeaders())
       .addHandler(_router);
@@ -408,8 +408,9 @@ String? _getUserIdFromRequest(Request request) {
   }
   
   final token = authHeader.substring(7);
-  final jwtSecret = dotenv.env.containsKey('JWT_SECRET')
-      ? dotenv.env['JWT_SECRET']!
+  final env = DotEnv(includePlatformEnvironment: true)..load();
+  final jwtSecret = env.containsKey('JWT_SECRET')
+      ? env['JWT_SECRET']!
       : 'default-secret-change-in-production';
   
   try {

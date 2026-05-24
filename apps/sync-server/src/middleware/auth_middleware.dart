@@ -1,6 +1,6 @@
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
-import 'package:dotenv/dotenv.dart' as dotenv;
+import 'package:dotenv/dotenv.dart';
 
 /// Middleware for JWT authentication using shelf
 shelf.Middleware authMiddleware() {
@@ -16,9 +16,9 @@ shelf.Middleware authMiddleware() {
       }
 
       final token = authHeader.substring(7);
-      dotenv.load();
-      final jwtSecret = dotenv.env.containsKey('JWT_SECRET')
-          ? dotenv.env['JWT_SECRET']!
+      final env = DotEnv(includePlatformEnvironment: true)..load();
+      final jwtSecret = env.containsKey('JWT_SECRET')
+          ? env['JWT_SECRET']!
           : 'default-secret-change-in-production';
       
       try {
