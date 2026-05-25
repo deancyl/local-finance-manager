@@ -151,6 +151,8 @@ List<Transaction> _applyFilter(
       return true; // Will be filtered further in the widget
     }
     
+    // Tag filter is handled separately in filteredTransactionsWithSplitsProvider
+    
     return true;
   }).toList();
 }
@@ -171,6 +173,16 @@ final filteredTransactionsWithSplitsProvider = FutureProvider<List<(Transaction,
     return result;
   }
   
+  // Handle tag filter separately for better performance
+  List<String>? tagFilteredTransactionIds;
+  if (filter.hasTagFilter) {
+    if (filter.tagFilterLogic == TagFilterLogic.and) {
+      tagFilteredTransactionIds = await db.tagsDao.getTransactionIdsWithAllTags(filter.tagIds);
+    } else {
+      tagFilteredTransactionIds = await db.tagsDao.getTransactionIdsWithAnyTags(filter.tagIds);
+    }
+  }
+  
   // Build query with filters
   final query = db.select(db.transactions)
     ..where((t) => t.deletedAt.isNull())
@@ -180,6 +192,11 @@ final filteredTransactionsWithSplitsProvider = FutureProvider<List<(Transaction,
   final result = <(Transaction, List<Split>)>[];
   
   for (final transaction in transactions) {
+    // Apply tag filter
+    if (tagFilteredTransactionIds != null) {
+      if (!tagFilteredTransactionIds.contains(transaction.id)) continue;
+    }
+    
     final splits = await db.transactionsDao.getSplits(transaction.id);
     
     // Apply date filter

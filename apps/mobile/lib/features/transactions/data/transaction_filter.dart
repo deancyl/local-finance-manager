@@ -8,6 +8,7 @@ class TransactionFilter {
   final double? minAmount;
   final double? maxAmount;
   final List<String> tagIds;
+  final TagFilterLogic tagFilterLogic;
 
   const TransactionFilter({
     this.startDate,
@@ -18,6 +19,7 @@ class TransactionFilter {
     this.minAmount,
     this.maxAmount,
     this.tagIds = const [],
+    this.tagFilterLogic = TagFilterLogic.and,
   });
 
   /// Creates a copy with updated fields.
@@ -31,6 +33,7 @@ class TransactionFilter {
     double? minAmount,
     double? maxAmount,
     List<String>? tagIds,
+    TagFilterLogic? tagFilterLogic,
     bool clearStartDate = false,
     bool clearEndDate = false,
     bool clearCategoryId = false,
@@ -49,6 +52,7 @@ class TransactionFilter {
       minAmount: clearMinAmount ? null : (minAmount ?? this.minAmount),
       maxAmount: clearMaxAmount ? null : (maxAmount ?? this.maxAmount),
       tagIds: clearTagIds ? [] : (tagIds ?? this.tagIds),
+      tagFilterLogic: tagFilterLogic ?? this.tagFilterLogic,
     );
   }
 
@@ -72,6 +76,9 @@ class TransactionFilter {
   /// Returns true if amount range filter is active.
   bool get hasAmountRange => minAmount != null || maxAmount != null;
 
+  /// Returns true if tag filter is active.
+  bool get hasTagFilter => tagIds.isNotEmpty;
+
   /// Returns a cleared filter (all fields null).
   static const TransactionFilter empty = TransactionFilter();
 
@@ -86,6 +93,7 @@ class TransactionFilter {
       'minAmount': minAmount,
       'maxAmount': maxAmount,
       'tagIds': tagIds.join(','),
+      'tagFilterLogic': tagFilterLogic.name,
     };
   }
 
@@ -106,6 +114,20 @@ class TransactionFilter {
       tagIds: json['tagIds'] != null && (json['tagIds'] as String).isNotEmpty
           ? (json['tagIds'] as String).split(',')
           : [],
+      tagFilterLogic: json['tagFilterLogic'] != null
+          ? TagFilterLogic.values.firstWhere(
+              (e) => e.name == json['tagFilterLogic'],
+              orElse: () => TagFilterLogic.and,
+            )
+          : TagFilterLogic.and,
     );
   }
+}
+
+/// Tag filter logic enum.
+enum TagFilterLogic {
+  /// Match transactions with ALL selected tags
+  and,
+  /// Match transactions with ANY selected tags
+  or,
 }

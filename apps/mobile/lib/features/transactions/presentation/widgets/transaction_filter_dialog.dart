@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:database/database.dart';
 import '../../../accounts/data/account_provider.dart';
 import '../../../categories/data/category_provider.dart';
+import '../../../tags/data/tag_provider.dart';
 import '../../data/transaction_filter.dart';
 import '../../data/transaction_provider.dart';
 
@@ -25,6 +26,8 @@ class _TransactionFilterDialogState extends ConsumerState<TransactionFilterDialo
   DateTime? _endDate;
   String? _categoryId;
   String? _accountId;
+  List<String> _tagIds = [];
+  TagFilterLogic _tagFilterLogic = TagFilterLogic.and;
   
   @override
   void initState() {
@@ -36,6 +39,8 @@ class _TransactionFilterDialogState extends ConsumerState<TransactionFilterDialo
     _endDate = filter.endDate;
     _categoryId = filter.categoryId;
     _accountId = filter.accountId;
+    _tagIds = filter.tagIds;
+    _tagFilterLogic = filter.tagFilterLogic;
     if (filter.minAmount != null) {
       _minAmountController.text = filter.minAmount!.toStringAsFixed(2);
     }
@@ -254,6 +259,10 @@ class _TransactionFilterDialogState extends ConsumerState<TransactionFilterDialo
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            
+            // Tag filter section
+            _buildTagFilterSection(context, categoriesAsync),
             const SizedBox(height: 24),
             
             // Action buttons
@@ -288,7 +297,8 @@ class _TransactionFilterDialogState extends ConsumerState<TransactionFilterDialo
         _categoryId != null ||
         _accountId != null ||
         _minAmountController.text.isNotEmpty ||
-        _maxAmountController.text.isNotEmpty;
+        _maxAmountController.text.isNotEmpty ||
+        _tagIds.isNotEmpty;
   }
 
   Future<void> _selectStartDate(BuildContext context) async {
@@ -315,6 +325,131 @@ class _TransactionFilterDialogState extends ConsumerState<TransactionFilterDialo
     }
   }
 
+  Widget _buildTagFilterSection(BuildContext context, AsyncValue<List<Category>> categoriesAsync) {
+    final allTagsAsync = ref.watch(allTagsProvider);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '标签筛选',
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 8),
+        
+        // AND/OR logic toggle
+        Row(
+          children: [
+            Text(
+              '筛选逻辑: ',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            SegmentedButton<TagFilterLogic>(
+              segments: const [
+                ButtonSegment<TagFilterLogic>(
+                  value: TagFilterLogic.and,
+                  label: Text('AND'),
+                  icon: Icon(Icons.check_circle_outline),
+                ),
+                ButtonSegment<TagFilterLogic>(
+                  value: TagFilterLogic.or,
+                  label: Text('OR'),
+                  icon: Icon(Icons.library_add_check_outlined),
+                ),
+              ],
+              selected: {_tagFilterLogic},
+              onSelectionChanged: (Set<TagFilterLogic> newSelection) {
+                setState(() => _tagFilterLogic = newSelection.first);
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        
+        // Tag chips
+        allTagsAsync.when(
+          data: (tags) {
+            if (tags.isEmpty) {
+              return const Text('暂无可用标签');
+            }
+            
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: tags.map((tag) => _buildTagFilterChip(tag)).toList(),
+            );
+          },
+          loading: () => const CircularProgressIndicator(),
+          error: (error, _) => Text('加载标签失败: $error'),
+        ),
+        
+        if (_tagIds.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            '已选择 ${_tagIds.length} 个标签 (${_tagFilterLogic == TagFilterLogic.and ? "必须全部匹配" : "匹配任意一个"})',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTagFilterChip(Tag tag) {
+    final isSelected = _tagIds.contains(tag.id);
+    final color = _parseColor(tag.color);
+    
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text('#${tag.name}'),
+          if (tag.usageCount > 0) ...[
+            const SizedBox(width: 4),
+            Text(
+              '(${tag.usageCount})',
+              style: TextStyle(
+                fontSize: 10,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ],
+      ),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() {
+          if (selected) {
+            _tagIds.add(tag.id);
+          } else {
+            _tagIds.remove(tag.id);
+          }
+        });
+      },
+      selectedColor: color.withOpacity(0.2),
+      checkmarkColor: color,
+      side: BorderSide(color: isSelected ? color : Theme.of(context).colorScheme.outline),
+    );
+  }
+
+  Color _parseColor(String colorHex) {
+    try {
+      return Color(int.parse(colorHex.replaceFirst('#', '0xFF')));
+    } catch (e) {
+      return Colors.grey;
+    }
+  }
+
   void _clearFilters() {
     _searchController.clear();
     _minAmountController.clear();
@@ -324,6 +459,8 @@ class _TransactionFilterDialogState extends ConsumerState<TransactionFilterDialo
       _endDate = null;
       _categoryId = null;
       _accountId = null;
+      _tagIds = [];
+      _tagFilterLogic = TagFilterLogic.and;
     });
   }
 
@@ -340,6 +477,8 @@ class _TransactionFilterDialogState extends ConsumerState<TransactionFilterDialo
       maxAmount: _maxAmountController.text.isEmpty 
           ? null 
           : double.tryParse(_maxAmountController.text),
+      tagIds: _tagIds,
+      tagFilterLogic: _tagFilterLogic,
     );
     
     ref.read(transactionFilterProvider.notifier).setFilter(filter);
