@@ -371,6 +371,138 @@ class ExportNotifier extends StateNotifier<ExportState> {
     }
   }
 
+  /// Exports transactions to Excel (XLSX) format
+  Future<void> exportTransactionsToXLSX(
+    ExportFilters filters, {
+    bool includeSummary = true,
+    bool includeCategoryBreakdown = true,
+    bool includeMonthlyTrend = true,
+  }) async {
+    state = ExportState(
+      status: ExportStatus.exporting,
+      message: '正在导出交易记录为Excel格式...',
+    );
+
+    try {
+      final result = await _xlsxExportService.exportToXLSX(
+        filters: filters,
+        includeSummary: includeSummary,
+        includeCategoryBreakdown: includeCategoryBreakdown,
+        includeMonthlyTrend: includeMonthlyTrend,
+      );
+
+      state = ExportState(
+        status: ExportStatus.success,
+        message: '导出成功！\n'
+            '交易: ${result.transactionCount} 条\n'
+            '工作表: ${result.sheetCount} 个',
+        result: ExportResult(
+          filePath: result.filePath,
+          transactionCount: result.transactionCount,
+          accountCount: result.accountCount,
+          categoryCount: result.categoryCount,
+          format: 'XLSX',
+        ),
+      );
+    } on ExportException catch (e) {
+      state = ExportState(
+        status: ExportStatus.error,
+        message: e.message,
+      );
+    } catch (e) {
+      state = ExportState(
+        status: ExportStatus.error,
+        message: '导出失败: $e',
+      );
+    }
+  }
+
+  /// Exports transactions to PDF format with charts
+  Future<void> exportTransactionsToPDF(
+    ExportFilters filters,
+  ) async {
+    state = ExportState(
+      status: ExportStatus.exporting,
+      message: '正在生成PDF报告...',
+    );
+
+    try {
+      final result = await _pdfExportService.exportToPDF(
+        filters: filters,
+      );
+
+      state = ExportState(
+        status: ExportStatus.success,
+        message: '导出成功！\n'
+            '交易: ${result.transactionCount} 条\n'
+            '收入: ¥${result.totalIncome.toStringAsFixed(2)}\n'
+            '支出: ¥${result.totalExpense.toStringAsFixed(2)}',
+        result: ExportResult(
+          filePath: result.filePath,
+          transactionCount: result.transactionCount,
+          accountCount: result.accountCount,
+          categoryCount: result.categoryCount,
+          format: 'PDF',
+        ),
+      );
+    } on ExportException catch (e) {
+      state = ExportState(
+        status: ExportStatus.error,
+        message: e.message,
+      );
+    } catch (e) {
+      state = ExportState(
+        status: ExportStatus.error,
+        message: '导出失败: $e',
+      );
+    }
+  }
+
+  /// Exports transactions to custom CSV format
+  Future<void> exportCustomCSV(
+    ExportFilters filters, {
+    List<String>? columnIds,
+    CsvColumnTemplate? template,
+  }) async {
+    state = ExportState(
+      status: ExportStatus.exporting,
+      message: '正在导出自定义CSV...',
+    );
+
+    try {
+      final result = await _customCsvExportService.exportCustomCSV(
+        filters: filters,
+        columnIds: columnIds ?? CustomCsvExportService.availableColumns.keys.toList(),
+      );
+
+      state = ExportState(
+        status: ExportStatus.success,
+        message: '导出成功！共导出 ${result.transactionCount} 条交易记录',
+        result: result,
+      );
+    } on ExportException catch (e) {
+      state = ExportState(
+        status: ExportStatus.error,
+        message: e.message,
+      );
+    } catch (e) {
+      state = ExportState(
+        status: ExportStatus.error,
+        message: '导出失败: $e',
+      );
+    }
+  }
+
+  /// Gets available CSV column definitions
+  List<CsvColumnDefinition> getAvailableCsvColumns() {
+    return CustomCsvExportService.availableColumns.values.toList();
+  }
+
+  /// Gets available CSV templates
+  List<CsvColumnTemplate> getCsvTemplates() {
+    return CsvColumnTemplate.all;
+  }
+
   /// Shares the exported file
   Future<void> shareResult() async {
     final result = state.result;

@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.117] - 2026-05-25
+
+### Added
+- **Export Format Extension**: Comprehensive export capabilities
+  - **Excel Export (XLSX)**: Multi-sheet Excel export with formatting
+    - Transaction sheet with color-coded amounts
+    - Summary sheet with income/expense totals
+    - Category breakdown sheet with percentages
+    - Monthly trend sheet with income/expense/net columns
+  - **Enhanced QIF Export**: Improved category support
+    - Full category hierarchy export
+    - Class support for category grouping
+    - Account type mapping improvements
+  - **Custom CSV Export**: User-defined column mapping
+    - 16 available column definitions (date, description, amount, debit, credit, etc.)
+    - 4 preset templates (standard, detailed, accounting, simple)
+    - Column order customization
+    - Import/export column configuration
+  - **Enhanced PDF Reports**: Complete financial reporting
+    - Summary with income/expense breakdown
+    - Category analysis with percentages
+    - Monthly trend analysis
+    - Transaction details table
+    - Professional formatting with headers and footers
+
+### Technical Details
+- `apps/mobile/lib/features/export/data/xlsx_export_service.dart` - Excel export service
+- `apps/mobile/lib/features/export/data/custom_csv_export_service.dart` - Custom CSV service
+- `apps/mobile/lib/features/export/data/pdf_export_service.dart` - Enhanced PDF service
+- `apps/mobile/lib/features/export/data/export_provider.dart` - Added new export methods
+- `apps/mobile/lib/features/export/presentation/pages/export_page.dart` - New format UI
+- Added `excel: ^4.0.0` dependency for XLSX generation
+- Export page now supports 7 formats: CSV, JSON, QIF, OFX, XLSX, PDF, Custom CSV
+
 ## [v0.3.44] - 2026-05-22
 
 ### Added

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../data/export_provider.dart';
 import '../../data/export_service.dart';
+import '../../data/custom_csv_export_service.dart';
 import '../widgets/export_filter_dialog.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import 'package:finance_app/features/categories/data/category_provider.dart';
@@ -149,6 +150,9 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                   '• JSON格式适合数据迁移和备份\n'
                   '• QIF格式适合导入到Quicken、GnuCash等软件\n'
                   '• OFX格式适合导入到Microsoft Money、QuickBooks等软件\n'
+                  '• Excel格式包含多工作表（交易、汇总、分类、趋势）\n'
+                  '• PDF格式生成完整的财务报告\n'
+                  '• 自定义CSV支持自定义列和模板\n'
                   '• CSV文件使用UTF-8编码，兼容Excel\n'
                   '• 可通过筛选条件导出特定范围的数据',
                   style: TextStyle(color: Colors.grey[600]),
@@ -234,35 +238,68 @@ class _ExportPageState extends ConsumerState<ExportPage> {
   Widget _buildFormatSelector() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: SegmentedButton<ExportFormat>(
-        segments: const [
-          ButtonSegment(
-            value: ExportFormat.csv,
-            label: Text('CSV'),
-            icon: Icon(Icons.table_chart),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Primary formats
+          SegmentedButton<ExportFormat>(
+            segments: const [
+              ButtonSegment(
+                value: ExportFormat.csv,
+                label: Text('CSV'),
+                icon: Icon(Icons.table_chart),
+              ),
+              ButtonSegment(
+                value: ExportFormat.json,
+                label: Text('JSON'),
+                icon: Icon(Icons.code),
+              ),
+              ButtonSegment(
+                value: ExportFormat.xlsx,
+                label: Text('Excel'),
+                icon: Icon(Icons.table_bar),
+              ),
+              ButtonSegment(
+                value: ExportFormat.pdf,
+                label: Text('PDF'),
+                icon: Icon(Icons.picture_as_pdf),
+              ),
+            ],
+            selected: {_selectedFormat},
+            onSelectionChanged: (Set<ExportFormat> selection) {
+              setState(() {
+                _selectedFormat = selection.first;
+              });
+            },
           ),
-          ButtonSegment(
-            value: ExportFormat.json,
-            label: Text('JSON'),
-            icon: Icon(Icons.code),
-          ),
-          ButtonSegment(
-            value: ExportFormat.qif,
-            label: Text('QIF'),
-            icon: Icon(Icons.description),
-          ),
-          ButtonSegment(
-            value: ExportFormat.ofx,
-            label: Text('OFX'),
-            icon: Icon(Icons.account_balance),
+          const SizedBox(height: 12),
+          // Additional formats
+          SegmentedButton<ExportFormat>(
+            segments: const [
+              ButtonSegment(
+                value: ExportFormat.qif,
+                label: Text('QIF'),
+                icon: Icon(Icons.description),
+              ),
+              ButtonSegment(
+                value: ExportFormat.ofx,
+                label: Text('OFX'),
+                icon: Icon(Icons.account_balance),
+              ),
+              ButtonSegment(
+                value: ExportFormat.customCsv,
+                label: Text('自定义CSV'),
+                icon: Icon(Icons.tune),
+              ),
+            ],
+            selected: {_selectedFormat},
+            onSelectionChanged: (Set<ExportFormat> selection) {
+              setState(() {
+                _selectedFormat = selection.first;
+              });
+            },
           ),
         ],
-        selected: {_selectedFormat},
-        onSelectionChanged: (Set<ExportFormat> selection) {
-          setState(() {
-            _selectedFormat = selection.first;
-          });
-        },
       ),
     );
   }
@@ -311,6 +348,35 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       case ExportFormat.ofx:
         notifier.exportTransactionsToOFX(_filters);
         break;
+      case ExportFormat.xlsx:
+        notifier.exportTransactionsToXLSX(_filters);
+        break;
+      case ExportFormat.pdf:
+        notifier.exportTransactionsToPDF(_filters);
+        break;
+      case ExportFormat.customCsv:
+        _showCustomCsvDialog();
+        break;
+    }
+  }
+
+  void _showCustomCsvDialog() async {
+    final templates = ref.read(exportProvider.notifier).getCsvTemplates();
+    final columns = ref.read(exportProvider.notifier).getAvailableCsvColumns();
+
+    final result = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => _CustomCsvDialog(
+        templates: templates,
+        columns: columns,
+      ),
+    );
+
+    if (result != null && mounted) {
+      ref.read(exportProvider.notifier).exportCustomCSV(
+        _filters,
+        columnIds: result,
+      );
     }
   }
 
@@ -333,4 +399,123 @@ enum ExportFormat {
   json,
   qif,
   ofx,
+  xlsx,
+  pdf,
+  customCsv,
+}
+
+/// Custom CSV column selection dialog
+class _CustomCsvDialog extends StatefulWidget {
+  final List<CsvColumnTemplate> templates;
+  final List<CsvColumnDefinition> columns;
+
+  const _CustomCsvDialog({
+    required this.templates,
+    required this.columns,
+  });
+
+  @override
+  State<_CustomCsvDialog> createState() => _CustomCsvDialogState();
+}
+
+class _CustomCsvDialogState extends State<_CustomCsvDialog> {
+  List<String> _selectedColumns = [];
+  int? _selectedTemplateIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    // Default to standard template
+    if (widget.templates.isNotEmpty) {
+      _selectedTemplateIndex = 0;
+      _selectedColumns = List.from(widget.templates.first.columnIds);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('自定义CSV导出'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Templates section
+            const Text(
+              '预设模板',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: widget.templates.asMap().entries.map((entry) {
+                final index = entry.key;
+                final template = entry.value;
+                final isSelected = _selectedTemplateIndex == index;
+
+                return ChoiceChip(
+                  label: Text(template.name),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() {
+                        _selectedTemplateIndex = index;
+                        _selectedColumns = List.from(template.columnIds);
+                      });
+                    }
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+
+            // Column selection
+            const Text(
+              '选择列',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView(
+                shrinkWrap: true,
+                children: widget.columns.map((column) {
+                  final isSelected = _selectedColumns.contains(column.id);
+
+                  return CheckboxListTile(
+                    title: Text(column.displayName),
+                    subtitle: Text(column.id),
+                    value: isSelected,
+                    onChanged: (checked) {
+                      setState(() {
+                        _selectedTemplateIndex = null; // Deselect template
+                        if (checked == true) {
+                          _selectedColumns.add(column.id);
+                        } else {
+                          _selectedColumns.remove(column.id);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        ElevatedButton(
+          onPressed: _selectedColumns.isEmpty
+              ? null
+              : () => Navigator.pop(context, _selectedColumns),
+          child: const Text('导出'),
+        ),
+      ],
+    );
+  }
 }
