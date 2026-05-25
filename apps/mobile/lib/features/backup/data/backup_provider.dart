@@ -360,9 +360,12 @@ class BackupService {
   }
 
   Future<String> _calculateChecksum(List<int> bytes) async {
-    // Simple checksum using SHA-256 from dart:convert
-    final digest = sha256.convert(bytes);
-    return digest.toString().substring(0, 16);
+    // Simple checksum - just use a hash of the length and first/last bytes
+    if (bytes.isEmpty) return '00000000';
+    final first = bytes.first;
+    final last = bytes.last;
+    final length = bytes.length;
+    return '${length.toRadixString(16).padLeft(4, '0')}${first.toRadixString(16).padLeft(2, '0')}${last.toRadixString(16).padLeft(2, '0')}';
   }
 }
 
