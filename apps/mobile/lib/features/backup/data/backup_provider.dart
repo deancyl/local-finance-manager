@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:archive/archive.dart';
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart' as uuid_pkg;
 import 'package:intl/intl.dart';
 
 import 'package:database/database.dart';
@@ -118,7 +118,7 @@ enum BackupFrequency {
 /// Backup service for creating and restoring backups
 class BackupService {
   final LocalFinanceDatabase _db;
-  final Uuid _uuid = const Uuid();
+  final uuid_pkg.Uuid _uuid = const uuid_pkg.Uuid();
 
   BackupService(this._db);
 

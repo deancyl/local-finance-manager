@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart' as uuid_pkg;
 
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
@@ -28,7 +28,7 @@ enum AuditOperation {
 /// Service for recording and querying audit logs
 class AuditService {
   final LocalFinanceDatabase _db;
-  final Uuid _uuid = const Uuid();
+  final uuid_pkg.Uuid _uuid = const uuid_pkg.Uuid();
   
   /// Current session ID for grouping related changes
   String? _currentSessionId;

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:database/database.dart';
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart' as uuid_pkg;
 import '../../data/cost_center_provider.dart';
 
 /// Dialog for adding/editing cost centers.
@@ -43,7 +43,7 @@ class _AddCostCenterDialogState extends ConsumerState<AddCostCenterDialog> {
       _isActive = widget.costCenter!.isActive;
       _sortOrder = widget.costCenter!.sortOrder;
     } else {
-      _idController.text = const Uuid().v4().substring(0, 8).toUpperCase();
+      _idController.text = const uuid_pkg.Uuid().v4().substring(0, 8).toUpperCase();
     }
   }
 

@@ -4,7 +4,7 @@ import 'package:csv/csv.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart' as uuid_pkg;
 import 'package:database/database.dart';
 
 /// CSV validation result
@@ -325,8 +325,8 @@ class ImportService {
             }
 
             // Create transaction
-            final transactionId = const Uuid().v4();
-            final splitId = const Uuid().v4();
+            final transactionId = const uuid_pkg.Uuid().v4();
+            final splitId = const uuid_pkg.Uuid().v4();
             final now = DateTime.now().millisecondsSinceEpoch;
             final amountNum = (amount * 100).round();
 
@@ -648,7 +648,7 @@ class ImportService {
           final splitData = s as Map<String, dynamic>;
           await _db.into(_db.splits).insert(
             SplitsCompanion.insert(
-              id: splitData['id'] as String? ?? const Uuid().v4(),
+              id: splitData['id'] as String? ?? const uuid_pkg.Uuid().v4(),
               transactionId: id,
               accountId: splitData['accountId'] as String,
               categoryId: drift.Value(splitData['categoryId'] as String?),
