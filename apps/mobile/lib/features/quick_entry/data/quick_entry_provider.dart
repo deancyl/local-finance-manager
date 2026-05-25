@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart' as uuid_pkg;
 
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
@@ -146,7 +146,7 @@ class QuickEntryNotifier extends StateNotifier<QuickEntryState> {
     if (!state.isValid) return null;
 
     try {
-      final transactionId = const Uuid().v4();
+      final transactionId = const uuid_pkg.Uuid().v4();
       final now = DateTime.now().millisecondsSinceEpoch;
       final postDate = state.date.millisecondsSinceEpoch;
       final amountNum = ((state.amount ?? 0) * 100).round();
@@ -196,7 +196,7 @@ class QuickEntryNotifier extends StateNotifier<QuickEntryState> {
     int amountNum,
     int now,
   ) async {
-    final splitId = const Uuid().v4();
+    final splitId = const uuid_pkg.Uuid().v4();
 
     await _db.into(_db.splits).insert(
       SplitsCompanion.insert(
@@ -216,8 +216,8 @@ class QuickEntryNotifier extends StateNotifier<QuickEntryState> {
     int amountNum,
     int now,
   ) async {
-    final fromSplitId = const Uuid().v4();
-    final toSplitId = const Uuid().v4();
+    final fromSplitId = const uuid_pkg.Uuid().v4();
+    final toSplitId = const uuid_pkg.Uuid().v4();
 
     // From account (debit)
     await _db.into(_db.splits).insert(

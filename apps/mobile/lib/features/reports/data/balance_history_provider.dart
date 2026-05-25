@@ -224,7 +224,7 @@ Future<Map<String, double>> _calculateBalancesAsOfDate(
   
   // Get all transactions to filter by date
   final transactions = await (db.select(db.transactions)
-    ..where((t) => t.postDate.isSmallerOrEqual(asOfDateMs))
+    ..where((t) => t.postDate <= asOfDateMs)
     ..where((t) => t.deletedAt.isNull()))
     .get();
   

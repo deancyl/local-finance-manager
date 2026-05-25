@@ -516,14 +516,21 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
           ),
           FilledButton(
             onPressed: () async {
-              // Update transaction notes using the correct fields
-              await ref.read(transactionNotifierProvider.notifier).updateTransaction(
-                transaction.id,
-                TransactionsCompanion(
-                  notes: drift.Value(noteController.text.isNotEmpty ? noteController.text : null),
-                  updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
-                ),
-              );
+              // Update transaction notes
+              // Get the first split for this transaction
+              final splits = await ref.read(databaseProvider).select(db.splits)
+                  .where((s) => s.transactionId.equals(transaction.id))
+                  .get();
+              
+              if (splits.isNotEmpty) {
+                final updatedSplit = splits.first.copyWith(
+                  memo: drift.Value(noteController.text.isNotEmpty ? noteController.text : null),
+                );
+                await ref.read(transactionNotifierProvider.notifier).updateTransaction(
+                  transaction,
+                  updatedSplit,
+                );
+              }
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('备注已添加')),
