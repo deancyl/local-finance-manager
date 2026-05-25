@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../data/template_provider.dart';
+import '../../data/template_provider.dart';
 
 /// Template card widget for displaying transaction templates
 class TemplateCard extends ConsumerWidget {

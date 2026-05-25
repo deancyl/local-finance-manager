@@ -109,7 +109,7 @@ class _TagAutocompleteSelectorState extends ConsumerState<TagAutocompleteSelecto
         ),
         
         // Suggestions dropdown
-        if (_showSuggestions) {
+        if (_showSuggestions) ...[
           const SizedBox(height: 4),
           _buildSuggestionsDropdown(allTagsAsync, statsAsync),
         ],
@@ -117,7 +117,7 @@ class _TagAutocompleteSelectorState extends ConsumerState<TagAutocompleteSelecto
         const SizedBox(height: 12),
         
         // Selected tags chips
-        if (_selectedTagIds.isNotEmpty) {
+        if (_selectedTagIds.isNotEmpty) ...[
           Text(
             '已选择 ${_selectedTagIds.length} 个标签',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(

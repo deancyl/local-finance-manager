@@ -109,7 +109,7 @@ Future<void> _checkRecurringReminders() async {
         final prefs = await SharedPreferences.getInstance();
         final reminderKey = 'recurring_reminder_${recurring.id}_${nextDate.millisecondsSinceEpoch}';
         
-        if (!prefs.getBool(reminderKey, false)) {
+        if (!prefs.getBool(reminderKey) ?? false) {
           // Send reminder
           await _showReminderNotification(
             notifications,

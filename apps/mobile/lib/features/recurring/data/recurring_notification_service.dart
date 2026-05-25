@@ -219,7 +219,7 @@ class RecurringNotificationService {
           // Check if we already sent this reminder
           final reminderKey = 'recurring_reminder_${recurring.id}_${nextDate.millisecondsSinceEpoch}';
 
-          if (!prefs.getBool(reminderKey, false)) {
+          if (!(prefs.getBool(reminderKey) ?? false)) {
             // Send reminder
             await showUpcomingReminder(
               recurringId: recurring.id,
@@ -257,7 +257,7 @@ class RecurringNotificationService {
         // Only notify once per day for overdue
         final overdueKey = 'recurring_overdue_${recurring.id}_${DateTime.now().day}';
         
-        if (!prefs.getBool(overdueKey, false)) {
+        if (!(prefs.getBool(overdueKey) ?? false)) {
           await showOverdueNotification(
             recurringId: recurring.id,
             recurringName: recurring.name,

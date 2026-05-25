@@ -1,4 +1,5 @@
 part of '../database.dart';
+import 'package:drift/drift.dart' as drift;
 
 /// Data Access Object for tags.
 @DriftAccessor(tables: [Tags, TransactionTags, Transactions])
@@ -167,7 +168,7 @@ class TagsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TagsDaoMixin
     
     return (select(tags)
           ..where((t) => t.name.like(searchPattern) & t.deletedAt.isNull())
-          ..orderBy([(t) => drift.OrderingTerm.desc(t.usageCount)])
+          ..orderBy([(t) => OrderingTerm.desc(t.usageCount)])
           ..limit(limit))
         .watch();
   }
@@ -285,7 +286,7 @@ class TagsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TagsDaoMixin
     
     query.where(tags.deletedAt.isNull());
     query.groupBy([tags.id]);
-    query.orderBy([drift.OrderingTerm.desc(tags.usageCount)]);
+    query.orderBy([OrderingTerm.desc(tags.usageCount)]);
     
     return query.watch().map((rows) {
       return rows.map((row) {
@@ -299,7 +300,7 @@ class TagsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TagsDaoMixin
   Future<List<Tag>> getPopularTags({int limit = 10}) async {
     return (select(tags)
           ..where((t) => t.deletedAt.isNull() & t.usageCount.isBiggerOrEqualValue(0))
-          ..orderBy([(t) => drift.OrderingTerm.desc(t.usageCount)])
+          ..orderBy([(t) => OrderingTerm.desc(t.usageCount)])
           ..limit(limit))
         .get();
   }

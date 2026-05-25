@@ -359,13 +359,13 @@ final accountBalanceInBaseCurrencyProvider = FutureProvider.family<double, Strin
   final account = await (db.select(db.accounts)..where((a) => a.id.equals(accountId))).getSingleOrNull();
   if (account == null) return 0.0;
   
-  // Get account balance from transactions
-  final transactions = await (db.select(db.transactions)
-    ..where((t) => t.accountId.equals(accountId))).get();
+  // Get account balance from splits (not transactions directly)
+  final splits = await (db.select(db.splits)
+    ..where((s) => s.accountId.equals(accountId))).get();
   
   double balance = 0.0;
-  for (final txn in transactions) {
-    final amount = txn.amount;
+  for (final split in splits) {
+    final amount = split.valueNum / split.valueDenom.toDouble();
     if (account.commodityId == 'CNY') {
       balance += amount;
     } else {

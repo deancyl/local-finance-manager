@@ -36,8 +36,9 @@ import '../../features/reconciliation/presentation/pages/reconciliation_page.dar
 import '../../features/settings/presentation/pages/currency_settings_page.dart';
 import '../../features/closing/presentation/pages/period_closing_page.dart';
 import '../../features/currency/presentation/pages/exchange_rates_page.dart';
-import '../../features/templates/presentation/pages/template_list_page.dart';
+import '../../features/templates/presentation/pages/template_list_page.dart' hide TemplateListPage;
 import '../../features/templates/presentation/template_page.dart';
+import '../../features/templates/data/template_provider.dart' show TemplateModel;
 // Sync temporarily disabled - PowerSync compatibility issues
 // import '../../features/sync/presentation/pages/sync_settings_page.dart';
 // import '../../features/sync/presentation/pages/sync_login_page.dart';
