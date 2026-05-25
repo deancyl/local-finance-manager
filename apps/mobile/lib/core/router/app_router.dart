@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/accounts/presentation/pages/accounts_page.dart';
+import '../../features/accounts/presentation/pages/account_hierarchy_page.dart';
 import '../../features/transactions/presentation/pages/transactions_page.dart';
 import '../../features/transactions/presentation/pages/add_transaction_page.dart';
 import '../../features/transactions/data/transaction_filter.dart';
@@ -32,8 +33,11 @@ import '../../features/recurring/presentation/pages/recurring_page.dart';
 import '../../features/attachments/presentation/pages/attachments_page.dart';
 import '../../features/attachments/presentation/pages/attachment_viewer_page.dart';
 import '../../features/reconciliation/presentation/pages/reconciliation_page.dart';
+import '../../features/settings/presentation/pages/currency_settings_page.dart';
 import '../../features/closing/presentation/pages/period_closing_page.dart';
 import '../../features/currency/presentation/pages/exchange_rates_page.dart';
+import '../../features/templates/presentation/pages/template_list_page.dart';
+import '../../features/templates/presentation/template_page.dart';
 // Sync temporarily disabled - PowerSync compatibility issues
 // import '../../features/sync/presentation/pages/sync_settings_page.dart';
 // import '../../features/sync/presentation/pages/sync_login_page.dart';
@@ -140,6 +144,11 @@ GoRouter _createRouter(Ref ref) {
             builder: (context, state) => const AccountsPage(),
           ),
           GoRoute(
+            path: '/accounts/hierarchy',
+            name: 'account-hierarchy',
+            builder: (context, state) => const AccountHierarchyPage(),
+          ),
+          GoRoute(
             path: '/budgets',
             name: 'budgets',
             builder: (context, state) => const BudgetsPage(),
@@ -241,9 +250,22 @@ GoRouter _createRouter(Ref ref) {
         builder: (context, state) => const RecurringPage(),
       ),
       GoRoute(
+        path: '/settings/templates',
+        name: 'templates',
+        builder: (context, state) => const TemplateListPage(),
+      ),
+      GoRoute(
+        path: '/settings/templates/edit',
+        name: 'template-edit',
+        builder: (context, state) {
+          final template = state.extra as TemplateModel?;
+          return TemplateEditPage(template: template);
+        },
+      ),
+      GoRoute(
         path: '/settings/currency',
         name: 'currency',
-        builder: (context, state) => const ExchangeRatesPage(),
+        builder: (context, state) => const CurrencySettingsPage(),
       ),
       GoRoute(
         path: '/import',

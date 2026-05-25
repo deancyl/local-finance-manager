@@ -258,3 +258,123 @@ final currencyConverterProvider = Provider<CurrencyConverter>((ref) {
   final ratesMap = ref.watch(exchangeRatesMapProvider);
   return CurrencyConverter(db, ratesMap);
 });
+
+/// Currency display formatter - shows amount in original and base currency
+class CurrencyDisplayFormatter {
+  final CurrencyConverter converter;
+  final String baseCurrency;
+
+  CurrencyDisplayFormatter(this.converter, this.baseCurrency);
+
+  /// Format amount with dual currency display
+  /// Returns "¥100 (≈ $14.50)" format
+  Future<String> formatDual(
+    double amount,
+    String originalCurrency, {
+    bool showBaseAlways = false,
+  }) async {
+    if (originalCurrency == baseCurrency) {
+      return _formatAmount(amount, originalCurrency);
+    }
+
+    final baseAmount = await converter.convert(amount, originalCurrency, baseCurrency);
+    if (baseAmount == null) {
+      return _formatAmount(amount, originalCurrency);
+    }
+
+    final originalFormatted = _formatAmount(amount, originalCurrency);
+    final baseFormatted = _formatAmount(baseAmount, baseCurrency);
+
+    return '$originalFormatted (≈ $baseFormatted)';
+  }
+
+  /// Format amount with conversion rate info
+  Future<String> formatWithRate(
+    double amount,
+    String originalCurrency,
+  ) async {
+    if (originalCurrency == baseCurrency) {
+      return _formatAmount(amount, originalCurrency);
+    }
+
+    final rate = await converter.convert(1, originalCurrency, baseCurrency);
+    if (rate == null) {
+      return _formatAmount(amount, originalCurrency);
+    }
+
+    final baseAmount = amount * rate;
+    final originalFormatted = _formatAmount(amount, originalCurrency);
+    final baseFormatted = _formatAmount(baseAmount, baseCurrency);
+
+    return '$originalFormatted\n(≈ $baseFormatted @ ${rate.toStringAsFixed(4)})';
+  }
+
+  String _formatAmount(double amount, String currency) {
+    final symbol = _getCurrencySymbol(currency);
+    return '$symbol${amount.toStringAsFixed(2)}';
+  }
+
+  String _getCurrencySymbol(String currency) {
+    const symbols = {
+      'CNY': '¥',
+      'USD': '\$',
+      'EUR': '€',
+      'GBP': '£',
+      'JPY': '¥',
+      'KRW': '₩',
+      'HKD': 'HK\$',
+      'SGD': 'S\$',
+      'AUD': 'A\$',
+      'CAD': 'C\$',
+      'CHF': 'CHF',
+      'THB': '฿',
+      'MYR': 'RM',
+    };
+    return symbols[currency] ?? currency;
+  }
+}
+
+/// Provider for currency display formatter
+final currencyDisplayFormatterProvider = Provider<CurrencyDisplayFormatter>((ref) {
+  final converter = ref.watch(currencyConverterProvider);
+  // Default base currency - in real app, this would be from settings
+  return CurrencyDisplayFormatter(converter, 'CNY');
+});
+
+/// Provider for converting amounts for reports
+/// Takes a list of amounts with their currencies and converts all to base currency
+final convertToBaseCurrencyProvider = FutureProvider.family<double, ({double amount, String currency})>((ref, params) async {
+  final converter = ref.watch(currencyConverterProvider);
+  if (params.currency == 'CNY') return params.amount;
+  final result = await converter.convert(params.amount, params.currency, 'CNY');
+  return result ?? params.amount;
+});
+
+/// Provider for account currency balance (converts to base currency)
+final accountBalanceInBaseCurrencyProvider = FutureProvider.family<double, String>((ref, accountId) async {
+  final db = ref.watch(databaseProvider);
+  final converter = ref.watch(currencyConverterProvider);
+  
+  // Get account with its currency
+  final account = await (db.select(db.accounts)..where((a) => a.id.equals(accountId))).getSingleOrNull();
+  if (account == null) return 0.0;
+  
+  // Get account balance from transactions
+  final transactions = await (db.select(db.transactions)
+    ..where((t) => t.accountId.equals(accountId))).get();
+  
+  double balance = 0.0;
+  for (final txn in transactions) {
+    final amount = txn.amount;
+    if (account.commodityId == 'CNY') {
+      balance += amount;
+    } else {
+      final converted = await converter.convert(amount, account.commodityId, 'CNY');
+      if (converted != null) {
+        balance += converted;
+      }
+    }
+  }
+  
+  return balance;
+});
