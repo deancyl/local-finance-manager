@@ -7,6 +7,7 @@ import 'package:database/database.dart' as db;
 import 'package:finance_app/features/reports/data/chart_providers.dart';
 import 'package:finance_app/features/reports/presentation/widgets/monthly_trend_chart.dart';
 import 'package:finance_app/features/reports/presentation/widgets/category_breakdown_chart.dart';
+import 'package:finance_app/features/reports/presentation/widgets/asset_trend_chart.dart';
 import 'package:finance_app/features/transactions/data/transaction_filter.dart';
 
 class ReportsPage extends ConsumerWidget {
@@ -65,6 +66,8 @@ class ReportsPage extends ConsumerWidget {
                 _buildMonthlyTrendSection(context, monthlyTrendAsync),
                 const SizedBox(height: 24),
                 _buildCategoryBreakdownSection(context, categoryBreakdownAsync),
+                const SizedBox(height: 24),
+                _buildAssetTrendSection(context),
               ],
             ),
           );
@@ -324,6 +327,30 @@ class ReportsPage extends ConsumerWidget {
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Center(child: Text('加载失败: $error')),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAssetTrendSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '资产负债趋势',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              height: 400,
+              child: const AssetTrendChart(),
             ),
           ),
         ),
