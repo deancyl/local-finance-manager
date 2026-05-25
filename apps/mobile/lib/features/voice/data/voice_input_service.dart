@@ -52,7 +52,7 @@ class VoiceInputService {
           (locale) => locale.localeId.startsWith('zh'),
           orElse: () => _availableLocales.isNotEmpty 
               ? _availableLocales.first 
-              : const stt.LocaleName('zh_CN', '中文'),
+              : stt.LocaleName('zh_CN', '中文'),
         );
         _selectedLocaleId = chineseLocale.localeId;
       }

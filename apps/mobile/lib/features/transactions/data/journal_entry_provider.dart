@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart' as uuid_pkg;
 
 import 'package:core/core.dart';
 import 'package:database/database.dart' hide Account;
@@ -128,11 +128,11 @@ class JournalEntryState {
 class JournalEntryNotifier extends StateNotifier<JournalEntryState> {
   final Ref _ref;
   final JournalEntryValidator _validator;
-  final Uuid _uuid;
+  final uuid_pkg.Uuid _uuid;
 
   JournalEntryNotifier(this._ref)
       : _validator = JournalEntryValidator(),
-        _uuid = const Uuid(),
+        _uuid = const uuid_pkg.Uuid(),
         super(const JournalEntryState()) {
     // Initialize with two empty splits
     _initializeSplits();

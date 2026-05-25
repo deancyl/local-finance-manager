@@ -21,8 +21,19 @@ import 'quick_amount_input.dart';
 
 class AddTransactionDialog extends ConsumerStatefulWidget {
   final Transaction? transaction;
+  final bool isDuplicate;
+  final String? originalDescription;
+  final String? originalNotes;
+  final String? originalCurrencyId;
 
-  const AddTransactionDialog({super.key, this.transaction});
+  const AddTransactionDialog({
+    super.key,
+    this.transaction,
+    this.isDuplicate = false,
+    this.originalDescription,
+    this.originalNotes,
+    this.originalCurrencyId,
+  });
 
   @override
   ConsumerState<AddTransactionDialog> createState() => _AddTransactionDialogState();

@@ -466,7 +466,7 @@ class _MonthlyTrendChartState extends State<MonthlyTrendChart>
   }
   
   void _handleBarTap(String monthLabel) {
-    if (onBarTap == null) return;
+    if (widget.onBarTap == null) return;
     
     // Parse monthLabel (format: "YYYY-MM")
     final parts = monthLabel.split('-');
@@ -485,6 +485,6 @@ class _MonthlyTrendChartState extends State<MonthlyTrendChart>
       endDate: endDate,
     );
     
-    onBarTap!(filter);
+    widget.onBarTap!(filter);
   }
 }

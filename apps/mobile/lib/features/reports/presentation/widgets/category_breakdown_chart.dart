@@ -359,12 +359,12 @@ class _CategoryBreakdownChartState extends State<CategoryBreakdownChart>
   }
   
   void _handleCategoryTap(String categoryId) {
-    if (onCategoryTap == null) return;
+    if (widget.onCategoryTap == null) return;
     
     final filter = TransactionFilter(
       categoryId: categoryId,
     );
     
-    onCategoryTap!(filter);
+    widget.onCategoryTap!(filter);
   }
 }

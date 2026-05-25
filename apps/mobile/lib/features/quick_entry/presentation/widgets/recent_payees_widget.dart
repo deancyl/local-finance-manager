@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/quick_actions_provider.dart';
+import '../../data/quick_actions_provider.dart';
 
 /// Recent payees quick selector
 /// 

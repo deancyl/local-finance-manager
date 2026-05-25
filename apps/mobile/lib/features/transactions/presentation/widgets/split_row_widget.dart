@@ -20,6 +20,7 @@ extension AccountTypeEntrySide on domain.AccountType {
     switch (this) {
       case domain.AccountType.asset:
       case domain.AccountType.expense:
+      case domain.AccountType.investment:
         return EntrySide.debit;
       case domain.AccountType.liability:
       case domain.AccountType.equity:
@@ -418,6 +419,8 @@ class _SplitRowWidgetState extends State<SplitRowWidget> {
         return Icons.trending_up;
       case domain.AccountType.expense:
         return Icons.shopping_cart;
+      case domain.AccountType.investment:
+        return Icons.show_chart;
       case null:
         return Icons.folder;
     }
@@ -435,6 +438,8 @@ class _SplitRowWidgetState extends State<SplitRowWidget> {
         return Colors.blue;
       case domain.AccountType.expense:
         return Colors.orange;
+      case domain.AccountType.investment:
+        return Colors.teal;
       case null:
         return theme.colorScheme.onSurfaceVariant;
     }

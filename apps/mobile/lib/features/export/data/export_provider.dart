@@ -709,3 +709,9 @@ final importServiceProvider = Provider<ImportService>((ref) {
   final db = ref.watch(databaseProvider);
   return ImportService(db);
 });
+
+/// Provider for PDF export service
+final pdfExportServiceProvider = Provider<PdfExportService>((ref) {
+  final db = ref.watch(databaseProvider);
+  return PdfExportService(db);
+});

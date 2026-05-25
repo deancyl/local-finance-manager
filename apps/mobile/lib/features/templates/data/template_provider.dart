@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart' as uuid_pkg;
 
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
@@ -155,7 +155,7 @@ class TemplateNotifier extends StateNotifier<AsyncValue<void>> {
   }) async {
     state = const AsyncValue.loading();
     try {
-      final id = const Uuid().v4();
+      final id = const uuid_pkg.Uuid().v4();
       final now = DateTime.now();
 
       await _db.transactionTemplatesDao.insert(

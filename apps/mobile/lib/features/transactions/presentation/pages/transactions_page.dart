@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:drift/drift.dart' as drift;
+import 'dart:typed_data';
 
 import 'package:database/database.dart';
 import 'package:finance_app/features/voice/presentation/widgets/voice_input_button.dart';
@@ -454,21 +456,19 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
 
   void _duplicateTransaction(BuildContext context, Transaction transaction) {
     // Create a duplicate transaction with current timestamp
-    final duplicatedTransaction = Transaction(
-      id: -1, // Will be assigned by database
-      guid: '', // Will be generated
-      currency: transaction.currency,
-      postDate: DateTime.now().millisecondsSinceEpoch,
-      enterDate: DateTime.now().millisecondsSinceEpoch,
-      description: '${transaction.description ?? ''} (副本)',
-      notes: transaction.notes,
-      num: transaction.num,
-    );
+    // Note: Transaction uses id (String), currencyId, and other fields
+    // The duplicate will be created via AddTransactionDialog with the original data
     
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => AddTransactionDialog(transaction: duplicatedTransaction),
+      builder: (context) => AddTransactionDialog(
+        // Pass original transaction data for duplication
+        isDuplicate: true,
+        originalDescription: transaction.description,
+        originalNotes: transaction.notes,
+        originalCurrencyId: transaction.currencyId,
+      ),
     );
     
     ScaffoldMessenger.of(context).showSnackBar(
@@ -516,18 +516,14 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
           ),
           FilledButton(
             onPressed: () async {
-              final updatedTransaction = Transaction(
-                id: transaction.id,
-                guid: transaction.guid,
-                currency: transaction.currency,
-                postDate: transaction.postDate,
-                enterDate: transaction.enterDate,
-                description: transaction.description,
-                notes: noteController.text,
-                num: transaction.num,
+              // Update transaction notes using the correct fields
+              await ref.read(transactionNotifierProvider.notifier).updateTransaction(
+                transaction.id,
+                TransactionsCompanion(
+                  notes: drift.Value(noteController.text.isNotEmpty ? noteController.text : null),
+                  updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+                ),
               );
-              
-              await ref.read(transactionNotifierProvider.notifier).updateTransaction(updatedTransaction);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('备注已添加')),

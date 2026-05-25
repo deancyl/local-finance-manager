@@ -145,9 +145,9 @@ final cashFlowForecastProvider = FutureProvider<CashFlowForecast?>((ref) async {
   // Get active recurring transactions
   final recurringAsync = ref.watch(activeRecurringTransactionsProvider);
   final recurring = recurringAsync.when(
-    data: (r) => r,
-    loading: () => [],
-    error: (_, __) => [],
+    data: (r) => r.cast<RecurringTransaction>(),
+    loading: () => <RecurringTransaction>[],
+    error: (_, __) => <RecurringTransaction>[],
   );
   
   // Get historical transactions for average calculations
@@ -161,9 +161,9 @@ final cashFlowForecastProvider = FutureProvider<CashFlowForecast?>((ref) async {
   // Get all accounts to determine asset accounts
   final accountsAsync = ref.watch(accountsProvider);
   final accounts = accountsAsync.when(
-    data: (a) => a,
-    loading: () => [],
-    error: (_, __) => [],
+    data: (a) => a.cast<Account>(),
+    loading: () => <Account>[],
+    error: (_, __) => <Account>[],
   );
   
   // Calculate starting balance (sum of asset accounts)

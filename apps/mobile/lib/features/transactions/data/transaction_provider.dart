@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart' as uuid_pkg;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:database/database.dart';
@@ -270,8 +270,8 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
   }) async {
     state = const AsyncValue.loading();
     try {
-      final transactionId = const Uuid().v4();
-      final splitId = const Uuid().v4();
+      final transactionId = const uuid_pkg.Uuid().v4();
+      final splitId = const uuid_pkg.Uuid().v4();
       final now = DateTime.now().millisecondsSinceEpoch;
       final postDate = date.millisecondsSinceEpoch;
       final amountNum = (amount * 100).round();
@@ -460,9 +460,9 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
   }) async {
     state = const AsyncValue.loading();
     try {
-      final transactionId = const Uuid().v4();
-      final fromSplitId = const Uuid().v4();
-      final toSplitId = const Uuid().v4();
+      final transactionId = const uuid_pkg.Uuid().v4();
+      final fromSplitId = const uuid_pkg.Uuid().v4();
+      final toSplitId = const uuid_pkg.Uuid().v4();
       final now = DateTime.now().millisecondsSinceEpoch;
       final postDate = date.millisecondsSinceEpoch;
       final amountNum = (amount * 100).round();

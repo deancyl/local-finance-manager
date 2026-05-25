@@ -814,6 +814,8 @@ class _GeneralLedgerPageState extends ConsumerState<GeneralLedgerPage> {
         return Icons.trending_up;
       case AccountType.expense:
         return Icons.trending_down;
+      case AccountType.investment:
+        return Icons.show_chart;
     }
   }
 
@@ -1124,6 +1126,8 @@ class _AccountSelectorDialog extends StatelessWidget {
         return Icons.trending_up;
       case AccountType.expense:
         return Icons.trending_down;
+      case AccountType.investment:
+        return Icons.show_chart;
     }
   }
 }

@@ -291,6 +291,8 @@ class _AccountTypeSectionState extends State<AccountTypeSection> {
         return Colors.blue;
       case AccountType.expense:
         return Colors.orange;
+      case AccountType.investment:
+        return Colors.teal;
     }
   }
 
@@ -306,6 +308,8 @@ class _AccountTypeSectionState extends State<AccountTypeSection> {
         return Icons.trending_up;
       case AccountType.expense:
         return Icons.shopping_cart;
+      case AccountType.investment:
+        return Icons.show_chart;
     }
   }
 

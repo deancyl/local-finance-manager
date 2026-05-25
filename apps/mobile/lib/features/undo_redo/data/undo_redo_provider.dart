@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart' as uuid_pkg;
 
 import 'package:database/database.dart';
 import '../../accounts/data/account_provider.dart';
@@ -20,7 +20,7 @@ abstract class UndoableCommand {
     String? id,
     DateTime? timestamp,
     required this.description,
-  }) : id = id ?? const Uuid().v4(),
+  }) : id = id ?? const uuid_pkg.Uuid().v4(),
        timestamp = timestamp ?? DateTime.now();
 
   /// Execute the command
@@ -921,7 +921,7 @@ extension UndoRedoExtension on UndoRedoNotifier {
     bool isPlaceholder = false,
     int sortOrder = 0,
   }) async {
-    final accountId = const Uuid().v4();
+    final accountId = const uuid_pkg.Uuid().v4();
     
     await executeCommand(
       CreateAccountCommand(

@@ -161,10 +161,24 @@ class _FinanceAppState extends ConsumerState<FinanceApp> {
   ThemeData _applyBoldText(ThemeData theme) {
     return theme.copyWith(
       textTheme: theme.textTheme.apply(
-        fontWeightDelta: 1,
+        fontFamily: null,
+      ).copyWith(
+        bodyLarge: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+        bodyMedium: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+        bodySmall: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+        titleLarge: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+        titleMedium: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+        titleSmall: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
       ),
       primaryTextTheme: theme.primaryTextTheme.apply(
-        fontWeightDelta: 1,
+        fontFamily: null,
+      ).copyWith(
+        bodyLarge: theme.primaryTextTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+        bodyMedium: theme.primaryTextTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+        bodySmall: theme.primaryTextTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+        titleLarge: theme.primaryTextTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+        titleMedium: theme.primaryTextTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+        titleSmall: theme.primaryTextTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
       ),
     );
   }
