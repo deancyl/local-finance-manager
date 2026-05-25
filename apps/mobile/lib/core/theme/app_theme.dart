@@ -81,165 +81,181 @@ class AppTheme {
     );
   }
 
-  static ThemeData lightTheme = ThemeData(
-    useMaterial3: true,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primaryColor,
-      brightness: Brightness.light,
-    ),
-    scaffoldBackgroundColor: const Color(0xFFFAFAFA),
-    appBarTheme: AppBarTheme(
-      centerTitle: true,
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      foregroundColor: Colors.black87,
-      toolbarHeight: isDesktop ? 64 : 56,
-    ),
-    cardTheme: CardTheme(
-      elevation: isWindows ? windowsCardElevation : (isDesktop ? 1 : 2),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 12),
+  /// Build light theme with optional custom accent color
+  static ThemeData buildLightTheme({Color? accentColor}) {
+    final seedColor = accentColor ?? primaryColor;
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: seedColor,
+        brightness: Brightness.light,
       ),
-      margin: isDesktop 
-          ? const EdgeInsets.symmetric(horizontal: 16, vertical: 8)
-          : null,
-    ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
+      scaffoldBackgroundColor: const Color(0xFFFAFAFA),
+      appBarTheme: AppBarTheme(
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.black87,
+        toolbarHeight: isDesktop ? 64 : 56,
+      ),
+      cardTheme: CardTheme(
+        elevation: isWindows ? windowsCardElevation : (isDesktop ? 1 : 2),
         shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 12),
+        ),
+        margin: isDesktop 
+            ? const EdgeInsets.symmetric(horizontal: 16, vertical: 8)
+            : null,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: isDesktop ? 32 : 24,
+            vertical: isDesktop ? 16 : 12,
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.grey.shade100,
+        border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
+          borderSide: BorderSide.none,
         ),
-        padding: EdgeInsets.symmetric(
-          horizontal: isDesktop ? 32 : 24,
-          vertical: isDesktop ? 16 : 12,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
+          borderSide: BorderSide(color: seedColor, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
+          borderSide: const BorderSide(color: errorColor, width: 1),
+        ),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: isDesktop ? 20 : 16,
+          vertical: isDesktop ? 20 : 16,
         ),
       ),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: Colors.grey.shade100,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
-        borderSide: BorderSide.none,
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        elevation: 4,
+        shape: isDesktop ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)) : const CircleBorder(),
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
-        borderSide: BorderSide.none,
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+        selectedLabelStyle: isDesktop ? TextStyle(fontSize: 14 * _platformFontScale) : null,
+        unselectedLabelStyle: isDesktop ? TextStyle(fontSize: 12 * _platformFontScale) : null,
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
-        borderSide: const BorderSide(color: primaryColor, width: 2),
+      dataTableTheme: DataTableThemeData(
+        headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
+        headingTextStyle: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 14 * _platformFontScale,
+        ),
+        dataTextStyle: TextStyle(
+          fontSize: (isDesktop ? 15 : 14) * _platformFontScale,
+        ),
+        headingRowHeight: isDesktop ? 56 : 48,
+        dataRowHeight: isDesktop ? 56 : 48,
+        dividerThickness: 1,
       ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
-        borderSide: const BorderSide(color: errorColor, width: 1),
-      ),
-      contentPadding: EdgeInsets.symmetric(
-        horizontal: isDesktop ? 20 : 16,
-        vertical: isDesktop ? 20 : 16,
-      ),
-    ),
-    floatingActionButtonTheme: FloatingActionButtonThemeData(
-      elevation: 4,
-      shape: isDesktop ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)) : const CircleBorder(),
-    ),
-    bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      type: BottomNavigationBarType.fixed,
-      elevation: 8,
-      selectedLabelStyle: isDesktop ? TextStyle(fontSize: 14 * _platformFontScale) : null,
-      unselectedLabelStyle: isDesktop ? TextStyle(fontSize: 12 * _platformFontScale) : null,
-    ),
-    dataTableTheme: DataTableThemeData(
-      headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
-      headingTextStyle: TextStyle(
-        fontWeight: FontWeight.w600,
-        fontSize: 14 * _platformFontScale,
-      ),
-      dataTextStyle: TextStyle(
-        fontSize: (isDesktop ? 15 : 14) * _platformFontScale,
-      ),
-      headingRowHeight: isDesktop ? 56 : 48,
-      dataRowHeight: isDesktop ? 56 : 48,
-      dividerThickness: 1,
-    ),
-    textTheme: _getScaledTextTheme(ThemeData.light().textTheme),
-  );
+      textTheme: _getScaledTextTheme(ThemeData.light().textTheme),
+    );
+  }
 
-  static ThemeData darkTheme = ThemeData(
-    useMaterial3: true,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primaryColor,
-      brightness: Brightness.dark,
-    ),
-    scaffoldBackgroundColor: const Color(0xFF121212),
-    appBarTheme: AppBarTheme(
-      centerTitle: true,
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      foregroundColor: Colors.white,
-      toolbarHeight: isDesktop ? 64 : 56,
-    ),
-    cardTheme: CardTheme(
-      elevation: isWindows ? windowsCardElevation : (isDesktop ? 1 : 2),
-      color: const Color(0xFF1E1E1E),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 12),
+  /// Build dark theme with optional custom accent color
+  static ThemeData buildDarkTheme({Color? accentColor, bool isAmoledBlack = false}) {
+    final seedColor = accentColor ?? primaryColor;
+    final backgroundColor = isAmoledBlack ? Colors.black : const Color(0xFF121212);
+    final cardColor = isAmoledBlack ? const Color(0xFF1A1A1A) : const Color(0xFF1E1E1E);
+    final inputFillColor = isAmoledBlack ? const Color(0xFF1A1A1A) : const Color(0xFF2C2C2C);
+    
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: seedColor,
+        brightness: Brightness.dark,
       ),
-      margin: isDesktop 
-          ? const EdgeInsets.symmetric(horizontal: 16, vertical: 8)
-          : null,
-    ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
+      scaffoldBackgroundColor: backgroundColor,
+      appBarTheme: AppBarTheme(
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        toolbarHeight: isDesktop ? 64 : 56,
+      ),
+      cardTheme: CardTheme(
+        elevation: isWindows ? windowsCardElevation : (isDesktop ? 1 : 2),
+        color: cardColor,
         shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 12),
+        ),
+        margin: isDesktop 
+            ? const EdgeInsets.symmetric(horizontal: 16, vertical: 8)
+            : null,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: isDesktop ? 32 : 24,
+            vertical: isDesktop ? 16 : 12,
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: inputFillColor,
+        border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
+          borderSide: BorderSide.none,
         ),
-        padding: EdgeInsets.symmetric(
-          horizontal: isDesktop ? 32 : 24,
-          vertical: isDesktop ? 16 : 12,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
+          borderSide: BorderSide(color: seedColor, width: 2),
+        ),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: isDesktop ? 20 : 16,
+          vertical: isDesktop ? 20 : 16,
         ),
       ),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: const Color(0xFF2C2C2C),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
-        borderSide: BorderSide.none,
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+        backgroundColor: cardColor,
+        selectedLabelStyle: isDesktop ? TextStyle(fontSize: 14 * _platformFontScale) : null,
+        unselectedLabelStyle: isDesktop ? TextStyle(fontSize: 12 * _platformFontScale) : null,
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
-        borderSide: BorderSide.none,
+      dataTableTheme: DataTableThemeData(
+        headingRowColor: WidgetStateProperty.all(isAmoledBlack ? const Color(0xFF1A1A1A) : Colors.grey.shade900),
+        headingTextStyle: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 14 * _platformFontScale,
+        ),
+        dataTextStyle: TextStyle(
+          fontSize: (isDesktop ? 15 : 14) * _platformFontScale,
+        ),
+        headingRowHeight: isDesktop ? 56 : 48,
+        dataRowHeight: isDesktop ? 56 : 48,
+        dividerThickness: 1,
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 8),
-        borderSide: const BorderSide(color: primaryColor, width: 2),
-      ),
-      contentPadding: EdgeInsets.symmetric(
-        horizontal: isDesktop ? 20 : 16,
-        vertical: isDesktop ? 20 : 16,
-      ),
-    ),
-    bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      type: BottomNavigationBarType.fixed,
-      elevation: 8,
-      backgroundColor: const Color(0xFF1E1E1E),
-      selectedLabelStyle: isDesktop ? TextStyle(fontSize: 14 * _platformFontScale) : null,
-      unselectedLabelStyle: isDesktop ? TextStyle(fontSize: 12 * _platformFontScale) : null,
-    ),
-    dataTableTheme: DataTableThemeData(
-      headingRowColor: WidgetStateProperty.all(Colors.grey.shade900),
-      headingTextStyle: TextStyle(
-        fontWeight: FontWeight.w600,
-        fontSize: 14 * _platformFontScale,
-      ),
-      dataTextStyle: TextStyle(
-        fontSize: (isDesktop ? 15 : 14) * _platformFontScale,
-      ),
-      headingRowHeight: isDesktop ? 56 : 48,
-      dataRowHeight: isDesktop ? 56 : 48,
-      dividerThickness: 1,
-    ),
-    textTheme: _getScaledTextTheme(ThemeData.dark().textTheme),
-  );
+      textTheme: _getScaledTextTheme(ThemeData.dark().textTheme),
+    );
+  }
+
+  // Legacy static themes for backward compatibility
+  static ThemeData lightTheme = buildLightTheme();
+  static ThemeData darkTheme = buildDarkTheme();
 }

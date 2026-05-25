@@ -2,11 +2,13 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/presentation/widgets/keyboard_shortcuts.dart';
+import 'core/presentation/widgets/gesture_config_provider.dart';
 import 'features/settings/data/theme_provider.dart';
 import 'features/settings/data/locale_provider.dart';
 import 'features/settings/data/security_provider.dart';
@@ -17,12 +19,23 @@ import 'features/platform/data/platform_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Initialize SharedPreferences
+  final sharedPreferences = await SharedPreferences.getInstance();
+  
   // Initialize budget notification service
   final notificationService = BudgetNotificationService();
   await notificationService.initialize();
   await notificationService.requestPermissions();
   
-  runApp(const ProviderScope(child: FinanceApp()));
+  runApp(ProviderScope(
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+      gestureConfigProvider.overrideWith((ref) {
+        return GestureConfigNotifier(sharedPreferences);
+      }),
+    ],
+    child: const FinanceApp(),
+  ));
 }
 
 class FinanceApp extends ConsumerStatefulWidget {
@@ -89,15 +102,22 @@ class _FinanceAppState extends ConsumerState<FinanceApp> {
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = ref.watch(themeProvider);
+    final themeSettings = ref.watch(themeProvider);
     final appLocale = ref.watch(localeProvider);
     final router = ref.watch(goRouterProvider);
+
+    // Build themes with custom accent color and AMOLED black support
+    final lightTheme = AppTheme.buildLightTheme(accentColor: themeSettings.accentColor);
+    final darkTheme = AppTheme.buildDarkTheme(
+      accentColor: themeSettings.accentColor,
+      isAmoledBlack: themeSettings.mode == AppThemeMode.amoledBlack,
+    );
 
     return MaterialApp.router(
       title: '本地金融管家',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: lightTheme,
+      darkTheme: darkTheme,
       themeMode: ref.read(themeProvider.notifier).materialThemeMode,
       locale: appLocale.locale,
       supportedLocales: const [
