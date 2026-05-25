@@ -1,5 +1,4 @@
 part of '../database.dart';
-import 'package:drift/drift.dart' as drift;
 
 /// Data Access Object for tags.
 @DriftAccessor(tables: [Tags, TransactionTags, Transactions])
