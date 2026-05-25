@@ -6,6 +6,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:database/database.dart';
+import 'package:core/core.dart';
+import 'package:decimal/decimal.dart';
 import 'export_service.dart';
 
 /// PDF export service for financial reports.
@@ -473,6 +475,7 @@ class PdfExportService {
     bool isBold = false,
     PdfColor textColor = PdfColors.black,
     int colSpan = 1,
+    bool alignRight = false,
   }) {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(8),
@@ -483,6 +486,7 @@ class PdfExportService {
           fontWeight: isHeader || isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
           color: textColor,
         ),
+        textAlign: alignRight ? pw.TextAlign.right : pw.TextAlign.left,
       ),
     );
   }
@@ -695,6 +699,364 @@ class PdfExportService {
     await file.writeAsBytes(bytes);
 
     return filePath;
+  }
+
+  /// Exports balance sheet to PDF format.
+  Future<PdfExportResult> exportBalanceSheetToPDF({
+    required BalanceSheet balanceSheet,
+    String? customPath,
+  }) async {
+    // Generate PDF
+    final pdfBytes = await _generateBalanceSheetPdf(balanceSheet);
+
+    // Save file
+    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final dateStr = _dateFormat.format(balanceSheet.asOfDate);
+    final fileName = 'balance_sheet_$dateStr\_$timestamp.pdf';
+    final filePath = await _savePdfFile(pdfBytes, fileName, customPath);
+
+    return PdfExportResult(
+      filePath: filePath,
+      transactionCount: 0,
+      accountCount: balanceSheet.assets.items.length +
+          balanceSheet.liabilities.items.length +
+          balanceSheet.equity.items.length,
+      categoryCount: 0,
+      totalIncome: 0,
+      totalExpense: 0,
+      netAmount: 0,
+    );
+  }
+
+  /// Generates the balance sheet PDF document.
+  Future<Uint8List> _generateBalanceSheetPdf(BalanceSheet balanceSheet) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(40),
+        build: (pw.Context context) {
+          return [
+            // Title
+            pw.Center(
+              child: pw.Text(
+                '资产负债表',
+                style: pw.TextStyle(
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            // As of date
+            pw.Center(
+              child: pw.Text(
+                '截止日期: ${_displayFormat.format(balanceSheet.asOfDate)}',
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  color: PdfColors.grey700,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            // Generated date
+            pw.Center(
+              child: pw.Text(
+                '生成时间: ${_displayFormat.format(balanceSheet.generatedAt)}',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  color: PdfColors.grey500,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 24),
+
+            // Assets Section
+            pw.Text(
+              '资 产',
+              style: pw.TextStyle(
+                fontSize: 16,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.green700,
+              ),
+            ),
+            pw.SizedBox(height: 12),
+            _buildBalanceSheetSectionTable(balanceSheet.assets, PdfColors.green700),
+            pw.SizedBox(height: 24),
+
+            // Liabilities Section
+            pw.Text(
+              '负 债',
+              style: pw.TextStyle(
+                fontSize: 16,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.red700,
+              ),
+            ),
+            pw.SizedBox(height: 12),
+            _buildBalanceSheetSectionTable(balanceSheet.liabilities, PdfColors.red700),
+            pw.SizedBox(height: 24),
+
+            // Equity Section
+            pw.Text(
+              '所有者权益',
+              style: pw.TextStyle(
+                fontSize: 16,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.purple700,
+              ),
+            ),
+            pw.SizedBox(height: 12),
+            _buildBalanceSheetSectionTable(balanceSheet.equity, PdfColors.purple700),
+            pw.SizedBox(height: 24),
+
+            // Balance Verification
+            _buildBalanceVerification(balanceSheet),
+          ];
+        },
+        footer: (pw.Context context) {
+          return pw.Container(
+            alignment: pw.Alignment.centerRight,
+            margin: const pw.EdgeInsets.only(top: 20),
+            child: pw.Text(
+              '第 ${context.pageNumber} 页，共 ${context.pagesCount} 页',
+              style: pw.TextStyle(
+                fontSize: 10,
+                color: PdfColors.grey500,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  /// Builds a balance sheet section table.
+  pw.Widget _buildBalanceSheetSectionTable(
+    BalanceSheetSection section,
+    PdfColor color,
+  ) {
+    final rows = <pw.TableRow>[];
+
+    // Header
+    rows.add(
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: color.withOpacity(0.2)),
+        children: [
+          _buildTableCell('科目', isHeader: true),
+          _buildTableCell('金额', isHeader: true, alignRight: true),
+        ],
+      ),
+    );
+
+    // Items
+    for (final item in section.items) {
+      _addBalanceSheetItemRows(rows, item, depth: 0);
+    }
+
+    // Total row
+    rows.add(
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: color.withOpacity(0.1)),
+        children: [
+          _buildTableCell('合计', isBold: true),
+          _buildTableCell(
+            '¥${_formatDecimal(section.totalDecimal)}',
+            isBold: true,
+            alignRight: true,
+            textColor: color,
+          ),
+        ],
+      ),
+    );
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey300),
+      columnWidths: {
+        0: const pw.FlexColumnWidth(4),
+        1: const pw.FlexColumnWidth(2),
+      },
+      children: rows,
+    );
+  }
+
+  /// Recursively adds balance sheet item rows.
+  void _addBalanceSheetItemRows(
+    List<pw.TableRow> rows,
+    BalanceSheetItem item, {
+    required int depth,
+  }) {
+    final indent = '  ' * depth;
+    final prefix = depth > 0 ? '├─ ' : '';
+
+    rows.add(
+      pw.TableRow(
+        children: [
+          pw.Padding(
+            padding: pw.EdgeInsets.only(left: depth * 8.0, top: 6, bottom: 6, right: 8),
+            child: pw.Text(
+              '$indent$prefix${item.accountName}',
+              style: pw.TextStyle(
+                fontSize: 10,
+                fontWeight: depth == 0 ? pw.FontWeight.bold : pw.FontWeight.normal,
+              ),
+            ),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+            child: pw.Text(
+              '¥${_formatDecimal(item.toDecimal)}',
+              style: pw.TextStyle(
+                fontSize: 10,
+                fontWeight: depth == 0 ? pw.FontWeight.w500 : pw.FontWeight.normal,
+              ),
+              textAlign: pw.TextAlign.right,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // Add children recursively
+    if (item.children != null) {
+      for (final child in item.children!) {
+        _addBalanceSheetItemRows(rows, child, depth: depth + 1);
+      }
+    }
+  }
+
+  /// Builds the balance verification section.
+  pw.Widget _buildBalanceVerification(BalanceSheet balanceSheet) {
+    final isBalanced = balanceSheet.isBalanced;
+    final statusColor = isBalanced ? PdfColors.green700 : PdfColors.red700;
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(16),
+      decoration: pw.BoxDecoration(
+        color: statusColor.withOpacity(0.1),
+        border: pw.Border.all(color: statusColor),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            children: [
+              pw.Icon(
+                pw.IconData(isBalanced ? 0xe5ca : 0xe001),
+                color: statusColor,
+                size: 20,
+              ),
+              pw.SizedBox(width: 8),
+              pw.Text(
+                '平衡验证',
+                style: pw.TextStyle(
+                  fontSize: 14,
+                  fontWeight: pw.FontWeight.bold,
+                  color: statusColor,
+                ),
+              ),
+              pw.Spacer(),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: pw.BoxDecoration(
+                  color: statusColor,
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
+                ),
+                child: pw.Text(
+                  isBalanced ? '平衡' : '不平衡',
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    color: PdfColors.white,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 16),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('资产总计', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                  pw.Text(
+                    '¥${_formatDecimal(balanceSheet.assets.totalDecimal)}',
+                    style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.green700),
+                  ),
+                ],
+              ),
+              pw.Text('=', style: pw.TextStyle(fontSize: 18)),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Text('负债合计', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                  pw.Text(
+                    '¥${_formatDecimal(balanceSheet.liabilities.totalDecimal)}',
+                    style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.red700),
+                  ),
+                ],
+              ),
+              pw.Text('+', style: pw.TextStyle(fontSize: 18)),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  pw.Text('权益合计', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                  pw.Text(
+                    '¥${_formatDecimal(balanceSheet.equity.totalDecimal)}',
+                    style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.purple700),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (!isBalanced) ...[
+            pw.SizedBox(height: 12),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(8),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.red50,
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+              ),
+              child: pw.Row(
+                children: [
+                  pw.Icon(
+                    pw.IconData(0xe002),
+                    color: PdfColors.red700,
+                    size: 16,
+                  ),
+                  pw.SizedBox(width: 8),
+                  pw.Text(
+                    '差额: ¥${_formatDecimal(balanceSheet.difference)}',
+                    style: pw.TextStyle(
+                      fontSize: 12,
+                      color: PdfColors.red700,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Formats a Decimal value to string.
+  String _formatDecimal(Decimal value) {
+    final str = value.toString();
+    if (str.contains('.')) {
+      final parts = str.split('.');
+      final decimal = parts[1].padRight(2, '0').substring(0, 2);
+      return '${parts[0]}.$decimal';
+    }
+    return '$str.00';
   }
 }
 

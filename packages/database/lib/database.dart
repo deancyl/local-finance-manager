@@ -14,3 +14,4 @@ export 'src/tables/categories.dart';
 export 'src/tables/budgets.dart';
 export 'src/tables/imports.dart';
 export 'src/tables/closing_entries.dart';
+export 'src/tables/attachments.dart';

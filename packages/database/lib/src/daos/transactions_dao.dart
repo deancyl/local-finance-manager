@@ -415,4 +415,256 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
     final result = await query.getSingle();
     return result.read(transactions.id.count()) ?? 0;
   }
+
+  /// Full-text search using FTS5 for better performance and relevance ranking.
+  /// Searches across description, notes, and reference_num fields.
+  /// Returns transactions ordered by FTS rank (most relevant first).
+  Future<List<(Transaction, List<Split>)>> fullTextSearch({
+    required String query,
+    int limit = 50,
+    int offset = 0,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? categoryId,
+    String? accountId,
+    double? minAmount,
+    double? maxAmount,
+    List<String>? tagIds,
+  }) async {
+    // Sanitize query for FTS5 (escape special characters)
+    final sanitizedQuery = query
+        .replaceAll('"', '""')
+        .replaceAll("'", "''")
+        .trim();
+    
+    if (sanitizedQuery.isEmpty) {
+      return getFilteredTransactionsPaginated(
+        limit: limit,
+        offset: offset,
+        startDate: startDate,
+        endDate: endDate,
+        categoryId: categoryId,
+        accountId: accountId,
+        minAmount: minAmount,
+        maxAmount: maxAmount,
+        searchQuery: null,
+      );
+    }
+
+    // Use FTS5 MATCH with BM25 ranking
+    final ftsQuery = customSelect(
+      '''
+      SELECT t.id, bm25(transactions_fts) as rank
+      FROM transactions_fts fts
+      INNER JOIN transactions t ON t.id = fts.id
+      WHERE transactions_fts MATCH ?
+        AND t.deleted_at IS NULL
+      ORDER BY rank
+      LIMIT ? OFFSET ?
+      ''',
+      variables: [
+        Variable.withString(sanitizedQuery),
+        Variable.withInt(limit),
+        Variable.withInt(offset),
+      ],
+      readsFrom: {transactions},
+    );
+
+    final ftsResults = await ftsQuery.get();
+    final transactionIds = ftsResults
+        .map((row) => row.read<String>('id'))
+        .toList();
+
+    if (transactionIds.isEmpty) {
+      return [];
+    }
+
+    // Fetch full transactions
+    final transactionList = await (select(transactions)
+          ..where((t) => t.id.isIn(transactionIds)))
+        .get();
+
+    // Create a map for quick lookup maintaining FTS order
+    final transactionMap = {for (var t in transactionList) t.id: t};
+    final orderedTransactions = transactionIds
+        .where((id) => transactionMap.containsKey(id))
+        .map((id) => transactionMap[id]!)
+        .toList();
+
+    // Apply additional filters if provided
+    var filteredTransactions = orderedTransactions;
+    
+    if (startDate != null || endDate != null) {
+      filteredTransactions = filteredTransactions.where((t) {
+        final postDate = DateTime.fromMillisecondsSinceEpoch(t.postDate);
+        if (startDate != null && postDate.isBefore(startDate)) return false;
+        if (endDate != null && postDate.isAfter(endDate)) return false;
+        return true;
+      }).toList();
+    }
+
+    if (filteredTransactions.isEmpty) {
+      return [];
+    }
+
+    // Fetch all splits for these transactions
+    final filteredIds = filteredTransactions.map((t) => t.id).toList();
+    final allSplits = await (select(splits)
+          ..where((s) => s.transactionId.isIn(filteredIds)))
+        .get();
+
+    // Group splits by transaction ID
+    final splitsByTransaction = <String, List<Split>>{};
+    for (final split in allSplits) {
+      splitsByTransaction.putIfAbsent(split.transactionId, () => []).add(split);
+    }
+
+    // Apply category filter if provided
+    if (categoryId != null) {
+      filteredTransactions = filteredTransactions.where((t) {
+        final splits = splitsByTransaction[t.id] ?? [];
+        return splits.any((s) => s.categoryId == categoryId);
+      }).toList();
+    }
+
+    // Apply account filter if provided
+    if (accountId != null) {
+      filteredTransactions = filteredTransactions.where((t) {
+        final splits = splitsByTransaction[t.id] ?? [];
+        return splits.any((s) => s.accountId == accountId);
+      }).toList();
+    }
+
+    // Apply amount range filter
+    if (minAmount != null || maxAmount != null) {
+      filteredTransactions = filteredTransactions.where((t) {
+        final splits = splitsByTransaction[t.id] ?? [];
+        final totalAmount = splits.fold<int>(0, (sum, s) => sum + s.valueNum.abs());
+        final amount = totalAmount / 100.0;
+        if (minAmount != null && amount < minAmount) return false;
+        if (maxAmount != null && amount > maxAmount) return false;
+        return true;
+      }).toList();
+    }
+
+    // Apply tag filter if provided
+    if (tagIds != null && tagIds.isNotEmpty) {
+      final taggedTransactionIds = await _getTransactionsWithTags(tagIds);
+      filteredTransactions = filteredTransactions
+          .where((t) => taggedTransactionIds.contains(t.id))
+          .toList();
+    }
+
+    // Build result
+    return filteredTransactions.map((t) {
+      final splits = splitsByTransaction[t.id] ?? [];
+      return (t, splits);
+    }).toList();
+  }
+
+  /// Gets transaction IDs that have all the specified tags.
+  Future<Set<String>> _getTransactionsWithTags(List<String> tagIds) async {
+    final query = selectOnly(transactionTags)
+      ..where(transactionTags.tagId.isIn(tagIds))
+      ..addColumns([transactionTags.transactionId]);
+
+    final results = await query.get();
+    
+    // Group by transaction and count tags
+    final transactionTagCounts = <String, int>{};
+    for (final row in results) {
+      final transactionId = row.read(transactionTags.transactionId);
+      if (transactionId != null) {
+        transactionTagCounts[transactionId] = (transactionTagCounts[transactionId] ?? 0) + 1;
+      }
+    }
+
+    // Return only transactions that have all requested tags
+    return transactionTagCounts.entries
+        .where((e) => e.value == tagIds.length)
+        .map((e) => e.key)
+        .toSet();
+  }
+
+  /// Full-text search with payee support (searches in split memo as well).
+  /// This is an enhanced search that includes payee information from splits.
+  Future<List<(Transaction, List<Split>)>> advancedFullTextSearch({
+    required String query,
+    int limit = 50,
+    int offset = 0,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? categoryId,
+    String? accountId,
+    double? minAmount,
+    double? maxAmount,
+    List<String>? tagIds,
+    String? payee,
+  }) async {
+    // First, do the FTS5 search on transactions
+    var results = await fullTextSearch(
+      query: query,
+      limit: limit * 2, // Get more results for filtering
+      offset: 0,
+      startDate: startDate,
+      endDate: endDate,
+      categoryId: categoryId,
+      accountId: accountId,
+      minAmount: minAmount,
+      maxAmount: maxAmount,
+      tagIds: tagIds,
+    );
+
+    // Apply payee filter if provided (search in split memo)
+    if (payee != null && payee.isNotEmpty) {
+      final payeeLower = payee.toLowerCase();
+      results = results.where((item) {
+        final splits = item.$2;
+        return splits.any((s) => 
+          s.memo != null && s.memo!.toLowerCase().contains(payeeLower)
+        );
+      }).toList();
+    }
+
+    // Apply offset and limit
+    return results.skip(offset).take(limit).toList();
+  }
+
+  /// Gets count of FTS results for pagination.
+  Future<int> fullTextSearchCount({
+    required String query,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? categoryId,
+    String? accountId,
+  }) async {
+    final sanitizedQuery = query
+        .replaceAll('"', '""')
+        .replaceAll("'", "''")
+        .trim();
+    
+    if (sanitizedQuery.isEmpty) {
+      return getFilteredTransactionsCount(
+        startDate: startDate,
+        endDate: endDate,
+        categoryId: categoryId,
+        accountId: accountId,
+      );
+    }
+
+    final ftsQuery = customSelect(
+      '''
+      SELECT COUNT(DISTINCT t.id) as count
+      FROM transactions_fts fts
+      INNER JOIN transactions t ON t.id = fts.id
+      WHERE transactions_fts MATCH ?
+        AND t.deleted_at IS NULL
+      ''',
+      variables: [Variable.withString(sanitizedQuery)],
+      readsFrom: {transactions},
+    );
+
+    final result = await ftsQuery.getSingle();
+    return result.read<int>('count') ?? 0;
+  }
 }

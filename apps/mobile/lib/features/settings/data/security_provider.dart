@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
 import 'dart:io';
+
+import '../../security/data/biometric_service.dart';
 
 /// Security settings state
 class SecuritySettings {
@@ -210,15 +214,11 @@ class SecurityNotifier extends StateNotifier<SecuritySettings> {
 
   /// Simple hash function (use proper hashing in production)
   String _hashPassword(String input) {
-    // In production, use crypto package with proper salt and iterations
-    // This is a simplified version for demonstration
-    var bytes = input.codeUnits;
-    var hash = 0;
-    for (var byte in bytes) {
-      hash = ((hash << 5) - hash) + byte;
-      hash = hash & 0xFFFFFFFF;
-    }
-    return hash.toRadixString(16);
+    // Use SHA-256 for better security
+    // In production, use PBKDF2 with salt and iterations
+    final bytes = utf8.encode(input);
+    final hash = sha256.convert(bytes);
+    return hash.toString();
   }
 }
 

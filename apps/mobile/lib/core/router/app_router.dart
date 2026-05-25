@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/accounts/presentation/pages/accounts_page.dart';
@@ -18,6 +19,10 @@ import '../../features/settings/presentation/pages/language_settings_page.dart';
 import '../../features/settings/presentation/pages/backup_settings_page.dart';
 import '../../features/settings/presentation/pages/security_settings_page.dart';
 import '../../features/settings/presentation/pages/about_page.dart';
+import '../../features/security/presentation/pages/lock_screen_page.dart';
+import '../../features/security/presentation/pages/biometric_settings_page.dart';
+import '../../features/security/data/biometric_service.dart';
+import '../../features/settings/data/security_provider.dart';
 import '../../features/export/presentation/pages/export_page.dart';
 import '../../features/export/presentation/pages/import_page.dart' as export_import;
 import '../../features/import/presentation/pages/import_page.dart';
@@ -25,6 +30,7 @@ import '../../features/import/presentation/pages/import_history_page.dart';
 import '../../features/tags/presentation/pages/tags_page.dart';
 import '../../features/recurring/presentation/pages/recurring_page.dart';
 import '../../features/attachments/presentation/pages/attachments_page.dart';
+import '../../features/attachments/presentation/pages/attachment_viewer_page.dart';
 import '../../features/reconciliation/presentation/pages/reconciliation_page.dart';
 import '../../features/closing/presentation/pages/period_closing_page.dart';
 import '../../features/currency/presentation/pages/exchange_rates_page.dart';
@@ -36,10 +42,77 @@ import '../../features/currency/presentation/pages/exchange_rates_page.dart';
 import '../presentation/pages/home_page.dart';
 import '../presentation/pages/main_shell.dart';
 
-class AppRouter {
-  static final GoRouter router = GoRouter(
+/// Global flag to track if app is unlocked
+/// Set to true after successful authentication on lock screen
+bool _isAppUnlocked = false;
+
+/// Mark the app as unlocked after successful authentication
+void markAppUnlocked() {
+  _isAppUnlocked = true;
+  notifyLockStateChanged();
+}
+
+/// Reset the unlocked state (for testing or explicit lock)
+void resetAppLocked() {
+  _isAppUnlocked = false;
+  notifyLockStateChanged();
+}
+
+/// Check if security is enabled and app needs locking
+bool _shouldShowLockScreen(SecuritySettings security) {
+  if (_isAppUnlocked) return false;
+  return security.isPasswordEnabled || security.isPinEnabled || security.isBiometricEnabled;
+}
+
+/// Provider for GoRouter with security-aware redirects
+final goRouterProvider = Provider<GoRouter>((ref) {
+  return _createRouter(ref);
+});
+
+/// Notifier to track lock state changes for GoRouter
+final _lockStateNotifier = ValueNotifier<bool>(false);
+
+/// Notify that lock state has changed
+void notifyLockStateChanged() {
+  _lockStateNotifier.value = !_lockStateNotifier.value;
+}
+
+GoRouter _createRouter(Ref ref) {
+  return GoRouter(
     initialLocation: '/home',
+    refreshListenable: _lockStateNotifier,
+    redirect: (context, state) {
+      final security = ref.read(securityProvider);
+      
+      // If security is enabled and app is not unlocked, show lock screen
+      if (_shouldShowLockScreen(security)) {
+        // Store the intended destination to redirect after unlock
+        return '/lock?redirect=${Uri.encodeComponent(state.matchedLocation)}';
+      }
+      
+      // If on lock screen but already unlocked, go to home
+      if (state.matchedLocation == '/lock' && _isAppUnlocked) {
+        return '/home';
+      }
+      
+      return null;
+    },
     routes: [
+      // Lock screen route (outside shell for full-screen)
+      GoRoute(
+        path: '/lock',
+        name: 'lock-screen',
+        builder: (context, state) {
+          final redirectUrl = state.uri.queryParameters['redirect'];
+          return LockScreenPage(redirectUrl: redirectUrl);
+        },
+      ),
+      // Biometric settings route (outside shell for full-screen)
+      GoRoute(
+        path: '/settings/biometric',
+        name: 'biometric-settings',
+        builder: (context, state) => const BiometricSettingsPage(),
+      ),
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [
@@ -194,6 +267,18 @@ class AppRouter {
           );
         },
       ),
+      GoRoute(
+        path: '/attachments/viewer',
+        name: 'attachment-viewer',
+        builder: (context, state) {
+          final args = state.extra as AttachmentViewerArgs;
+          return AttachmentViewerPage(
+            transactionId: args.transactionId,
+            initialIndex: args.initialIndex,
+            transactionDescription: args.transactionDescription,
+          );
+        },
+      ),
       // Sync routes temporarily disabled
       // GoRoute(
       //   path: '/settings/sync',
@@ -222,4 +307,14 @@ class AppRouter {
       ),
     ),
   );
+}
+
+/// AppRouter class for backward compatibility
+class AppRouter {
+  /// Static router instance (uses the provider internally)
+  static GoRouter get router {
+    // Create a provider container to access the router
+    final container = ProviderContainer();
+    return container.read(goRouterProvider);
+  }
 }

@@ -39,12 +39,12 @@ class BalanceSheetNotifier extends AsyncNotifier<BalanceSheet?> {
     return null;
   }
 
-  /// Fetch balance sheet data from database
+  /// Fetch balance sheet data from database using BalanceSheetDao
   Future<BalanceSheet> _fetch() async {
     final asOfDate = ref.read(balanceSheetAsOfDateProvider);
     final targetCurrency = ref.read(reportCurrencyProvider);
 
-    // Get all accounts
+    // Get all accounts using accountsDao
     final accountsData = await _db.accountsDao.getAll();
     
     // Convert database Account to core Account model
@@ -65,31 +65,73 @@ class BalanceSheetNotifier extends AsyncNotifier<BalanceSheet?> {
       createdAt: DateTime.fromMillisecondsSinceEpoch(acc.createdAt),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(acc.updatedAt),
       version: acc.version,
+      liquidityType: _parseLiquidityType(acc.liquidityType),
     )).toList();
 
-    // Get raw balances from splits as of the specified date
-    final rawBalances = await _db.splitsDao.getAccountBalancesAsOfDate(asOfDate);
+    // Get raw balances from BalanceSheetDao (preferred) or splitsDao as fallback
+    List<AccountBalanceRaw> balances;
+    
+    try {
+      // Try using the new BalanceSheetDao
+      final balanceSheetData = await _db.balanceSheetDao.getAccountBalancesAsOfDate(asOfDate);
+      
+      // Convert BalanceSheetAccountData to AccountBalanceRaw with currency conversion
+      balances = await _convertBalanceSheetDataToRaw(
+        balanceSheetData,
+        accounts,
+        targetCurrency,
+      );
+    } catch (e) {
+      // Fallback to splitsDao if BalanceSheetDao is not available
+      final rawBalances = await _db.splitsDao.getAccountBalancesAsOfDate(asOfDate);
+      
+      balances = await _convertSplitsDataToRaw(
+        rawBalances,
+        accounts,
+        targetCurrency,
+      );
+    }
 
-    // Convert database AccountBalanceRaw to core AccountBalanceRaw
-    // with currency conversion
+    // Calculate balance sheet
+    final balanceSheet = await _calculator.calculate(
+      accounts: accounts,
+      balances: balances,
+      asOfDate: asOfDate,
+    );
+
+    // Update state
+    state = AsyncValue.data(balanceSheet);
+    
+    return balanceSheet;
+  }
+
+  /// Convert BalanceSheetAccountData to AccountBalanceRaw with currency conversion
+  Future<List<AccountBalanceRaw>> _convertBalanceSheetDataToRaw(
+    List<BalanceSheetAccountData> data,
+    List<Account> accounts,
+    String targetCurrency,
+  ) async {
     final balances = <AccountBalanceRaw>[];
-    for (final raw in rawBalances) {
-      // Calculate debit and credit from totalNum
+    final accountMap = <String, Account>{
+      for (final a in accounts) a.id: a,
+    };
+
+    for (final item in data) {
+      // Get account's commodity for currency conversion
+      final account = accountMap[item.accountId];
+      if (account == null) continue;
+
+      // Calculate debit and credit from balanceNum
       // In double-entry: positive = credit, negative = debit
-      final totalNum = raw.totalNum;
+      final totalNum = item.balanceNum;
       var debitNum = totalNum < 0 ? totalNum.abs() : 0;
       var creditNum = totalNum > 0 ? totalNum : 0;
-      
-      // Get account's commodity for currency conversion
-      final account = accounts.firstWhere(
-        (a) => a.id == raw.accountId,
-        orElse: () => throw StateError('Account not found: ${raw.accountId}'),
-      );
-      
+      var denom = item.denom;
+
       // Convert to target currency if needed
       if (account.commodityId != targetCurrency) {
-        final debitAmount = debitNum / raw.valueDenom.toDouble();
-        final creditAmount = creditNum / raw.valueDenom.toDouble();
+        final debitAmount = debitNum / denom.toDouble();
+        final creditAmount = creditNum / denom.toDouble();
         
         final convertedDebit = await _currencyService.convertOrDefault(
           debitAmount,
@@ -105,27 +147,88 @@ class BalanceSheetNotifier extends AsyncNotifier<BalanceSheet?> {
         // Convert back to integer (using 100 as denominator for cents)
         debitNum = (convertedDebit * 100).round();
         creditNum = (convertedCredit * 100).round();
+        denom = 100;
       }
-      
+
+      balances.add(AccountBalanceRaw(
+        accountId: item.accountId,
+        debitNum: debitNum,
+        creditNum: creditNum,
+        denom: denom,
+      ));
+    }
+
+    return balances;
+  }
+
+  /// Convert splitsDao AccountBalanceRaw to core AccountBalanceRaw with currency conversion
+  Future<List<AccountBalanceRaw>> _convertSplitsDataToRaw(
+    List<dynamic> rawBalances, // database.AccountBalanceRaw from splitsDao
+    List<Account> accounts,
+    String targetCurrency,
+  ) async {
+    final balances = <AccountBalanceRaw>[];
+    final accountMap = <String, Account>{
+      for (final a in accounts) a.id: a,
+    };
+
+    for (final raw in rawBalances) {
+      // Get account's commodity for currency conversion
+      final account = accountMap[raw.accountId];
+      if (account == null) continue;
+
+      // Calculate debit and credit from totalNum
+      // In double-entry: positive = credit, negative = debit
+      final totalNum = raw.totalNum;
+      var debitNum = totalNum < 0 ? totalNum.abs() : 0;
+      var creditNum = totalNum > 0 ? totalNum : 0;
+      var denom = raw.valueDenom;
+
+      // Convert to target currency if needed
+      if (account.commodityId != targetCurrency) {
+        final debitAmount = debitNum / denom.toDouble();
+        final creditAmount = creditNum / denom.toDouble();
+        
+        final convertedDebit = await _currencyService.convertOrDefault(
+          debitAmount,
+          account.commodityId,
+          targetCurrency,
+        );
+        final convertedCredit = await _currencyService.convertOrDefault(
+          creditAmount,
+          account.commodityId,
+          targetCurrency,
+        );
+        
+        // Convert back to integer (using 100 as denominator for cents)
+        debitNum = (convertedDebit * 100).round();
+        creditNum = (convertedCredit * 100).round();
+        denom = 100;
+      }
+
       balances.add(AccountBalanceRaw(
         accountId: raw.accountId,
         debitNum: debitNum,
         creditNum: creditNum,
-        denom: 100, // Standardized to cents after conversion
+        denom: denom,
       ));
     }
 
-    // Calculate balance sheet
-    final balanceSheet = await _calculator.calculate(
-      accounts: accounts,
-      balances: balances,
-      asOfDate: asOfDate,
-    );
+    return balances;
+  }
 
-    // Update state
-    state = AsyncValue.data(balanceSheet);
-    
-    return balanceSheet;
+  /// Parse liquidity type from database string
+  LiquidityType _parseLiquidityType(String? value) {
+    if (value == null) return LiquidityType.current;
+    switch (value.toLowerCase()) {
+      case 'current':
+        return LiquidityType.current;
+      case 'non_current':
+      case 'non-current':
+        return LiquidityType.nonCurrent;
+      default:
+        return LiquidityType.current;
+    }
   }
 
   /// Refresh balance sheet data

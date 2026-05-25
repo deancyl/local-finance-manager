@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:archive/archive.dart';
 import 'package:csv/csv.dart';
 import 'package:drift/drift.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:database/database.dart';
+import 'package:core/core.dart';
+import 'package:decimal/decimal.dart';
 import 'qif_export_service.dart';
 import 'ofx_export_service.dart';
 import 'pdf_export_service.dart';
@@ -39,6 +42,7 @@ class ExportResult {
   final int transactionCount;
   final int accountCount;
   final int categoryCount;
+  final int attachmentCount;
   final String format;
 
   ExportResult({
@@ -46,6 +50,7 @@ class ExportResult {
     required this.transactionCount,
     required this.accountCount,
     required this.categoryCount,
+    this.attachmentCount = 0,
     required this.format,
   });
 }
@@ -320,8 +325,8 @@ class ExportService {
     );
   }
 
-  /// Exports full backup (all data)
-  Future<ExportResult> exportFullBackup({String? customPath}) async {
+/// Exports full backup (all data including attachments)
+  Future<ExportResult> exportFullBackup({String? customPath, bool includeAttachments = true}) async {
     // Fetch all data
     final transactions = await (_db.select(_db.transactions)
           ..where((t) => t.deletedAt.isNull()))
@@ -331,6 +336,7 @@ class ExportService {
     final categories = await _db.select(_db.categories).get();
     final commodities = await _db.select(_db.commodities).get();
     final budgets = await _db.select(_db.budgets).get();
+    final attachments = await _db.select(_db.attachments).get();
 
     // Build splits map
     final splitsByTransaction = <String, List<Split>>{};
@@ -338,8 +344,14 @@ class ExportService {
       splitsByTransaction.putIfAbsent(split.transactionId, () => []).add(split);
     }
 
+    // Build attachments map
+    final attachmentsByTransaction = <String, List<AttachmentData>>{};
+    for (final attachment in attachments) {
+      attachmentsByTransaction.putIfAbsent(attachment.transactionId, () => []).add(attachment);
+    }
+
     final jsonData = {
-      'version': '0.3.21',
+      'version': '0.3.95',
       'exportedAt': DateTime.now().toIso8601String(),
       'exportType': 'full',
       'commodities': commodities.map((c) => <String, dynamic>{
@@ -379,6 +391,7 @@ class ExportService {
       }).toList(),
       'transactions': transactions.map((t) {
         final transactionSplits = splitsByTransaction[t.id] ?? [];
+        final transactionAttachments = attachmentsByTransaction[t.id] ?? [];
         return <String, dynamic>{
           'id': t.id,
           'description': t.description,
@@ -408,6 +421,21 @@ class ExportService {
             'version': s.version,
             'createdAt': s.createdAt,
           }).toList(),
+          'attachments': transactionAttachments.map((a) => <String, dynamic>{
+            'id': a.id,
+            'fileName': a.fileName,
+            'filePath': a.filePath,
+            'fileType': a.fileType,
+            'fileSize': a.fileSize,
+            'thumbnailPath': a.thumbnailPath,
+            'thumbnailWidth': a.thumbnailWidth,
+            'thumbnailHeight': a.thumbnailHeight,
+            'fileHash': a.fileHash,
+            'description': a.description,
+            'sortOrder': a.sortOrder,
+            'createdAt': a.createdAt,
+            'updatedAt': a.updatedAt,
+          }).toList(),
         };
       }).toList(),
       'budgets': budgets.map((b) => <String, dynamic>{
@@ -436,6 +464,7 @@ class ExportService {
       transactionCount: transactions.length,
       accountCount: accounts.length,
       categoryCount: categories.length,
+      attachmentCount: attachments.length,
       format: 'JSON',
     );
   }
@@ -526,6 +555,118 @@ class ExportService {
       filters: filters,
       customPath: customPath,
     );
+  }
+
+  /// Exports balance sheet to PDF format
+  Future<PdfExportResult> exportBalanceSheetToPDF({
+    required BalanceSheet balanceSheet,
+    String? customPath,
+  }) async {
+    final pdfService = PdfExportService(_db);
+    return pdfService.exportBalanceSheetToPDF(
+      balanceSheet: balanceSheet,
+      customPath: customPath,
+    );
+  }
+
+  /// Exports balance sheet to CSV format
+  Future<ExportResult> exportBalanceSheetToCSV({
+    required BalanceSheet balanceSheet,
+    String? customPath,
+  }) async {
+    // Build CSV rows
+    final rows = <List<String>>[];
+
+    // Header
+    rows.add(['资产负债表']);
+    rows.add(['截止日期', DateFormat('yyyy-MM-dd').format(balanceSheet.asOfDate)]);
+    rows.add(['生成时间', DateFormat('yyyy-MM-dd HH:mm:ss').format(balanceSheet.generatedAt)]);
+    rows.add([]);
+
+    // Assets Section
+    rows.add(['资 产', '', '']);
+    rows.add(['科目', '金额', '']);
+    _addBalanceSheetItemsToCsv(rows, balanceSheet.assets.items, depth: 0);
+    rows.add(['资产合计', '', '¥${_formatDecimal(balanceSheet.assets.totalDecimal)}']);
+    rows.add([]);
+
+    // Liabilities Section
+    rows.add(['负 债', '', '']);
+    rows.add(['科目', '金额', '']);
+    _addBalanceSheetItemsToCsv(rows, balanceSheet.liabilities.items, depth: 0);
+    rows.add(['负债合计', '', '¥${_formatDecimal(balanceSheet.liabilities.totalDecimal)}']);
+    rows.add([]);
+
+    // Equity Section
+    rows.add(['所有者权益', '', '']);
+    rows.add(['科目', '金额', '']);
+    _addBalanceSheetItemsToCsv(rows, balanceSheet.equity.items, depth: 0);
+    rows.add(['权益合计', '', '¥${_formatDecimal(balanceSheet.equity.totalDecimal)}']);
+    rows.add([]);
+
+    // Balance Verification
+    rows.add(['平衡验证', '', '']);
+    rows.add(['资产总计', '', '¥${_formatDecimal(balanceSheet.assets.totalDecimal)}']);
+    rows.add(['负债合计', '', '¥${_formatDecimal(balanceSheet.liabilities.totalDecimal)}']);
+    rows.add(['权益合计', '', '¥${_formatDecimal(balanceSheet.equity.totalDecimal)}']);
+    rows.add(['平衡状态', '', balanceSheet.isBalanced ? '平衡' : '不平衡']);
+    if (!balanceSheet.isBalanced) {
+      rows.add(['差额', '', '¥${_formatDecimal(balanceSheet.difference)}']);
+    }
+
+    // Convert to CSV string
+    final csvString = const ListToCsvConverter().convert(rows);
+
+    // Add UTF-8 BOM for Excel compatibility
+    final bom = '\u{FEFF}';
+    final csvWithBom = '$bom$csvString';
+
+    // Save file
+    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final dateStr = DateFormat('yyyyMMdd').format(balanceSheet.asOfDate);
+    final fileName = 'balance_sheet_$dateStr\_$timestamp.csv';
+    final filePath = await _saveFile(csvWithBom, fileName, customPath);
+
+    return ExportResult(
+      filePath: filePath,
+      transactionCount: 0,
+      accountCount: balanceSheet.assets.items.length +
+          balanceSheet.liabilities.items.length +
+          balanceSheet.equity.items.length,
+      categoryCount: 0,
+      format: 'CSV',
+    );
+  }
+
+  /// Recursively adds balance sheet items to CSV rows.
+  void _addBalanceSheetItemsToCsv(
+    List<List<String>> rows,
+    List<BalanceSheetItem> items, {
+    required int depth,
+  }) {
+    for (final item in items) {
+      final indent = '  ' * depth;
+      rows.add([
+        '$indent${item.accountName}',
+        '¥${_formatDecimal(item.toDecimal)}',
+        item.liquidityType == 'current' ? '流动' : '非流动',
+      ]);
+
+      if (item.children != null) {
+        _addBalanceSheetItemsToCsv(rows, item.children!, depth: depth + 1);
+      }
+    }
+  }
+
+  /// Formats a Decimal value to string.
+  String _formatDecimal(Decimal value) {
+    final str = value.toString();
+    if (str.contains('.')) {
+      final parts = str.split('.');
+      final decimal = parts[1].padRight(2, '0').substring(0, 2);
+      return '${parts[0]}.$decimal';
+    }
+    return '$str.00';
   }
 
   /// Fetches filtered transactions with their splits
@@ -620,6 +761,53 @@ class ExportService {
     await file.writeAsString(content, encoding: utf8);
 
     return filePath;
+  }
+
+  /// Exports all attachments to a ZIP archive.
+  /// 
+  /// Creates a ZIP file containing all attachment files organized by transaction.
+  /// Returns the path to the created ZIP file.
+  Future<String> exportAttachmentsToZip({String? customPath}) async {
+    final attachments = await _db.select(_db.attachments).get();
+
+    if (attachments.isEmpty) {
+      throw ExportException('没有可导出的附件');
+    }
+
+    // Create archive
+    final archive = Archive();
+
+    for (final attachment in attachments) {
+      final file = File(attachment.filePath);
+      if (await file.exists()) {
+        final bytes = await file.readAsBytes();
+        // Organize by transaction ID
+        final archivePath = '${attachment.transactionId}/${attachment.fileName}';
+        archive.addFile(ArchiveFile(archivePath, bytes.length, bytes));
+      }
+    }
+
+    // Compress
+    final compressed = ZipEncoder().encode(archive);
+    if (compressed == null) {
+      throw ExportException('压缩附件失败');
+    }
+
+    // Save file
+    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final fileName = 'attachments_$timestamp.zip';
+    final filePath = customPath ?? await _getExportPath(fileName);
+
+    final zipFile = File(filePath);
+    await zipFile.writeAsBytes(compressed);
+
+    return filePath;
+  }
+
+  /// Gets the default export path for a file.
+  Future<String> _getExportPath(String fileName) async {
+    final directory = await getApplicationDocumentsDirectory();
+    return '${directory.path}/$fileName';
   }
 }
 

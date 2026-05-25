@@ -19,3 +19,4 @@ export 'src/models/income_statement.dart';
 export 'src/models/cash_flow_statement.dart';
 export 'src/models/general_ledger.dart';
 export 'src/models/closing_entry.dart';
+export 'src/models/saved_search.dart';

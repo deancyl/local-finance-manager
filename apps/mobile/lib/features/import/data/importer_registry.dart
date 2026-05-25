@@ -12,6 +12,10 @@ class ImporterRegistry {
     IcbcImporter(),
     CcbImporter(),
     BocImporter(),
+    AbcImporter(),
+    BocomImporter(),
+    CmbImporter(),
+    CiticImporter(),
   ];
 
   /// Detects the appropriate importer for the given file.

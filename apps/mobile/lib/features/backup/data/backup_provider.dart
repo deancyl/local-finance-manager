@@ -214,18 +214,35 @@ class BackupService {
     }
 
     final dbPath = await _getDatabasePath();
+    final attachmentsDir = await _getAttachmentsDir();
+    
+    // Ensure attachments directory exists
+    if (!await attachmentsDir.exists()) {
+      await attachmentsDir.create(recursive: true);
+    }
     
     // Check if compressed
     if (backupFilePath.endsWith('.zip')) {
       final bytes = await backupFile.readAsBytes();
       final archive = ZipDecoder().decodeBytes(bytes);
       
-      // Find database file in archive
+      // Find database file and attachments in archive
       for (final file in archive.files) {
         if (file.name == 'finance.db') {
           final dbFile = File(dbPath);
           await dbFile.writeAsBytes(file.content as List<int>);
-          break;
+        } else if (file.name.startsWith('attachments/')) {
+          // Restore attachment files
+          final relativePath = file.name.substring('attachments/'.length);
+          final attachmentPath = '${attachmentsDir.path}/$relativePath';
+          final attachmentFile = File(attachmentPath);
+          
+          // Ensure parent directory exists
+          if (!await attachmentFile.parent.exists()) {
+            await attachmentFile.parent.create(recursive: true);
+          }
+          
+          await attachmentFile.writeAsBytes(file.content as List<int>);
         }
       }
     } else {

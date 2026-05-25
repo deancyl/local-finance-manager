@@ -197,3 +197,112 @@ class IncomeStatement extends Equatable {
         generatedAt,
       ];
 }
+
+/// Income statement with period comparison support.
+///
+/// Extends the base IncomeStatement with comparison data for a previous period.
+class IncomeStatementWithComparison extends Equatable {
+  final IncomeStatement current;
+  final IncomeStatement? previous;
+  final PeriodComparisonType comparisonType;
+
+  const IncomeStatementWithComparison({
+    required this.current,
+    this.previous,
+    this.comparisonType = PeriodComparisonType.none,
+  });
+
+  /// Returns true if comparison data is available.
+  bool get hasComparison => previous != null && comparisonType != PeriodComparisonType.none;
+
+  /// Returns the revenue change amount (current - previous).
+  /// Positive means increase, negative means decrease.
+  Decimal get revenueChange {
+    if (!hasComparison) return Decimal.zero;
+    return current.revenues.totalDecimal - previous!.revenues.totalDecimal;
+  }
+
+  /// Returns the expense change amount (current - previous).
+  /// Positive means increase, negative means decrease.
+  Decimal get expenseChange {
+    if (!hasComparison) return Decimal.zero;
+    return current.expenses.totalDecimal - previous!.expenses.totalDecimal;
+  }
+
+  /// Returns the net income change amount (current - previous).
+  Decimal get netIncomeChange {
+    if (!hasComparison) return Decimal.zero;
+    return current.netIncomeDecimal - previous!.netIncomeDecimal;
+  }
+
+  /// Returns the revenue change percentage.
+  /// Returns null if previous revenue was zero.
+  double? get revenueChangePercent {
+    if (!hasComparison) return null;
+    final prevRevenue = previous!.revenues.totalDecimal;
+    if (prevRevenue == Decimal.zero) return null;
+    final change = revenueChange;
+    return (change / prevRevenue).toDouble() * 100;
+  }
+
+  /// Returns the expense change percentage.
+  /// Returns null if previous expense was zero.
+  double? get expenseChangePercent {
+    if (!hasComparison) return null;
+    final prevExpense = previous!.expenses.totalDecimal;
+    if (prevExpense == Decimal.zero) return null;
+    final change = expenseChange;
+    return (change / prevExpense).toDouble() * 100;
+  }
+
+  /// Returns the net income change percentage.
+  /// Returns null if previous net income was zero.
+  double? get netIncomeChangePercent {
+    if (!hasComparison) return null;
+    final prevNetIncome = previous!.netIncomeDecimal;
+    if (prevNetIncome == Decimal.zero) return null;
+    final change = netIncomeChange;
+    return (change / prevNetIncome).toDouble() * 100;
+  }
+
+  /// Returns a formatted comparison period label.
+  String get comparisonPeriodLabel {
+    switch (comparisonType) {
+      case PeriodComparisonType.none:
+        return '';
+      case PeriodComparisonType.previousMonth:
+        return '上月';
+      case PeriodComparisonType.previousQuarter:
+        return '上季度';
+      case PeriodComparisonType.previousYear:
+        return '去年同期';
+      case PeriodComparisonType.custom:
+        return '对比期间';
+    }
+  }
+
+  /// Creates a copy with the given fields replaced.
+  IncomeStatementWithComparison copyWith({
+    IncomeStatement? current,
+    IncomeStatement? previous,
+    PeriodComparisonType? comparisonType,
+  }) {
+    return IncomeStatementWithComparison(
+      current: current ?? this.current,
+      previous: previous ?? this.previous,
+      comparisonType: comparisonType ?? this.comparisonType,
+    );
+  }
+
+  @override
+  List<Object?> get props => [current, previous, comparisonType];
+}
+
+/// Type of period comparison for income statement.
+enum PeriodComparisonType {
+  none,
+  previousMonth,
+  previousQuarter,
+  previousYear,
+  custom,
+}

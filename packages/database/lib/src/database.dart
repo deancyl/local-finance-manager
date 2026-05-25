@@ -15,6 +15,7 @@ import 'tables/exchange_rates.dart';
 import 'tables/cost_centers.dart';
 import 'tables/audit_logs.dart';
 import 'tables/transaction_templates.dart';
+import 'tables/saved_searches.dart';
 
 part 'database.g.dart';
 part 'daos/accounts_dao.dart';
@@ -31,6 +32,9 @@ part 'daos/exchange_rates_dao.dart';
 part 'daos/cost_centers_dao.dart';
 part 'daos/audit_logs_dao.dart';
 part 'daos/transaction_templates_dao.dart';
+part 'daos/income_statement_dao.dart';
+part 'daos/balance_sheet_dao.dart';
+part 'daos/saved_search_dao.dart';
 
 /// Local finance database with all tables.
 @DriftDatabase(
@@ -52,6 +56,8 @@ part 'daos/transaction_templates_dao.dart';
     CostCenters,
     AuditLogs,
     TransactionTemplates,
+    SavedSearches,
+    SearchHistory,
   ],
 )
 class LocalFinanceDatabase extends _$LocalFinanceDatabase {
@@ -73,9 +79,12 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final CostCentersDao costCentersDao = CostCentersDao(this);
   late final AuditLogsDao auditLogsDao = AuditLogsDao(this);
   late final TransactionTemplatesDao transactionTemplatesDao = TransactionTemplatesDao(this);
+  late final IncomeStatementDao incomeStatementDao = IncomeStatementDao(this);
+  late final BalanceSheetDao balanceSheetDao = BalanceSheetDao(this);
+  late final SavedSearchDao savedSearchDao = SavedSearchDao(this);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration {
@@ -97,6 +106,39 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
           'CREATE INDEX IF NOT EXISTS idx_splits_category_date '
           'ON splits(category_id, transaction_id)',
         );
+        
+        // Create FTS5 virtual table for full-text search
+        await customStatement('''
+          CREATE VIRTUAL TABLE IF NOT EXISTS transactions_fts USING fts5(
+            id UNINDEXED,
+            description,
+            notes,
+            reference_num,
+            content='transactions',
+            content_rowid='rowid'
+          )
+        ''');
+        // Create triggers to keep FTS index in sync
+        await customStatement('''
+          CREATE TRIGGER IF NOT EXISTS transactions_ai AFTER INSERT ON transactions BEGIN
+            INSERT INTO transactions_fts(rowid, id, description, notes, reference_num)
+            VALUES (new.rowid, new.id, new.description, new.notes, new.reference_num);
+          END
+        ''');
+        await customStatement('''
+          CREATE TRIGGER IF NOT EXISTS transactions_ad AFTER DELETE ON transactions BEGIN
+            INSERT INTO transactions_fts(transactions_fts, rowid, id, description, notes, reference_num)
+            VALUES('delete', old.rowid, old.id, old.description, old.notes, old.reference_num);
+          END
+        ''');
+        await customStatement('''
+          CREATE TRIGGER IF NOT EXISTS transactions_au AFTER UPDATE ON transactions BEGIN
+            INSERT INTO transactions_fts(transactions_fts, rowid, id, description, notes, reference_num)
+            VALUES('delete', old.rowid, old.id, old.description, old.notes, old.reference_num);
+            INSERT INTO transactions_fts(rowid, id, description, notes, reference_num)
+            VALUES (new.rowid, new.id, new.description, new.notes, new.reference_num);
+          END
+        ''');
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
@@ -334,6 +376,55 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
             'CREATE INDEX IF NOT EXISTS idx_templates_use_count '
             'ON transaction_templates(use_count DESC)',
           );
+        }
+        if (from < 13) {
+          // Version 13: Add saved searches and FTS5 for advanced search
+          await m.createTable(savedSearches);
+          await m.createTable(searchHistory);
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_saved_searches_favorite '
+            'ON saved_searches(is_favorite) WHERE is_favorite = 1',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_saved_searches_use_count '
+            'ON saved_searches(use_count DESC)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_search_history_searched_at '
+            'ON search_history(searched_at DESC)',
+          );
+          // Create FTS5 virtual table for full-text search
+          await customStatement('''
+            CREATE VIRTUAL TABLE IF NOT EXISTS transactions_fts USING fts5(
+              id UNINDEXED,
+              description,
+              notes,
+              reference_num,
+              content='transactions',
+              content_rowid='rowid'
+            )
+          ''');
+          // Create triggers to keep FTS index in sync
+          await customStatement('''
+            CREATE TRIGGER IF NOT EXISTS transactions_ai AFTER INSERT ON transactions BEGIN
+              INSERT INTO transactions_fts(rowid, id, description, notes, reference_num)
+              VALUES (new.rowid, new.id, new.description, new.notes, new.reference_num);
+            END
+          ''');
+          await customStatement('''
+            CREATE TRIGGER IF NOT EXISTS transactions_ad AFTER DELETE ON transactions BEGIN
+              INSERT INTO transactions_fts(transactions_fts, rowid, id, description, notes, reference_num)
+              VALUES('delete', old.rowid, old.id, old.description, old.notes, old.reference_num);
+            END
+          ''');
+          await customStatement('''
+            CREATE TRIGGER IF NOT EXISTS transactions_au AFTER UPDATE ON transactions BEGIN
+              INSERT INTO transactions_fts(transactions_fts, rowid, id, description, notes, reference_num)
+              VALUES('delete', old.rowid, old.id, old.description, old.notes, old.reference_num);
+              INSERT INTO transactions_fts(rowid, id, description, notes, reference_num)
+              VALUES (new.rowid, new.id, new.description, new.notes, new.reference_num);
+            END
+          ''');
         }
       },
     );

@@ -10,10 +10,10 @@ import '../widgets/income_statement_section.dart';
 import '../../../export/data/export_service.dart';
 import '../../../export/data/export_provider.dart';
 
-/// Income statement report page with date range filtering.
+/// Income statement report page with date range filtering and period comparison.
 ///
 /// Displays revenues and expenses sections with net income calculation.
-/// Supports pull-to-refresh and date range selection.
+/// Supports pull-to-refresh, date range selection, and period comparison.
 class IncomeStatementPage extends ConsumerStatefulWidget {
   const IncomeStatementPage({super.key});
 
@@ -24,6 +24,10 @@ class IncomeStatementPage extends ConsumerStatefulWidget {
 class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage> {
   DateTime? _startDate;
   DateTime? _endDate;
+  PeriodComparisonType _comparisonType = PeriodComparisonType.none;
+  DateTime? _comparisonStartDate;
+  DateTime? _comparisonEndDate;
+  bool _showComparisonSelector = false;
 
   @override
   void initState() {
@@ -41,6 +45,13 @@ class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage> {
 
   Future<void> _loadData() async {
     await ref.read(incomeStatementProvider.notifier).setDateRange(_startDate, _endDate);
+    await ref.read(incomeStatementProvider.notifier).setComparisonType(_comparisonType);
+    if (_comparisonType == PeriodComparisonType.custom &&
+        _comparisonStartDate != null &&
+        _comparisonEndDate != null) {
+      await ref.read(incomeStatementProvider.notifier)
+          .setCustomComparisonDates(_comparisonStartDate, _comparisonEndDate);
+    }
   }
 
   Future<void> _selectStartDate() async {
@@ -77,6 +88,40 @@ class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage> {
     }
   }
 
+  Future<void> _selectComparisonStartDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _comparisonStartDate ?? DateTime.now().subtract(const Duration(days: 365)),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+      locale: const Locale('zh', 'CN'),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _comparisonStartDate = DateTime(picked.year, picked.month, picked.day);
+      });
+      await _loadData();
+    }
+  }
+
+  Future<void> _selectComparisonEndDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _comparisonEndDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+      locale: const Locale('zh', 'CN'),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _comparisonEndDate = DateTime(picked.year, picked.month, picked.day, 23, 59, 59, 999);
+      });
+      await _loadData();
+    }
+  }
+
   Future<void> _handleRefresh() async {
     await ref.read(incomeStatementProvider.notifier).refresh();
   }
@@ -90,6 +135,15 @@ class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage> {
         endDate: _endDate,
       ),
     );
+  }
+
+  void _handleComparisonTypeChanged(PeriodComparisonType? type) {
+    if (type == null) return;
+    setState(() {
+      _comparisonType = type;
+      _showComparisonSelector = type == PeriodComparisonType.custom;
+    });
+    ref.read(incomeStatementProvider.notifier).setComparisonType(type);
   }
 
   @override
@@ -112,14 +166,17 @@ class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage> {
           // Date range selector
           _buildDateRangeSelector(context),
 
+          // Comparison type selector
+          _buildComparisonSelector(context),
+
           // Content
           Expanded(
             child: incomeStatementAsync.when(
-              data: (incomeStatement) {
-                if (incomeStatement == null) {
+              data: (statementWithComparison) {
+                if (statementWithComparison == null) {
                   return _buildEmptyState(context);
                 }
-                return _buildContent(context, incomeStatement);
+                return _buildContent(context, statementWithComparison);
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => _buildErrorState(context, error),
@@ -157,7 +214,7 @@ class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage> {
               ),
               const SizedBox(width: 8),
               Text(
-                '日期范围',
+                '报告期间',
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -243,7 +300,158 @@ class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage> {
     );
   }
 
-  Widget _buildContent(BuildContext context, IncomeStatement incomeStatement) {
+  Widget _buildComparisonSelector(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.compare_arrows,
+                size: 20,
+                color: theme.colorScheme.secondary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '期间对比',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: PeriodComparisonType.values.map((type) {
+                final isSelected = _comparisonType == type;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    label: Text(_getComparisonTypeLabel(type)),
+                    selected: isSelected,
+                    onSelected: (_) => _handleComparisonTypeChanged(type),
+                    selectedColor: theme.colorScheme.primaryContainer,
+                    checkmarkColor: theme.colorScheme.primary,
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          if (_showComparisonSelector) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: _selectComparisonStartDate,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            size: 16,
+                            color: theme.colorScheme.secondary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _comparisonStartDate != null
+                                  ? DateFormat('yyyy-MM-dd').format(_comparisonStartDate!)
+                                  : '对比开始',
+                              style: theme.textTheme.bodySmall,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: InkWell(
+                    onTap: _selectComparisonEndDate,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            size: 16,
+                            color: theme.colorScheme.secondary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _comparisonEndDate != null
+                                  ? DateFormat('yyyy-MM-dd').format(_comparisonEndDate!)
+                                  : '对比结束',
+                              style: theme.textTheme.bodySmall,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _getComparisonTypeLabel(PeriodComparisonType type) {
+    switch (type) {
+      case PeriodComparisonType.none:
+        return '无对比';
+      case PeriodComparisonType.previousMonth:
+        return '上月';
+      case PeriodComparisonType.previousQuarter:
+        return '上季度';
+      case PeriodComparisonType.previousYear:
+        return '去年同期';
+      case PeriodComparisonType.custom:
+        return '自定义';
+    }
+  }
+
+  Widget _buildContent(BuildContext context, IncomeStatementWithComparison statementWithComparison) {
+    final incomeStatement = statementWithComparison.current;
     final hasData = incomeStatement.revenues.items.isNotEmpty ||
         incomeStatement.expenses.items.isNotEmpty;
 
@@ -258,6 +466,10 @@ class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage> {
         padding: const EdgeInsets.only(top: 12, bottom: 12),
         child: Column(
           children: [
+            // Comparison summary card (if comparison is enabled)
+            if (statementWithComparison.hasComparison)
+              _buildComparisonSummaryCard(context, statementWithComparison),
+
             // Revenues section
             IncomeStatementSectionWidget(
               section: incomeStatement.revenues,
@@ -278,6 +490,145 @@ class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage> {
             _buildNetIncomeCard(context, incomeStatement),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildComparisonSummaryCard(BuildContext context, IncomeStatementWithComparison statement) {
+    final theme = Theme.of(context);
+    final previous = statement.previous!;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.compare_arrows,
+                  size: 18,
+                  color: theme.colorScheme.secondary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '与${statement.comparisonPeriodLabel}对比',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.secondary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Revenue change
+            _buildComparisonRow(
+              context,
+              label: '收入变化',
+              change: statement.revenueChange,
+              changePercent: statement.revenueChangePercent,
+              isPositiveGood: true,
+            ),
+            const SizedBox(height: 12),
+
+            // Expense change
+            _buildComparisonRow(
+              context,
+              label: '费用变化',
+              change: statement.expenseChange,
+              changePercent: statement.expenseChangePercent,
+              isPositiveGood: false,
+            ),
+            const SizedBox(height: 12),
+
+            // Net income change
+            _buildComparisonRow(
+              context,
+              label: '净利变化',
+              change: statement.netIncomeChange,
+              changePercent: statement.netIncomeChangePercent,
+              isPositiveGood: true,
+              isHighlighted: true,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildComparisonRow(
+    BuildContext context, {
+    required String label,
+    required Decimal change,
+    required double? changePercent,
+    required bool isPositiveGood,
+    bool isHighlighted = false,
+  }) {
+    final theme = Theme.of(context);
+    final isPositive = change > Decimal.zero;
+    final isNegative = change < Decimal.zero;
+    final isNeutral = change == Decimal.zero;
+
+    Color getChangeColor() {
+      if (isNeutral) return theme.colorScheme.outline;
+      if (isPositive) {
+        return isPositiveGood ? Colors.green : Colors.red;
+      } else {
+        return isPositiveGood ? Colors.red : Colors.green;
+      }
+    }
+
+    final changeColor = getChangeColor();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: isHighlighted
+            ? changeColor.withOpacity(0.1)
+            : theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: isHighlighted ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+          Row(
+            children: [
+              Text(
+                '${isPositive ? '+' : ''}${_formatDecimal(change)}',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: changeColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (changePercent != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: changeColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '${isPositive ? '+' : ''}${changePercent.toStringAsFixed(1)}%',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: changeColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
       ),
     );
   }

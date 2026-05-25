@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
-import 'package:go_router/go_router.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/presentation/widgets/keyboard_shortcuts.dart';
 import 'features/settings/data/theme_provider.dart';
 import 'features/settings/data/locale_provider.dart';
+import 'features/settings/data/security_provider.dart';
 import 'features/budgets/data/budget_notification_service.dart';
 import 'features/recurring/data/recurring_provider.dart';
 import 'features/platform/data/platform_provider.dart';
@@ -33,12 +33,15 @@ class FinanceApp extends ConsumerStatefulWidget {
 }
 
 class _FinanceAppState extends ConsumerState<FinanceApp> {
+  bool _securityChecked = false;
+  
   @override
   void initState() {
     super.initState();
     _setupNotificationHandler();
     _processRecurringTransactions();
     _logPlatformInfo();
+    _checkSecurityOnStartup();
   }
 
   void _setupNotificationHandler() {
@@ -78,10 +81,17 @@ class _FinanceAppState extends ConsumerState<FinanceApp> {
     });
   }
 
+  void _checkSecurityOnStartup() {
+    // Security check is now handled by GoRouter redirect
+    // This method is kept for future extensions if needed
+    _securityChecked = true;
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeProvider);
     final appLocale = ref.watch(localeProvider);
+    final router = ref.watch(goRouterProvider);
 
     return MaterialApp.router(
       title: '本地金融管家',
@@ -96,11 +106,11 @@ class _FinanceAppState extends ConsumerState<FinanceApp> {
         Locale('en', 'US'),
       ],
       localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
+        GlobalMaterialLocalizationsDelegate,
+        GlobalWidgetsLocalizationsDelegate,
+        GlobalCupertinoLocalizationsDelegate,
       ],
-      routerConfig: AppRouter.router,
+      routerConfig: router,
     );
   }
 }

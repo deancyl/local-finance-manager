@@ -444,19 +444,21 @@ class _ExportOptionsSheetState extends ConsumerState<_ExportOptionsSheet> {
     setState(() => _isExporting = true);
 
     try {
-      final exportService = ref.read(exportServiceProvider);
-      final filters = ExportFilters(
-        startDate: widget.startDate,
-        endDate: widget.endDate,
-      );
+      final balanceSheet = ref.read(balanceSheetProvider).valueOrNull;
+      if (balanceSheet == null) {
+        throw Exception('资产负债表数据未加载');
+      }
 
-      final result = await exportService.exportTransactionsToPDF(filters: filters);
+      final exportService = ref.read(exportServiceProvider);
+      final result = await exportService.exportBalanceSheetToPDF(
+        balanceSheet: balanceSheet,
+      );
 
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('导出成功：${result.transactionCount} 条记录'),
+            content: Text('导出成功：资产负债表 PDF'),
             action: SnackBarAction(
               label: '分享',
               onPressed: () => Share.shareXFiles([XFile(result.filePath)]),
@@ -480,19 +482,21 @@ class _ExportOptionsSheetState extends ConsumerState<_ExportOptionsSheet> {
     setState(() => _isExporting = true);
 
     try {
-      final exportService = ref.read(exportServiceProvider);
-      final filters = ExportFilters(
-        startDate: widget.startDate,
-        endDate: widget.endDate,
-      );
+      final balanceSheet = ref.read(balanceSheetProvider).valueOrNull;
+      if (balanceSheet == null) {
+        throw Exception('资产负债表数据未加载');
+      }
 
-      final result = await exportService.exportTransactionsToCSV(filters: filters);
+      final exportService = ref.read(exportServiceProvider);
+      final result = await exportService.exportBalanceSheetToCSV(
+        balanceSheet: balanceSheet,
+      );
 
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('导出成功：${result.transactionCount} 条记录'),
+            content: Text('导出成功：资产负债表 CSV'),
             action: SnackBarAction(
               label: '分享',
               onPressed: () => Share.shareXFiles([XFile(result.filePath)]),
