@@ -7,7 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:database/database.dart' as db;
-import 'package:core/core.dart';
+import 'package:core/core.dart' hide Transaction, Split;
 import 'package:decimal/decimal.dart';
 import 'qif_export_service.dart';
 import 'ofx_export_service.dart';

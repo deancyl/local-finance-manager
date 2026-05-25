@@ -236,9 +236,9 @@ final incomeStatementMonthlyTrendProvider = FutureProvider<List<MonthlyIncomeSta
 
   return monthlyData.map((data) => MonthlyIncomeStatementData(
     monthLabel: data.monthLabel,
-    revenue: Decimal.fromInt(data.revenueNum) / Decimal.fromInt(data.denom),
-    expenses: Decimal.fromInt(data.expenseNum) / Decimal.fromInt(data.denom),
-    netIncome: Decimal.fromInt(data.netIncomeNum) / Decimal.fromInt(data.denom),
+    revenue: (Decimal.fromInt(data.revenueNum) / Decimal.fromInt(data.denom)).toDecimal(),
+    expenses: (Decimal.fromInt(data.expenseNum) / Decimal.fromInt(data.denom)).toDecimal(),
+    netIncome: (Decimal.fromInt(data.netIncomeNum) / Decimal.fromInt(data.denom)).toDecimal(),
   )).toList();
 });
 

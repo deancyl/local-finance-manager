@@ -394,7 +394,7 @@ class AmountTextField extends StatelessWidget {
       hintText: hintText,
       prefixIcon: currencySymbol != null
           ? null
-          : const Icon(Icons.attach_money),
+          : Icons.attach_money,
       keyboardType: const TextInputType.numberWithOptions(
         decimal: true,
         signed: allowNegative,
@@ -433,7 +433,7 @@ class DateTextField extends StatelessWidget {
   final DateTime? initialDate;
   final DateTime? firstDate;
   final DateTime? lastDate;
-  final bool showDatePicker;
+  final bool showDatePickerButton;
 
   const DateTextField({
     super.key,
@@ -454,7 +454,7 @@ class DateTextField extends StatelessWidget {
     this.initialDate,
     this.firstDate,
     this.lastDate,
-    this.showDatePicker = true,
+    this.showDatePickerButton = true,
   });
 
   Future<void> _selectDate(BuildContext context) async {
@@ -479,9 +479,9 @@ class DateTextField extends StatelessWidget {
       controller: controller,
       labelText: labelText ?? 'Date',
       hintText: hintText,
-      prefixIcon: const Icon(Icons.calendar_today),
-      suffixIcon: showDatePicker ? Icons.edit_calendar : null,
-      onSuffixIconPressed: showDatePicker && enabled
+      prefixIcon: Icons.calendar_today,
+      suffixIcon: showDatePickerButton ? Icons.edit_calendar : null,
+      onSuffixIconPressed: showDatePickerButton && enabled
           ? () => _selectDate(context)
           : null,
       keyboardType: TextInputType.datetime,
@@ -491,10 +491,10 @@ class DateTextField extends StatelessWidget {
       initialValue: initialValue,
       onChanged: onChanged,
       onSubmitted: onSubmitted,
-      onTap: showDatePicker && enabled
+      onTap: showDatePickerButton && enabled
           ? () => _selectDate(context)
           : onTap,
-      readOnly: showDatePicker,
+      readOnly: showDatePickerButton,
     );
   }
 }
@@ -540,7 +540,7 @@ class DescriptionTextField extends StatelessWidget {
       controller: controller,
       labelText: labelText ?? 'Description',
       hintText: hintText,
-      prefixIcon: const Icon(Icons.description),
+      prefixIcon: Icons.description,
       validator: validator,
       enabled: enabled,
       focusNode: focusNode,

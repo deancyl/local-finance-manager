@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../data/biometric_service.dart';
 import '../../../settings/data/security_provider.dart';
-import '../../../core/router/app_router.dart' show markAppUnlocked;
+import 'package:finance_app/core/router/app_router.dart' show markAppUnlocked;
 
 /// Lock screen page for app unlock
 /// Supports biometric authentication with PIN fallback

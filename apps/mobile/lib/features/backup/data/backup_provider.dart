@@ -144,7 +144,7 @@ class BackupService {
     // Get statistics
     final transactionCount = await _db.transactionsDao.count();
     final accountCount = (await _db.accountsDao.getAll()).length;
-    final attachmentCount = await _db.attachmentsDao.getAllAttachments().length;
+    final attachmentCount = (await _db.attachmentsDao.getAllAttachments()).length;
 
     // Create backup
     if (compress) {
@@ -361,10 +361,11 @@ class BackupService {
   Future<String> _calculateChecksum(List<int> bytes) async {
     // Simple CRC32 checksum using archive package
     final crc = Crc32();
-    crc.add(bytes);
-    final checksumBytes = crc.close();
-    // Convert list of bytes to hex string
-    return checksumBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    for (final byte in bytes) {
+      crc.add(byte);
+    }
+    final checksumValue = crc.close();
+    return checksumValue.toRadixString(16).padLeft(8, '0');
   }
 }
 

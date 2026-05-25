@@ -10,6 +10,7 @@ import 'package:path/path.dart' as p;
 import 'package:database/database.dart';
 import '../../data/attachment_provider.dart';
 import '../../data/attachment_service.dart';
+import '../../../accounts/data/account_provider.dart';
 
 /// Full-screen page for viewing attachments with gallery support.
 class AttachmentViewerPage extends ConsumerStatefulWidget {
@@ -124,24 +125,28 @@ class _AttachmentViewerPageState extends ConsumerState<AttachmentViewerPage> {
                   final file = File(attachment.filePath);
 
                   if (!file.existsSync()) {
-                    return PhotoViewGalleryPageOptions.customBuilder(
-                      builder: (context, photoViewScaleStateController) {
-                        return Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.error_outline, size: 64, color: Colors.white),
-                              const SizedBox(height: 16),
-                              const Text('文件不存在', style: TextStyle(color: Colors.white)),
-                              const SizedBox(height: 8),
-                              Text(
-                                attachment.fileName,
-                                style: const TextStyle(color: Colors.white70, fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                    // Return a placeholder for missing files
+                    return PhotoViewGalleryPageOptions(
+                      imageProvider: const AssetImage('assets/images/placeholder.png'),
+                      initialScale: PhotoViewComputedScale.contained,
+                      minScale: PhotoViewComputedScale.contained,
+                      maxScale: PhotoViewComputedScale.covered * 3,
+                      heroAttributes: PhotoViewHeroAttributes(tag: attachment.id),
+                      errorBuilder: (context, error, stackTrace) => Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.error_outline, size: 64, color: Colors.white),
+                            const SizedBox(height: 16),
+                            const Text('文件不存在', style: TextStyle(color: Colors.white)),
+                            const SizedBox(height: 8),
+                            Text(
+                              attachment.fileName,
+                              style: const TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
                     );
                   }
 
@@ -156,48 +161,51 @@ class _AttachmentViewerPageState extends ConsumerState<AttachmentViewerPage> {
                   }
 
                   // For non-image files, show placeholder
-                  return PhotoViewGalleryPageOptions.customBuilder(
-                    builder: (context, photoViewScaleStateController) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _getFileIcon(attachment.fileType),
-                              size: 64,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              AttachmentService.getFileTypeName(attachment.fileType),
-                              style: const TextStyle(color: Colors.white, fontSize: 18),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              attachment.fileName,
-                              style: const TextStyle(color: Colors.white70, fontSize: 14),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              AttachmentService.formatFileSize(attachment.fileSize),
-                              style: const TextStyle(color: Colors.white60, fontSize: 12),
-                            ),
-                            const SizedBox(height: 24),
-                            ElevatedButton.icon(
-                              onPressed: () => _openExternal(attachment),
-                              icon: const Icon(Icons.open_in_new),
-                              label: const Text('打开文件'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                  return PhotoViewGalleryPageOptions(
+                    imageProvider: const AssetImage('assets/images/placeholder.png'),
+                    initialScale: PhotoViewComputedScale.contained,
+                    minScale: PhotoViewComputedScale.contained,
+                    maxScale: PhotoViewComputedScale.covered * 3,
+                    heroAttributes: PhotoViewHeroAttributes(tag: attachment.id),
+                    errorBuilder: (context, error, stackTrace) => Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _getFileIcon(attachment.fileType),
+                            size: 64,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            AttachmentService.getFileTypeName(attachment.fileType),
+                            style: const TextStyle(color: Colors.white, fontSize: 18),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            attachment.fileName,
+                            style: const TextStyle(color: Colors.white70, fontSize: 14),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            AttachmentService.formatFileSize(attachment.fileSize),
+                            style: const TextStyle(color: Colors.white60, fontSize: 12),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: () => _openExternal(attachment),
+                            icon: const Icon(Icons.open_in_new),
+                            label: const Text('打开文件'),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                 },
                 itemCount: attachments.length,
                 loadingBuilder: (context, event) => Center(
                   child: CircularProgressIndicator(
-                    value: event == null ? null : event.cumulativeProgress /
+                    value: event == null ? null : event.cumulativeBytesLoaded /
                         (event.expectedTotalBytes ?? 1),
                     color: Colors.white,
                   ),

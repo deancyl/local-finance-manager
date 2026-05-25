@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:database/database.dart' as db;
-import 'package:core/core.dart';
+import 'package:core/core.dart' hide Transaction, Split;
 import 'package:decimal/decimal.dart';
 import 'export_service.dart';
 
@@ -844,7 +844,7 @@ class PdfExportService {
     // Header
     rows.add(
       pw.TableRow(
-        decoration: pw.BoxDecoration(color: color.withOpacity(0.2)),
+        decoration: pw.BoxDecoration(color: color),
         children: [
           _buildTableCell('科目', isHeader: true),
           _buildTableCell('金额', isHeader: true, alignRight: true),
@@ -860,7 +860,7 @@ class PdfExportService {
     // Total row
     rows.add(
       pw.TableRow(
-        decoration: pw.BoxDecoration(color: color.withOpacity(0.1)),
+        decoration: pw.BoxDecoration(color: color),
         children: [
           _buildTableCell('合计', isBold: true),
           _buildTableCell(
@@ -911,7 +911,7 @@ class PdfExportService {
               '¥${_formatDecimal(item.toDecimal)}',
               style: pw.TextStyle(
                 fontSize: 10,
-                fontWeight: depth == 0 ? pw.FontWeight.w500 : pw.FontWeight.normal,
+                fontWeight: depth == 0 ? pw.FontWeight.bold : pw.FontWeight.normal,
               ),
               textAlign: pw.TextAlign.right,
             ),
@@ -936,7 +936,7 @@ class PdfExportService {
     return pw.Container(
       padding: const pw.EdgeInsets.all(16),
       decoration: pw.BoxDecoration(
-        color: statusColor.withOpacity(0.1),
+        color: statusColor,
         border: pw.Border.all(color: statusColor),
         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
       ),

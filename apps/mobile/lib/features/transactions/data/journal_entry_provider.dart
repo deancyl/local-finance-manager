@@ -285,7 +285,7 @@ class JournalEntryNotifier extends StateNotifier<JournalEntryState> {
   ValidationResult _validateSplits(List<SplitLine> splits) {
     // Check minimum splits
     if (splits.length < 2) {
-      return const ValidationResult.failure(
+      return const ValidationResult.invalid(
         'Journal entry must have at least 2 splits.',
       );
     }
@@ -293,7 +293,7 @@ class JournalEntryNotifier extends StateNotifier<JournalEntryState> {
     // Check all splits have accounts
     final emptySplits = splits.where((s) => !s.hasAccount).toList();
     if (emptySplits.isNotEmpty) {
-      return const ValidationResult.failure(
+      return const ValidationResult.invalid(
         'All splits must have an account selected.',
       );
     }
@@ -303,7 +303,7 @@ class JournalEntryNotifier extends StateNotifier<JournalEntryState> {
     for (final split in splits) {
       if (split.accountId != null) {
         if (accountIds.contains(split.accountId)) {
-          return const ValidationResult.failure(
+          return const ValidationResult.invalid(
             'Duplicate account in journal entry.',
           );
         }
@@ -314,7 +314,7 @@ class JournalEntryNotifier extends StateNotifier<JournalEntryState> {
     // Check all splits have amounts
     final zeroSplits = splits.where((s) => !s.hasAmount).toList();
     if (zeroSplits.isNotEmpty) {
-      return const ValidationResult.failure(
+      return const ValidationResult.invalid(
         'All splits must have a non-zero amount.',
       );
     }
@@ -325,12 +325,12 @@ class JournalEntryNotifier extends StateNotifier<JournalEntryState> {
     final balance = totalDebits - totalCredits;
 
     if (balance.abs() > 0.01) {
-      return ValidationResult.failure(
+      return ValidationResult.invalid(
         'Entry is not balanced. Difference: ¥${balance.abs().toStringAsFixed(2)}',
       );
     }
 
-    return const ValidationResult.success();
+    return const ValidationResult.valid();
   }
 
   /// Saves the journal entry to the database.

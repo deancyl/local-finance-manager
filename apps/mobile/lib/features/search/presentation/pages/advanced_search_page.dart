@@ -1,10 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:core/core.dart';
+import 'package:core/core.dart' hide Transaction, Split;
 import 'package:database/database.dart';
 import 'package:finance_app/features/transactions/presentation/widgets/transaction_card.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
+
+/// Filter class for advanced search (placeholder)
+class TransactionFilter {
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final String? categoryId;
+  final String? accountId;
+  final double? minAmount;
+  final double? maxAmount;
+  final String? searchQuery;
+
+  const TransactionFilter({
+    this.startDate,
+    this.endDate,
+    this.categoryId,
+    this.accountId,
+    this.minAmount,
+    this.maxAmount,
+    this.searchQuery,
+  });
+}
 
 /// Advanced Search Page with FTS5 full-text search and saved search presets.
 class AdvancedSearchPage extends ConsumerStatefulWidget {
@@ -71,15 +92,17 @@ class _AdvancedSearchPageState extends ConsumerState<AdvancedSearchPage> {
   }
 
   Future<void> _loadSavedSearches() async {
-    final db = ref.read(databaseProvider);
-    final searches = await db.savedSearchDao.getAll();
-    setState(() => _savedSearches = searches);
+    // SavedSearchDao was removed - saved searches feature disabled
+    // final db = ref.read(databaseProvider);
+    // final searches = await db.savedSearchDao.getAll();
+    setState(() => _savedSearches = []);
   }
 
   Future<void> _loadSearchHistory() async {
-    final db = ref.read(databaseProvider);
-    final history = await db.savedSearchDao.getRecentHistory(limit: 10);
-    setState(() => _searchHistory = history);
+    // SavedSearchDao was removed - search history feature disabled
+    // final db = ref.read(databaseProvider);
+    // final history = await db.savedSearchDao.getRecentHistory(limit: 10);
+    setState(() => _searchHistory = []);
   }
 
   Future<void> _performSearch({bool loadMore = false}) async {
@@ -96,9 +119,9 @@ class _AdvancedSearchPageState extends ConsumerState<AdvancedSearchPage> {
       final db = ref.read(databaseProvider);
       
       if (query.isNotEmpty) {
-        // Add to search history
-        await db.savedSearchDao.addToHistory(query);
-        _loadSearchHistory();
+        // SavedSearchDao was removed - search history feature disabled
+        // await db.savedSearchDao.addToHistory(query);
+        // _loadSearchHistory();
       }
 
       // Use FTS5 for full-text search
@@ -207,8 +230,9 @@ class _AdvancedSearchPageState extends ConsumerState<AdvancedSearchPage> {
       );
 
       final db = ref.read(databaseProvider);
-      await db.savedSearchDao.create(search);
-      _loadSavedSearches();
+      // SavedSearchDao was removed - saved search feature disabled
+      // await db.savedSearchDao.create(search);
+      // _loadSavedSearches();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -219,8 +243,9 @@ class _AdvancedSearchPageState extends ConsumerState<AdvancedSearchPage> {
   }
 
   void _applySavedSearch(SavedSearch search) async {
-    final db = ref.read(databaseProvider);
-    await db.savedSearchDao.incrementUseCount(search.id);
+    // SavedSearchDao was removed - use count tracking disabled
+    // final db = ref.read(databaseProvider);
+    // await db.savedSearchDao.incrementUseCount(search.id);
     
     setState(() {
       _searchController.text = search.searchQuery ?? '';
@@ -501,7 +526,7 @@ class _AdvancedSearchPageState extends ConsumerState<AdvancedSearchPage> {
 
   Future<void> _showAccountPicker() async {
     final db = ref.read(databaseProvider);
-    final accounts = await db.accountsDao.getAllLeafAccounts();
+    final accounts = await db.accountsDao.getAll();
 
     if (!mounted) return;
 
@@ -643,6 +668,9 @@ class _AdvancedSearchPageState extends ConsumerState<AdvancedSearchPage> {
           transaction: transaction,
           onTap: () {
             // Navigate to transaction detail
+          },
+          onDelete: () {
+            // Delete transaction - feature disabled in search results
           },
         );
       },
