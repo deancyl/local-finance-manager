@@ -176,7 +176,7 @@ void main() {
         final config = ImportConfig(
           targetAccountId: 'default-account',
           defaultCurrencyId: 'CNY',
-          accountMapping: {'yuebao': 'yuebao-account-id'},
+          accountMapping: {'余额宝': 'yuebao-account-id'},
         );
 
         final result = await importer.parse(
