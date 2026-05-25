@@ -22,7 +22,7 @@ class DraftTransactionsDao extends DatabaseAccessor<LocalFinanceDatabase>
     String? name,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    final id = const Uuid().v4();
+    final id = Uuid().v4();
     
     await into(draftTransactions).insert(
       DraftTransactionsCompanion.insert(
@@ -44,7 +44,7 @@ class DraftTransactionsDao extends DatabaseAccessor<LocalFinanceDatabase>
       ),
     );
     
-    return await getDraftById(id)!;
+    return (await getDraftById(id))!;
   }
 
   /// Update an existing draft
@@ -69,15 +69,15 @@ class DraftTransactionsDao extends DatabaseAccessor<LocalFinanceDatabase>
     
     await (update(draftTransactions)..where((d) => d.id.equals(id))).write(
       DraftTransactionsCompanion(
-        mode: Value(mode),
+        mode: Value(mode!),
         fromAccountId: Value(fromAccountId),
         toAccountId: Value(toAccountId),
         amount: Value(amount),
         categoryId: Value(categoryId),
         description: Value(description),
         notes: Value(notes),
-        date: Value(date?.toIso8601String()),
-        currencyId: Value(currencyId),
+        date: Value(date!.toIso8601String()),
+        currencyId: Value(currencyId!),
         templateId: Value(templateId),
         splitData: Value(splitData),
         name: Value(name),
