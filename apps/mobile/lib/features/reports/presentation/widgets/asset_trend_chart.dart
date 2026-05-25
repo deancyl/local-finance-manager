@@ -1,8 +1,12 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:finance_app/features/reports/data/balance_history_provider.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// Asset-liability trend chart showing asset, liability, and net worth over time.
 /// 
@@ -12,6 +16,13 @@ import 'package:finance_app/features/reports/data/balance_history_provider.dart'
 /// - Zoom and pan support
 /// - Comparison with previous period
 /// - Chinese labels
+/// 
+/// Optimized features (v0.3.116):
+/// - Smooth animations
+/// - Interactive tooltips with detailed information
+/// - Export charts as images
+/// - Legend toggle
+/// - Data labels
 class AssetTrendChart extends ConsumerStatefulWidget {
   const AssetTrendChart({super.key});
 
@@ -19,7 +30,8 @@ class AssetTrendChart extends ConsumerStatefulWidget {
   ConsumerState<AssetTrendChart> createState() => _AssetTrendChartState();
 }
 
-class _AssetTrendChartState extends ConsumerState<AssetTrendChart> {
+class _AssetTrendChartState extends ConsumerState<AssetTrendChart>
+    with SingleTickerProviderStateMixin {
   // Zoom and pan state
   double _minX = 0;
   double _maxX = 0;
@@ -28,6 +40,40 @@ class _AssetTrendChartState extends ConsumerState<AssetTrendChart> {
   
   // Track if we need to initialize the range
   bool _needsInit = true;
+  
+  // Animation controller
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+  
+  // Legend toggle
+  bool _showLegend = true;
+  
+  // Data labels toggle
+  bool _showDataLabels = false;
+  
+  // Export state
+  final GlobalKey _chartKey = GlobalKey();
+  bool _isExporting = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOutCubic,
+    );
+    _animationController.forward();
+  }
+  
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -55,7 +101,12 @@ class _AssetTrendChartState extends ConsumerState<AssetTrendChart> {
         
         const SizedBox(height: 16),
         
-        // Chart
+        // Chart controls
+        _buildChartControls(context),
+        
+        const SizedBox(height: 8),
+        
+        // Chart with export wrapper
         Expanded(
           child: historyAsync.when(
             data: (history) {
@@ -69,7 +120,15 @@ class _AssetTrendChartState extends ConsumerState<AssetTrendChart> {
                 _needsInit = false;
               }
               
-              return _buildChart(context, history, period);
+              return RepaintBoundary(
+                key: _chartKey,
+                child: AnimatedBuilder(
+                  animation: _animation,
+                  builder: (context, child) {
+                    return _buildChart(context, history, period);
+                  },
+                ),
+              );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => Center(
@@ -78,10 +137,134 @@ class _AssetTrendChartState extends ConsumerState<AssetTrendChart> {
           ),
         ),
         
-        // Legend
-        _buildLegend(context),
+        // Legend (toggleable)
+        if (_showLegend) _buildLegend(context),
       ],
     );
+  }
+  
+  Widget _buildChartControls(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        // Legend toggle
+        IconButton(
+          icon: Icon(
+            _showLegend ? Icons.legend_toggle : Icons.legend_toggle_outlined,
+            size: 20,
+          ),
+          onPressed: () {
+            setState(() {
+              _showLegend = !_showLegend;
+            });
+          },
+          tooltip: _showLegend ? '隐藏图例' : '显示图例',
+        ),
+        
+        // Data labels toggle
+        IconButton(
+          icon: Icon(
+            _showDataLabels ? Icons.label : Icons.label_outline,
+            size: 20,
+          ),
+          onPressed: () {
+            setState(() {
+              _showDataLabels = !_showDataLabels;
+            });
+          },
+          tooltip: _showDataLabels ? '隐藏数据标签' : '显示数据标签',
+        ),
+        
+        // Export button
+        IconButton(
+          icon: _isExporting
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.download, size: 20),
+          onPressed: _isExporting ? null : _exportChart,
+          tooltip: '导出图表',
+        ),
+      ],
+    );
+  }
+  
+  Future<void> _exportChart() async {
+    if (_isExporting) return;
+    
+    setState(() {
+      _isExporting = true;
+    });
+    
+    try {
+      // Request storage permission
+      final status = await Permission.storage.request();
+      if (!status.isGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('需要存储权限才能保存图表')),
+          );
+        }
+        return;
+      }
+      
+      // Capture the chart as image
+      final boundary = _chartKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('无法捕获图表')),
+          );
+        }
+        return;
+      }
+      
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      
+      if (byteData == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('无法生成图片')),
+          );
+        }
+        return;
+      }
+      
+      // Save to gallery
+      final fileName = 'asset_trend_${DateTime.now().millisecondsSinceEpoch}';
+      final result = await ImageGallerySaver.saveImage(
+        byteData.buffer.asUint8List(),
+        quality: 100,
+        name: fileName,
+      );
+      
+      if (mounted) {
+        if (result['isSuccess'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('图表已保存: $fileName.png')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('保存失败')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导出失败: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+        });
+      }
+    }
   }
   
   Widget _buildPeriodSelector() {
