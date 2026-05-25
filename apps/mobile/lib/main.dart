@@ -107,8 +107,6 @@ class _FinanceAppState extends ConsumerState<FinanceApp> {
       ],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalization.delegate,
-        GlobalCupertinoLocalization.delegate,
       ],
       routerConfig: router,
     );

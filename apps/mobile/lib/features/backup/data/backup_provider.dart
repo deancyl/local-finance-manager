@@ -361,10 +361,7 @@ class BackupService {
   Future<String> _calculateChecksum(List<int> bytes) async {
     // Simple CRC32 checksum using archive package
     final crc = Crc32();
-    for (final byte in bytes) {
-      crc.add(byte);
-    }
-    final checksumValue = crc.close();
+    final checksumValue = crc.calculate(bytes);
     return checksumValue.toRadixString(16).padLeft(8, '0');
   }
 }

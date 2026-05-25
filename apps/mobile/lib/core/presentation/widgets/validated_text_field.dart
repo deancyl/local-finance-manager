@@ -395,7 +395,7 @@ class AmountTextField extends StatelessWidget {
       prefixIcon: currencySymbol != null
           ? null
           : Icons.attach_money,
-      keyboardType: const TextInputType.numberWithOptions(
+      keyboardType: TextInputType.numberWithOptions(
         decimal: true,
         signed: allowNegative,
       ),
