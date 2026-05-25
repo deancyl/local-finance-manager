@@ -147,4 +147,9 @@ class AttachmentsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Attac
   Stream<List<Attachment>> watchAll() {
     return (select(attachments)..where((a) => a.deletedAt.isNull())).watch();
   }
+
+  /// Gets all non-deleted attachments.
+  Future<List<Attachment>> getAllAttachments() {
+    return (select(attachments)..where((a) => a.deletedAt.isNull())).get();
+  }
 }

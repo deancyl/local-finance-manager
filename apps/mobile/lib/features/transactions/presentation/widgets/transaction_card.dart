@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import 'package:database/database.dart';
 import '../../data/transaction_provider.dart';
+import '../../../attachments/data/attachment_provider.dart';
 
 class TransactionCard extends ConsumerWidget {
   final Transaction transaction;
@@ -20,6 +21,7 @@ class TransactionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final splitsAsync = ref.watch(splitsForTransactionProvider(transaction.id));
+    final attachmentCountAsync = ref.watch(attachmentCountProvider(transaction.id));
 
     return splitsAsync.when(
       data: (splits) {
@@ -56,11 +58,33 @@ class TransactionCard extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          transaction.description ?? '未分类交易',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+                        Row(
+                          children: [
+                            Text(
+                              transaction.description ?? '未分类交易',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                            // Attachment indicator
+                            attachmentCountAsync.when(
+                              data: (count) {
+                                if (count > 0) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Icon(
+                                      Icons.attach_file,
+                                      size: 16,
+                                      color: Theme.of(context).colorScheme.primary,
+                                    ),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                              loading: () => const SizedBox.shrink(),
+                              error: (_, __) => const SizedBox.shrink(),
+                            ),
+                          ],
                         ),
                         if (transaction.notes != null && transaction.notes!.isNotEmpty) ...[
                           const SizedBox(height: 2),

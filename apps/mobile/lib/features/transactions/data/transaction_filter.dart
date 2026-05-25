@@ -7,6 +7,7 @@ class TransactionFilter {
   final String? searchQuery;
   final double? minAmount;
   final double? maxAmount;
+  final List<String> tagIds;
 
   const TransactionFilter({
     this.startDate,
@@ -16,6 +17,7 @@ class TransactionFilter {
     this.searchQuery,
     this.minAmount,
     this.maxAmount,
+    this.tagIds = const [],
   });
 
   /// Creates a copy with updated fields.
@@ -28,6 +30,7 @@ class TransactionFilter {
     String? searchQuery,
     double? minAmount,
     double? maxAmount,
+    List<String>? tagIds,
     bool clearStartDate = false,
     bool clearEndDate = false,
     bool clearCategoryId = false,
@@ -35,6 +38,7 @@ class TransactionFilter {
     bool clearSearchQuery = false,
     bool clearMinAmount = false,
     bool clearMaxAmount = false,
+    bool clearTagIds = false,
   }) {
     return TransactionFilter(
       startDate: clearStartDate ? null : (startDate ?? this.startDate),
@@ -44,6 +48,7 @@ class TransactionFilter {
       searchQuery: clearSearchQuery ? null : (searchQuery ?? this.searchQuery),
       minAmount: clearMinAmount ? null : (minAmount ?? this.minAmount),
       maxAmount: clearMaxAmount ? null : (maxAmount ?? this.maxAmount),
+      tagIds: clearTagIds ? [] : (tagIds ?? this.tagIds),
     );
   }
 
@@ -55,7 +60,8 @@ class TransactionFilter {
       accountId == null &&
       (searchQuery == null || searchQuery!.isEmpty) &&
       minAmount == null &&
-      maxAmount == null;
+      maxAmount == null &&
+      tagIds.isEmpty;
 
   /// Returns true if any filters are applied.
   bool get isNotEmpty => !isEmpty;
@@ -79,6 +85,7 @@ class TransactionFilter {
       'searchQuery': searchQuery,
       'minAmount': minAmount,
       'maxAmount': maxAmount,
+      'tagIds': tagIds.join(','),
     };
   }
 
@@ -96,6 +103,9 @@ class TransactionFilter {
       searchQuery: json['searchQuery'] as String?,
       minAmount: json['minAmount'] as double?,
       maxAmount: json['maxAmount'] as double?,
+      tagIds: json['tagIds'] != null && (json['tagIds'] as String).isNotEmpty
+          ? (json['tagIds'] as String).split(',')
+          : [],
     );
   }
 }

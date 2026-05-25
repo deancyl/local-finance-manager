@@ -16,6 +16,7 @@ class BackupMetadata {
   final int sizeBytes;
   final int transactionCount;
   final int accountCount;
+  final int attachmentCount;
   final String? checksum;
   final bool isVerified;
 
@@ -26,6 +27,7 @@ class BackupMetadata {
     required this.sizeBytes,
     required this.transactionCount,
     required this.accountCount,
+    this.attachmentCount = 0,
     this.checksum,
     this.isVerified = false,
   });
@@ -45,6 +47,7 @@ class BackupMetadata {
     'sizeBytes': sizeBytes,
     'transactionCount': transactionCount,
     'accountCount': accountCount,
+    'attachmentCount': attachmentCount,
     'checksum': checksum,
     'isVerified': isVerified,
   };
@@ -56,6 +59,7 @@ class BackupMetadata {
     sizeBytes: json['sizeBytes'] as int,
     transactionCount: json['transactionCount'] as int,
     accountCount: json['accountCount'] as int,
+    attachmentCount: json['attachmentCount'] as int? ?? 0,
     checksum: json['checksum'] as String?,
     isVerified: json['isVerified'] as bool? ?? false,
   );
@@ -140,6 +144,7 @@ class BackupService {
     // Get statistics
     final transactionCount = await _db.transactionsDao.count();
     final accountCount = (await _db.accountsDao.getAll()).length;
+    final attachmentCount = await _db.attachmentsDao.getAllAttachments().length;
 
     // Create backup
     if (compress) {
@@ -184,6 +189,7 @@ class BackupService {
         sizeBytes: sizeBytes,
         transactionCount: transactionCount,
         accountCount: accountCount,
+        attachmentCount: attachmentCount,
         checksum: checksum,
         isVerified: true,
       );
@@ -200,6 +206,7 @@ class BackupService {
         sizeBytes: sizeBytes,
         transactionCount: transactionCount,
         accountCount: accountCount,
+        attachmentCount: attachmentCount,
         isVerified: true,
       );
     }

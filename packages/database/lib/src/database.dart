@@ -15,7 +15,6 @@ import 'tables/exchange_rates.dart';
 import 'tables/cost_centers.dart';
 import 'tables/audit_logs.dart';
 import 'tables/transaction_templates.dart';
-import 'tables/saved_searches.dart';
 
 part 'database.g.dart';
 part 'daos/accounts_dao.dart';
@@ -34,7 +33,6 @@ part 'daos/audit_logs_dao.dart';
 part 'daos/transaction_templates_dao.dart';
 part 'daos/income_statement_dao.dart';
 part 'daos/balance_sheet_dao.dart';
-part 'daos/saved_search_dao.dart';
 
 /// Local finance database with all tables.
 @DriftDatabase(
@@ -56,8 +54,6 @@ part 'daos/saved_search_dao.dart';
     CostCenters,
     AuditLogs,
     TransactionTemplates,
-    SavedSearches,
-    SearchHistory,
   ],
 )
 class LocalFinanceDatabase extends _$LocalFinanceDatabase {
@@ -381,18 +377,6 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
           // Version 13: Add saved searches and FTS5 for advanced search
           await m.createTable(savedSearches);
           await m.createTable(searchHistory);
-          await customStatement(
-            'CREATE INDEX IF NOT EXISTS idx_saved_searches_favorite '
-            'ON saved_searches(is_favorite) WHERE is_favorite = 1',
-          );
-          await customStatement(
-            'CREATE INDEX IF NOT EXISTS idx_saved_searches_use_count '
-            'ON saved_searches(use_count DESC)',
-          );
-          await customStatement(
-            'CREATE INDEX IF NOT EXISTS idx_search_history_searched_at '
-            'ON search_history(searched_at DESC)',
-          );
           // Create FTS5 virtual table for full-text search
           await customStatement('''
             CREATE VIRTUAL TABLE IF NOT EXISTS transactions_fts USING fts5(

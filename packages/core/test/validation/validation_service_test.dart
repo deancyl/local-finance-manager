@@ -435,7 +435,7 @@ void main() {
       test('returns first failed validation', () {
         final validator = ValidationService.combine([
           ValidationService.required(message: 'Required'),
-          ValidationService.numeric(message: 'Must be numeric'),
+          ValidationService.numeric(invalidFormatMessage: 'Must be numeric'),
         ]);
         final result = validator('');
         expect(result.errorMessage, 'Required');
@@ -444,7 +444,7 @@ void main() {
       test('returns second failed validation when first passes', () {
         final validator = ValidationService.combine([
           ValidationService.required(message: 'Required'),
-          ValidationService.numeric(message: 'Must be numeric'),
+          ValidationService.numeric(invalidFormatMessage: 'Must be numeric'),
         ]);
         final result = validator('abc');
         expect(result.errorMessage, 'Must be numeric');

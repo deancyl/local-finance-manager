@@ -168,7 +168,7 @@ class ExportService {
 
     // Build JSON structure
     final jsonData = {
-      'version': '0.3.21',
+      'version': '0.3.95',
       'exportedAt': DateTime.now().toIso8601String(),
       'exportType': 'transactions',
       'filters': {
@@ -247,7 +247,7 @@ class ExportService {
     }
 
     final jsonData = {
-      'version': '0.3.21',
+      'version': '0.3.95',
       'exportedAt': DateTime.now().toIso8601String(),
       'exportType': 'accounts',
       'accounts': accounts.map((a) => <String, dynamic>{
@@ -296,7 +296,7 @@ class ExportService {
     }
 
     final jsonData = {
-      'version': '0.3.21',
+      'version': '0.3.95',
       'exportedAt': DateTime.now().toIso8601String(),
       'exportType': 'categories',
       'categories': categories.map((c) => <String, dynamic>{
@@ -345,7 +345,7 @@ class ExportService {
     }
 
     // Build attachments map
-    final attachmentsByTransaction = <String, List<AttachmentData>>{};
+    final attachmentsByTransaction = <String, List<Attachment>>{};
     for (final attachment in attachments) {
       attachmentsByTransaction.putIfAbsent(attachment.transactionId, () => []).add(attachment);
     }
