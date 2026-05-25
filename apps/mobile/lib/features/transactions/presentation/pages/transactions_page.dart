@@ -135,6 +135,12 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               },
             ),
           if (!_isSearching)
+            IconButton(
+              icon: const Icon(Icons.print),
+              onPressed: _handlePrint,
+              tooltip: '打印',
+            ),
+          if (!_isSearching)
             _buildFilterButton(context, filter),
         ],
       ),
@@ -261,6 +267,26 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
       context: context,
       isScrollControlled: true,
       builder: (context) => const TransactionFilterDialog(),
+    );
+  }
+
+  void _handlePrint() async {
+    final filter = ref.read(transactionFilterProvider);
+
+    await PrintService.showPreview(
+      context: context,
+      title: '交易记录 - 打印预览',
+      onLayout: (setup) async {
+        final pdfService = ref.read(pdfExportServiceProvider);
+        final exportFilters = ExportFilters(
+          startDate: filter.startDate,
+          endDate: filter.endDate,
+          categoryId: filter.categoryId,
+          accountId: filter.accountId,
+        );
+        final result = await pdfService.exportToPDF(filters: exportFilters);
+        return result.bytes ?? Uint8List(0);
+      },
     );
   }
 

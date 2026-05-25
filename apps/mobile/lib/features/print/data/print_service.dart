@@ -356,7 +356,7 @@ class _PrintPreviewScreenState extends State<PrintPreviewScreen> {
 }
 
 /// PDF preview widget using flutter PDF viewer.
-class PdfPreview extends StatelessWidget {
+class PdfPreview extends StatefulWidget {
   final Uint8List bytes;
   final void Function(int page, int total)? onPageChanged;
 
@@ -367,17 +367,40 @@ class PdfPreview extends StatelessWidget {
   });
 
   @override
+  State<PdfPreview> createState() => _PdfPreviewState();
+}
+
+class _PdfPreviewState extends State<PdfPreview> {
+  @override
   Widget build(BuildContext context) {
-    return PdfDocument.loadBytes(bytes).then((doc) {
-      onPageChanged?.call(1, doc.pagesCount);
-      return PdfViewer.openData(bytes);
-    }).then((viewer) {
-      return viewer;
-    }).catchError((error) {
-      return Center(
-        child: Text('预览加载失败: $error'),
-      );
-    }) as Widget;
+    return InteractiveViewer(
+      minScale: 0.1,
+      maxScale: 5.0,
+      child: Center(
+        child: FutureBuilder<PdfDocument>(
+          future: PdfDocument.openData(widget.bytes),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return Center(
+                child: Text('预览加载失败: ${snapshot.error}'),
+              );
+            }
+
+            if (!snapshot.hasData) {
+              return const CircularProgressIndicator();
+            }
+
+            final doc = snapshot.data!;
+            widget.onPageChanged?.call(1, doc.pagesCount);
+
+            return PdfPageView(
+              document: doc,
+              pageNumber: 1,
+            );
+          },
+        ),
+      ),
+    );
   }
 }
 
