@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import 'package:database/database.dart';
 import 'package:finance_app/features/voice/presentation/widgets/voice_input_button.dart';
+import '../../../../core/presentation/widgets/gesture_controls.dart';
 import '../../data/transaction_provider.dart';
 import '../../data/transaction_filter.dart';
 import '../widgets/transaction_card.dart';
@@ -293,6 +294,11 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                   transaction: transaction,
                   onTap: () => _showEditDialog(context, transaction),
                   onDelete: () => _deleteTransaction(context, transaction),
+                  onEdit: () => _showEditDialog(context, transaction),
+                  onDuplicate: () => _duplicateTransaction(context, transaction),
+                  onCategorize: () => _categorizeTransaction(context, transaction),
+                  onAddNote: () => _addNoteToTransaction(context, transaction),
+                  onArchive: () => _archiveTransaction(context, transaction),
                 )),
             const SizedBox(height: 8),
           ],
@@ -411,6 +417,120 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               );
             },
             child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _duplicateTransaction(BuildContext context, Transaction transaction) {
+    // Create a duplicate transaction with current timestamp
+    final duplicatedTransaction = Transaction(
+      id: -1, // Will be assigned by database
+      guid: '', // Will be generated
+      currency: transaction.currency,
+      postDate: DateTime.now().millisecondsSinceEpoch,
+      enterDate: DateTime.now().millisecondsSinceEpoch,
+      description: '${transaction.description ?? ''} (副本)',
+      notes: transaction.notes,
+      num: transaction.num,
+    );
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => AddTransactionDialog(transaction: duplicatedTransaction),
+    );
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('交易已复制')),
+    );
+  }
+
+  void _categorizeTransaction(BuildContext context, Transaction transaction) {
+    // Show category selection dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('选择分类'),
+        content: const Text('分类功能开发中...'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addNoteToTransaction(BuildContext context, Transaction transaction) {
+    final noteController = TextEditingController(text: transaction.notes ?? '');
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('添加备注'),
+        content: TextField(
+          controller: noteController,
+          decoration: const InputDecoration(
+            hintText: '输入备注内容',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final updatedTransaction = Transaction(
+                id: transaction.id,
+                guid: transaction.guid,
+                currency: transaction.currency,
+                postDate: transaction.postDate,
+                enterDate: transaction.enterDate,
+                description: transaction.description,
+                notes: noteController.text,
+                num: transaction.num,
+              );
+              
+              await ref.read(transactionNotifierProvider.notifier).updateTransaction(updatedTransaction);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('备注已添加')),
+              );
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _archiveTransaction(BuildContext context, Transaction transaction) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('归档交易'),
+        content: const Text('确定要归档这条交易记录吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () {
+              // Archive functionality placeholder
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('交易已归档')),
+              );
+            },
+            child: const Text('归档'),
           ),
         ],
       ),

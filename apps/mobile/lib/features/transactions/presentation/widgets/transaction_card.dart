@@ -5,23 +5,36 @@ import 'package:intl/intl.dart';
 import 'package:database/database.dart';
 import '../../data/transaction_provider.dart';
 import '../../../attachments/data/attachment_provider.dart';
+import '../../../../core/presentation/widgets/gesture_controls.dart';
+import '../../../../core/presentation/widgets/gesture_config_provider.dart';
 
 class TransactionCard extends ConsumerWidget {
   final Transaction transaction;
   final VoidCallback onTap;
   final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDuplicate;
+  final VoidCallback? onCategorize;
+  final VoidCallback? onAddNote;
+  final VoidCallback? onArchive;
 
   const TransactionCard({
     super.key,
     required this.transaction,
     required this.onTap,
     required this.onDelete,
+    this.onEdit,
+    this.onDuplicate,
+    this.onCategorize,
+    this.onAddNote,
+    this.onArchive,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final splitsAsync = ref.watch(splitsForTransactionProvider(transaction.id));
     final attachmentCountAsync = ref.watch(attachmentCountProvider(transaction.id));
+    final gestureConfig = ref.watch(gestureConfigProvider);
 
     return splitsAsync.when(
       data: (splits) {
@@ -30,7 +43,7 @@ class TransactionCard extends ConsumerWidget {
         final amount = split.valueNum / split.valueDenom;
         final isIncome = amount > 0;
 
-        return Card(
+        final card = Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: InkWell(
             onTap: onTap,
@@ -133,9 +146,56 @@ class TransactionCard extends ConsumerWidget {
             ),
           ),
         );
+
+        // Wrap with gesture controls
+        return SwipeableAction(
+          leftAction: gestureConfig.swipeLeft,
+          rightAction: gestureConfig.swipeRight,
+          onLeftSwipe: _getActionCallback(gestureConfig.swipeLeft),
+          onRightSwipe: _getActionCallback(gestureConfig.swipeRight),
+          enableHapticFeedback: gestureConfig.enableHapticFeedback,
+          threshold: gestureConfig.swipeThreshold,
+          child: LongPressMenu(
+            itemBuilder: (context) => GestureMenuItems.standardTransactionMenu(),
+            onSelected: (action) => _handleMenuAction(action),
+            enableHapticFeedback: gestureConfig.enableHapticFeedback,
+            longPressDuration: gestureConfig.longPressDuration,
+            child: DoubleTapAction(
+              action: gestureConfig.doubleTap,
+              onDoubleTap: _getActionCallback(gestureConfig.doubleTap),
+              enableHapticFeedback: gestureConfig.enableHapticFeedback,
+              child: card,
+            ),
+          ),
+        );
       },
       loading: () => const Card(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
       error: (_, __) => const SizedBox.shrink(),
     );
+  }
+
+  VoidCallback? _getActionCallback(GestureAction action) {
+    switch (action) {
+      case GestureAction.delete:
+        return onDelete;
+      case GestureAction.edit:
+        return onEdit;
+      case GestureAction.duplicate:
+        return onDuplicate;
+      case GestureAction.categorize:
+        return onCategorize;
+      case GestureAction.addNote:
+        return onAddNote;
+      case GestureAction.archive:
+        return onArchive;
+      case GestureAction.transfer:
+      case GestureAction.none:
+        return null;
+    }
+  }
+
+  void _handleMenuAction(GestureAction action) {
+    final callback = _getActionCallback(action);
+    callback?.call();
   }
 }
