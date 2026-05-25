@@ -10,6 +10,7 @@ class TagsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tagsAsync = ref.watch(allTagsProvider);
+    final statsAsync = ref.watch(tagsWithStatsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -34,7 +35,12 @@ class TagsPage extends ConsumerWidget {
             itemCount: tags.length,
             itemBuilder: (context, index) {
               final tag = tags[index];
-              return _buildTagItem(context, ref, tag);
+              // Get stats for this tag
+              final stats = statsAsync.whenOrNull(
+                data: (s) => s.where((s) => s.$1.id == tag.id).firstOrNull,
+              );
+              final transactionCount = stats?.$2 ?? tag.usageCount;
+              return _buildTagItem(context, ref, tag, transactionCount);
             },
           );
         },
@@ -48,7 +54,7 @@ class TagsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildTagItem(BuildContext context, WidgetRef ref, Tag tag) {
+  Widget _buildTagItem(BuildContext context, WidgetRef ref, Tag tag, int transactionCount) {
     final color = _parseColor(tag.color);
     
     return Card(
@@ -77,22 +83,30 @@ class TagsPage extends ConsumerWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (tag.usageCount > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${tag.usageCount}',
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+            // Transaction count badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
               ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.receipt_long, size: 14, color: color),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$transactionCount',
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
             if (!tag.isSystem)
               IconButton(
                 icon: const Icon(Icons.delete_outline),
