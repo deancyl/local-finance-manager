@@ -9,6 +9,7 @@ import 'package:database/database.dart' as db;
 import 'package:core/core.dart' hide Transaction, Split;
 import 'package:decimal/decimal.dart';
 import 'export_service.dart';
+import '../../print/data/print_service.dart';
 
 /// PDF export service for financial reports.
 ///
@@ -717,6 +718,7 @@ class PdfExportService {
 
     return PdfExportResult(
       filePath: filePath,
+      bytes: pdfBytes,
       transactionCount: 0,
       accountCount: balanceSheet.assets.items.length +
           balanceSheet.liabilities.items.length +
@@ -728,14 +730,34 @@ class PdfExportService {
     );
   }
 
+  /// Exports balance sheet to PDF bytes (for printing).
+  Future<Uint8List> exportBalanceSheetToPDFBytes({
+    required BalanceSheet balanceSheet,
+    PageSetup? pageSetup,
+  }) async {
+    return await _generateBalanceSheetPdf(balanceSheet, pageSetup: pageSetup);
+  }
+
+  /// Exports income statement to PDF bytes (for printing).
+  Future<Uint8List> exportIncomeStatementToPDFBytes({
+    required IncomeStatement incomeStatement,
+    PageSetup? pageSetup,
+  }) async {
+    return await _generateIncomeStatementPdf(incomeStatement, pageSetup: pageSetup);
+  }
+
   /// Generates the balance sheet PDF document.
-  Future<Uint8List> _generateBalanceSheetPdf(BalanceSheet balanceSheet) async {
+  Future<Uint8List> _generateBalanceSheetPdf(
+    BalanceSheet balanceSheet, {
+    PageSetup? pageSetup,
+  }) async {
     final pdf = pw.Document();
+    final setup = pageSetup ?? const PageSetup();
 
     pdf.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(40),
+        pageFormat: setup.effectiveFormat,
+        margin: setup.margins,
         build: (pw.Context context) {
           return [
             // Title
@@ -1058,6 +1080,289 @@ class PdfExportService {
     }
     return '$str.00';
   }
+
+  /// Generates the income statement PDF document.
+  Future<Uint8List> _generateIncomeStatementPdf(
+    IncomeStatement incomeStatement, {
+    PageSetup? pageSetup,
+  }) async {
+    final pdf = pw.Document();
+    final setup = pageSetup ?? const PageSetup();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: setup.effectiveFormat,
+        margin: setup.margins,
+        build: (pw.Context context) {
+          return [
+            // Title
+            pw.Center(
+              child: pw.Text(
+                '利润表',
+                style: pw.TextStyle(
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            // Period
+            pw.Center(
+              child: pw.Text(
+                '报告期间: ${_displayFormat.format(incomeStatement.startDate)} - ${_displayFormat.format(incomeStatement.endDate)}',
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  color: PdfColors.grey700,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            // Generated date
+            pw.Center(
+              child: pw.Text(
+                '生成时间: ${_displayFormat.format(DateTime.now())}',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  color: PdfColors.grey500,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 24),
+
+            // Revenues Section
+            pw.Text(
+              '收入',
+              style: pw.TextStyle(
+                fontSize: 16,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.green700,
+              ),
+            ),
+            pw.SizedBox(height: 12),
+            _buildIncomeStatementSectionTable(
+              incomeStatement.revenues,
+              PdfColors.green700,
+            ),
+            pw.SizedBox(height: 24),
+
+            // Expenses Section
+            pw.Text(
+              '费用',
+              style: pw.TextStyle(
+                fontSize: 16,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.red700,
+              ),
+            ),
+            pw.SizedBox(height: 12),
+            _buildIncomeStatementSectionTable(
+              incomeStatement.expenses,
+              PdfColors.red700,
+            ),
+            pw.SizedBox(height: 24),
+
+            // Net Income
+            _buildNetIncomeCard(incomeStatement),
+          ];
+        },
+        footer: (pw.Context context) {
+          return pw.Container(
+            alignment: pw.Alignment.centerRight,
+            margin: const pw.EdgeInsets.only(top: 20),
+            child: pw.Text(
+              '第 ${context.pageNumber} 页，共 ${context.pagesCount} 页',
+              style: pw.TextStyle(
+                fontSize: 10,
+                color: PdfColors.grey500,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  /// Builds an income statement section table.
+  pw.Widget _buildIncomeStatementSectionTable(
+    IncomeStatementSection section,
+    PdfColor color,
+  ) {
+    final rows = <pw.TableRow>[];
+
+    // Header
+    rows.add(
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: color),
+        children: [
+          _buildTableCell('科目', isHeader: true),
+          _buildTableCell('金额', isHeader: true, alignRight: true),
+        ],
+      ),
+    );
+
+    // Items
+    for (final item in section.items) {
+      _addIncomeStatementItemRows(rows, item, depth: 0);
+    }
+
+    // Total row
+    rows.add(
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: color),
+        children: [
+          _buildTableCell('合计', isBold: true),
+          _buildTableCell(
+            '¥${_formatDecimal(section.totalDecimal)}',
+            isBold: true,
+            alignRight: true,
+            textColor: color,
+          ),
+        ],
+      ),
+    );
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey300),
+      columnWidths: {
+        0: const pw.FlexColumnWidth(4),
+        1: const pw.FlexColumnWidth(2),
+      },
+      children: rows,
+    );
+  }
+
+  /// Recursively adds income statement item rows.
+  void _addIncomeStatementItemRows(
+    List<pw.TableRow> rows,
+    IncomeStatementItem item, {
+    required int depth,
+  }) {
+    final indent = '  ' * depth;
+    final prefix = depth > 0 ? '├─ ' : '';
+
+    rows.add(
+      pw.TableRow(
+        children: [
+          pw.Padding(
+            padding: pw.EdgeInsets.only(left: depth * 8.0, top: 6, bottom: 6, right: 8),
+            child: pw.Text(
+              '$indent$prefix${item.accountName}',
+              style: pw.TextStyle(
+                fontSize: 10,
+                fontWeight: depth == 0 ? pw.FontWeight.bold : pw.FontWeight.normal,
+              ),
+            ),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+            child: pw.Text(
+              '¥${_formatDecimal(item.toDecimal)}',
+              style: pw.TextStyle(
+                fontSize: 10,
+                fontWeight: depth == 0 ? pw.FontWeight.bold : pw.FontWeight.normal,
+              ),
+              textAlign: pw.TextAlign.right,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // Add children recursively
+    if (item.children != null) {
+      for (final child in item.children!) {
+        _addIncomeStatementItemRows(rows, child, depth: depth + 1);
+      }
+    }
+  }
+
+  /// Builds the net income card.
+  pw.Widget _buildNetIncomeCard(IncomeStatement incomeStatement) {
+    final isProfit = incomeStatement.isProfit;
+    final statusColor = isProfit ? PdfColors.green700 : PdfColors.red700;
+    final statusText = isProfit ? '盈利' : '亏损';
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(16),
+      decoration: pw.BoxDecoration(
+        color: statusColor,
+        border: pw.Border.all(color: statusColor),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            children: [
+              pw.Text(
+                '净利润',
+                style: pw.TextStyle(
+                  fontSize: 14,
+                  fontWeight: pw.FontWeight.bold,
+                  color: statusColor,
+                ),
+              ),
+              pw.SizedBox(width: 8),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: pw.BoxDecoration(
+                  color: statusColor,
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
+                ),
+                child: pw.Text(
+                  statusText,
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    color: PdfColors.white,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 16),
+          pw.Text(
+            '¥${_formatDecimal(incomeStatement.netIncomeDecimal)}',
+            style: pw.TextStyle(
+              fontSize: 24,
+              fontWeight: pw.FontWeight.bold,
+              color: statusColor,
+            ),
+          ),
+          pw.SizedBox(height: 16),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+            children: [
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Text('收入合计', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                  pw.Text(
+                    '¥${_formatDecimal(incomeStatement.grossProfit)}',
+                    style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.green700),
+                  ),
+                ],
+              ),
+              pw.Text('-', style: pw.TextStyle(fontSize: 18)),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Text('费用合计', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                  pw.Text(
+                    '¥${_formatDecimal(incomeStatement.totalExpenses)}',
+                    style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.red700),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Category breakdown data model.
@@ -1097,6 +1402,7 @@ class MonthlyData {
 /// PDF export result.
 class PdfExportResult {
   final String filePath;
+  final Uint8List? bytes;
   final int transactionCount;
   final int accountCount;
   final int categoryCount;
@@ -1106,6 +1412,7 @@ class PdfExportResult {
 
   PdfExportResult({
     required this.filePath,
+    this.bytes,
     required this.transactionCount,
     required this.accountCount,
     required this.categoryCount,

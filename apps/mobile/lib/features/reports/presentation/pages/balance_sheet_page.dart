@@ -11,6 +11,8 @@ import '../widgets/balance_sheet_section.dart';
 import '../widgets/balance_verification_card.dart';
 import '../../../export/data/export_service.dart';
 import '../../../export/data/export_provider.dart';
+import '../../../print/data/print_service.dart';
+import '../../../print/data/print_provider.dart';
 
 /// Balance sheet report page with as-of date selection.
 ///
@@ -77,6 +79,28 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
     );
   }
 
+  void _handlePrint() async {
+    final balanceSheet = ref.read(balanceSheetProvider).valueOrNull;
+    if (balanceSheet == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('资产负债表数据未加载')),
+      );
+      return;
+    }
+
+    await PrintService.showPreview(
+      context: context,
+      title: '资产负债表 - 打印预览',
+      onLayout: (setup) async {
+        final pdfService = ref.read(pdfExportServiceProvider);
+        return pdfService.exportBalanceSheetToPDFBytes(
+          balanceSheet: balanceSheet,
+          pageSetup: setup,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final balanceSheetAsync = ref.watch(balanceSheetProvider);
@@ -85,6 +109,11 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
       appBar: AppBar(
         title: const Text('资产负债表'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.print),
+            onPressed: _handlePrint,
+            tooltip: '打印',
+          ),
           IconButton(
             icon: const Icon(Icons.download),
             onPressed: _handleExport,

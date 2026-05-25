@@ -7,7 +7,8 @@ enum AccountType {
   liability('LIABILITY', '负债'),
   equity('EQUITY', '权益'),
   income('INCOME', '收入'),
-  expense('EXPENSE', '支出');
+  expense('EXPENSE', '支出'),
+  investment('INVESTMENT', '投资');
 
   final String code;
   final String labelZh;

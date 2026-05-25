@@ -258,4 +258,251 @@ class AppTheme {
   // Legacy static themes for backward compatibility
   static ThemeData lightTheme = buildLightTheme();
   static ThemeData darkTheme = buildDarkTheme();
+
+  // High contrast colors for accessibility
+  static const Color highContrastPrimary = Color(0xFF000000);
+  static const Color highContrastSecondary = Color(0xFFFFFFFF);
+  static const Color highContrastAccent = Color(0xFF0055FF);
+  static const Color highContrastError = Color(0xFFFF0000);
+  static const Color highContrastSuccess = Color(0xFF008800);
+  static const Color highContrastWarning = Color(0xFFFF8800);
+
+  /// Build high contrast light theme for accessibility
+  static ThemeData buildHighContrastLightTheme() {
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.highContrastLight(
+        primary: highContrastPrimary,
+        secondary: highContrastAccent,
+        error: highContrastError,
+        surface: highContrastSecondary,
+      ),
+      scaffoldBackgroundColor: highContrastSecondary,
+      appBarTheme: const AppBarTheme(
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: highContrastPrimary,
+        foregroundColor: highContrastSecondary,
+        toolbarHeight: 56,
+      ),
+      cardTheme: CardTheme(
+        elevation: 2,
+        color: highContrastSecondary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: highContrastPrimary, width: 2),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: highContrastPrimary,
+          foregroundColor: highContrastSecondary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: highContrastPrimary, width: 2),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: highContrastPrimary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: highContrastPrimary, width: 2),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: highContrastPrimary,
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            decoration: TextDecoration.underline,
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: highContrastSecondary,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: highContrastPrimary, width: 2),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: highContrastPrimary, width: 2),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: highContrastAccent, width: 3),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: highContrastError, width: 2),
+        ),
+        labelStyle: const TextStyle(
+          color: highContrastPrimary,
+          fontWeight: FontWeight.bold,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: highContrastPrimary,
+        foregroundColor: highContrastSecondary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+        backgroundColor: highContrastSecondary,
+        selectedItemColor: highContrastPrimary,
+        unselectedItemColor: highContrastPrimary,
+        selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: highContrastPrimary,
+        thickness: 2,
+      ),
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(color: highContrastPrimary, fontWeight: FontWeight.bold),
+        displayMedium: TextStyle(color: highContrastPrimary, fontWeight: FontWeight.bold),
+        displaySmall: TextStyle(color: highContrastPrimary, fontWeight: FontWeight.bold),
+        headlineLarge: TextStyle(color: highContrastPrimary, fontWeight: FontWeight.bold),
+        headlineMedium: TextStyle(color: highContrastPrimary, fontWeight: FontWeight.bold),
+        headlineSmall: TextStyle(color: highContrastPrimary, fontWeight: FontWeight.bold),
+        titleLarge: TextStyle(color: highContrastPrimary, fontWeight: FontWeight.bold),
+        titleMedium: TextStyle(color: highContrastPrimary, fontWeight: FontWeight.bold),
+        titleSmall: TextStyle(color: highContrastPrimary, fontWeight: FontWeight.bold),
+        bodyLarge: TextStyle(color: highContrastPrimary),
+        bodyMedium: TextStyle(color: highContrastPrimary),
+        bodySmall: TextStyle(color: highContrastPrimary),
+        labelLarge: TextStyle(color: highContrastPrimary, fontWeight: FontWeight.bold),
+        labelMedium: TextStyle(color: highContrastPrimary, fontWeight: FontWeight.bold),
+        labelSmall: TextStyle(color: highContrastPrimary, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  /// Build high contrast dark theme for accessibility
+  static ThemeData buildHighContrastDarkTheme() {
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.highContrastDark(
+        primary: highContrastSecondary,
+        secondary: highContrastAccent,
+        error: highContrastError,
+        surface: highContrastPrimary,
+      ),
+      scaffoldBackgroundColor: highContrastPrimary,
+      appBarTheme: const AppBarTheme(
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: highContrastSecondary,
+        foregroundColor: highContrastPrimary,
+        toolbarHeight: 56,
+      ),
+      cardTheme: CardTheme(
+        elevation: 2,
+        color: highContrastPrimary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: highContrastSecondary, width: 2),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: highContrastSecondary,
+          foregroundColor: highContrastPrimary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: highContrastSecondary, width: 2),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: highContrastSecondary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: highContrastSecondary, width: 2),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: highContrastSecondary,
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            decoration: TextDecoration.underline,
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: highContrastPrimary,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: highContrastSecondary, width: 2),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: highContrastSecondary, width: 2),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: highContrastAccent, width: 3),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: highContrastError, width: 2),
+        ),
+        labelStyle: const TextStyle(
+          color: highContrastSecondary,
+          fontWeight: FontWeight.bold,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: highContrastSecondary,
+        foregroundColor: highContrastPrimary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+        backgroundColor: highContrastPrimary,
+        selectedItemColor: highContrastSecondary,
+        unselectedItemColor: highContrastSecondary,
+        selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: highContrastSecondary,
+        thickness: 2,
+      ),
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(color: highContrastSecondary, fontWeight: FontWeight.bold),
+        displayMedium: TextStyle(color: highContrastSecondary, fontWeight: FontWeight.bold),
+        displaySmall: TextStyle(color: highContrastSecondary, fontWeight: FontWeight.bold),
+        headlineLarge: TextStyle(color: highContrastSecondary, fontWeight: FontWeight.bold),
+        headlineMedium: TextStyle(color: highContrastSecondary, fontWeight: FontWeight.bold),
+        headlineSmall: TextStyle(color: highContrastSecondary, fontWeight: FontWeight.bold),
+        titleLarge: TextStyle(color: highContrastSecondary, fontWeight: FontWeight.bold),
+        titleMedium: TextStyle(color: highContrastSecondary, fontWeight: FontWeight.bold),
+        titleSmall: TextStyle(color: highContrastSecondary, fontWeight: FontWeight.bold),
+        bodyLarge: TextStyle(color: highContrastSecondary),
+        bodyMedium: TextStyle(color: highContrastSecondary),
+        bodySmall: TextStyle(color: highContrastSecondary),
+        labelLarge: TextStyle(color: highContrastSecondary, fontWeight: FontWeight.bold),
+        labelMedium: TextStyle(color: highContrastSecondary, fontWeight: FontWeight.bold),
+        labelSmall: TextStyle(color: highContrastSecondary, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  static ThemeData highContrastLightTheme = buildHighContrastLightTheme();
+  static ThemeData highContrastDarkTheme = buildHighContrastDarkTheme();
 }

@@ -1,9 +1,14 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
+import 'package:finance_app/features/currency/data/rate_fetch_service.dart';
 
 /// Provider for all commodities (currencies)
 final commoditiesProvider = StreamProvider<List<Commodity>>((ref) {
@@ -377,4 +382,377 @@ final accountBalanceInBaseCurrencyProvider = FutureProvider.family<double, Strin
   }
   
   return balance;
+});
+
+// ============================================================
+// Exchange Rate Auto-Update and Alert System
+// ============================================================
+
+/// Rate fetch service provider
+final rateFetchServiceProvider = Provider<RateFetchService>((ref) {
+  return RateFetchService();
+});
+
+/// Auto-update settings
+class AutoUpdateSettings {
+  final bool enabled;
+  final Duration interval;
+  final double alertThreshold; // Percentage change threshold for alerts
+  final String baseCurrency;
+
+  const AutoUpdateSettings({
+    this.enabled = true,
+    this.interval = const Duration(hours: 6),
+    this.alertThreshold = 5.0, // 5% change triggers alert
+    this.baseCurrency = 'CNY',
+  });
+
+  AutoUpdateSettings copyWith({
+    bool? enabled,
+    Duration? interval,
+    double? alertThreshold,
+    String? baseCurrency,
+  }) {
+    return AutoUpdateSettings(
+      enabled: enabled ?? this.enabled,
+      interval: interval ?? this.interval,
+      alertThreshold: alertThreshold ?? this.alertThreshold,
+      baseCurrency: baseCurrency ?? this.baseCurrency,
+    );
+  }
+}
+
+/// Provider for auto-update settings
+final autoUpdateSettingsProvider = StateNotifierProvider<AutoUpdateSettingsNotifier, AutoUpdateSettings>((ref) {
+  return AutoUpdateSettingsNotifier();
+});
+
+class AutoUpdateSettingsNotifier extends StateNotifier<AutoUpdateSettings> {
+  AutoUpdateSettingsNotifier() : super(const AutoUpdateSettings());
+
+  void setEnabled(bool enabled) => state = state.copyWith(enabled: enabled);
+  void setInterval(Duration interval) => state = state.copyWith(interval: interval);
+  void setAlertThreshold(double threshold) => state = state.copyWith(alertThreshold: threshold);
+  void setBaseCurrency(String currency) => state = state.copyWith(baseCurrency: currency);
+}
+
+/// Rate change alert model
+class RateChangeAlert {
+  final String fromCurrency;
+  final String toCurrency;
+  final double oldRate;
+  final double newRate;
+  final double changePercent;
+  final DateTime timestamp;
+
+  RateChangeAlert({
+    required this.fromCurrency,
+    required this.toCurrency,
+    required this.oldRate,
+    required this.newRate,
+    required this.changePercent,
+    required this.timestamp,
+  });
+
+  String get direction => changePercent >= 0 ? '上涨' : '下跌';
+}
+
+/// Enhanced exchange rate notifier with auto-update and alerts
+class EnhancedExchangeRateNotifier extends StateNotifier<AsyncValue<void>> {
+  final LocalFinanceDatabase _db;
+  final RateFetchService _fetchService;
+  final Ref _ref;
+  Timer? _autoUpdateTimer;
+  final List<RateChangeAlert> _pendingAlerts = [];
+
+  EnhancedExchangeRateNotifier(this._db, this._fetchService, this._ref) 
+      : super(const AsyncValue.data(null));
+
+  /// Start auto-update timer
+  void startAutoUpdate() {
+    final settings = _ref.read(autoUpdateSettingsProvider);
+    if (!settings.enabled) return;
+
+    _autoUpdateTimer?.cancel();
+    _autoUpdateTimer = Timer.periodic(settings.interval, (_) {
+      fetchAndUpdateRates();
+    });
+    
+    debugPrint('汇率自动更新已启动，间隔: ${settings.interval.inHours}小时');
+  }
+
+  /// Stop auto-update timer
+  void stopAutoUpdate() {
+    _autoUpdateTimer?.cancel();
+    _autoUpdateTimer = null;
+    debugPrint('汇率自动更新已停止');
+  }
+
+  /// Fetch and update rates from API
+  Future<List<RateChangeAlert>> fetchAndUpdateRates({
+    String? baseCurrency,
+    bool showAlerts = true,
+  }) async {
+    final settings = _ref.read(autoUpdateSettingsProvider);
+    final base = baseCurrency ?? settings.baseCurrency;
+
+    state = const AsyncValue.loading();
+    final alerts = <RateChangeAlert>[];
+
+    try {
+      // Check if online
+      if (!await _fetchService.isOnline()) {
+        debugPrint('离线模式，跳过汇率更新');
+        state = const AsyncValue.data(null);
+        return [];
+      }
+
+      // Fetch rates from API
+      final fetchedRates = await _fetchService.fetchRates(base);
+      
+      // Get existing rates for comparison
+      final existingRates = await _db.exchangeRatesDao.getAll();
+      final existingMap = <String, ExchangeRate>{};
+      for (final rate in existingRates) {
+        final key = '${rate.fromCurrency}_${rate.toCurrency}';
+        if (!existingMap.containsKey(key) || existingMap[key]!.date < rate.date) {
+          existingMap[key] = rate;
+        }
+      }
+
+      // Prepare batch insert
+      final companions = <ExchangeRatesCompanion>[];
+      final now = DateTime.now();
+
+      for (final fetched in fetchedRates) {
+        // Check for significant change
+        final key = '${fetched.fromCurrency}_${fetched.toCurrency}';
+        final existing = existingMap[key];
+        
+        if (existing != null && showAlerts) {
+          final changePercent = ((fetched.rate - existing.rate) / existing.rate) * 100;
+          if (changePercent.abs() >= settings.alertThreshold) {
+            final alert = RateChangeAlert(
+              fromCurrency: fetched.fromCurrency,
+              toCurrency: fetched.toCurrency,
+              oldRate: existing.rate,
+              newRate: fetched.rate,
+              changePercent: changePercent,
+              timestamp: now,
+            );
+            alerts.add(alert);
+            _pendingAlerts.add(alert);
+          }
+        }
+
+        companions.add(ExchangeRatesCompanion.insert(
+          id: '${fetched.fromCurrency}_${fetched.toCurrency}_${now.millisecondsSinceEpoch}_${fetched.source}',
+          fromCurrency: fetched.fromCurrency,
+          toCurrency: fetched.toCurrency,
+          rate: fetched.rate,
+          date: now.millisecondsSinceEpoch,
+          source: drift.Value(fetched.source),
+          createdAt: now.millisecondsSinceEpoch,
+          updatedAt: now.millisecondsSinceEpoch,
+        ));
+      }
+
+      // Batch insert new rates
+      if (companions.isNotEmpty) {
+        await _db.exchangeRatesDao.batchInsertRates(companions);
+        debugPrint('已更新 ${companions.length} 个汇率');
+      }
+
+      state = const AsyncValue.data(null);
+      
+      // Show notifications for alerts
+      if (alerts.isNotEmpty) {
+        await _showRateAlerts(alerts);
+      }
+
+      return alerts;
+    } catch (e, st) {
+      debugPrint('汇率更新失败: $e');
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  /// Add manual rate (overrides auto-fetched)
+  Future<void> addManualRate({
+    required String fromCurrency,
+    required String toCurrency,
+    required double rate,
+    DateTime? date,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      await _db.exchangeRatesDao.insertRate(
+        fromCurrency: fromCurrency,
+        toCurrency: toCurrency,
+        rate: rate,
+        date: date ?? DateTime.now(),
+        source: 'manual',
+      );
+      debugPrint('已添加手动汇率: $fromCurrency -> $toCurrency = $rate');
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  /// Get pending alerts
+  List<RateChangeAlert> getPendingAlerts() {
+    return List.unmodifiable(_pendingAlerts);
+  }
+
+  /// Clear pending alerts
+  void clearAlerts() {
+    _pendingAlerts.clear();
+  }
+
+  /// Show rate change notifications
+  Future<void> _showRateAlerts(List<RateChangeAlert> alerts) async {
+    try {
+      final plugin = FlutterLocalNotificationsPlugin();
+      
+      // Initialize if not already done
+      await plugin.initialize(
+        const InitializationSettings(
+          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          iOS: DarwinInitializationSettings(),
+        ),
+      );
+
+      for (final alert in alerts) {
+        await plugin.show(
+          alert.toCurrency.hashCode,
+          '汇率变动提醒',
+          '${alert.fromCurrency}/${alert.toCurrency} ${alert.direction} ${alert.changePercent.abs().toStringAsFixed(2)}%\n'
+          '旧汇率: ${alert.oldRate.toStringAsFixed(4)} → 新汇率: ${alert.newRate.toStringAsFixed(4)}',
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'exchange_rate_alerts',
+              '汇率提醒',
+              importance: Importance.high,
+              priority: Priority.high,
+            ),
+            iOS: DarwinNotificationDetails(),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('显示通知失败: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    stopAutoUpdate();
+    super.dispose();
+  }
+}
+
+/// Provider for enhanced exchange rate notifier
+final enhancedExchangeRateNotifierProvider = 
+    StateNotifierProvider<EnhancedExchangeRateNotifier, AsyncValue<void>>((ref) {
+  final db = ref.watch(databaseProvider);
+  final fetchService = ref.watch(rateFetchServiceProvider);
+  return EnhancedExchangeRateNotifier(db, fetchService, ref);
+});
+
+/// Provider for rate history for a specific currency pair
+final rateHistoryProvider = FutureProvider.family<List<ExchangeRate>, ({String from, String to})>((ref, params) async {
+  final db = ref.watch(databaseProvider);
+  return db.exchangeRatesDao.getRatesForDateRange(
+    params.from,
+    params.to,
+    DateTime.now().subtract(const Duration(days: 30)),
+    DateTime.now(),
+  );
+});
+
+/// Provider for rate history statistics
+final rateHistoryStatsProvider = FutureProvider.family<RateHistoryStats, ({String from, String to})>((ref, params) async {
+  final rates = await ref.watch(rateHistoryProvider(params).future);
+  
+  if (rates.isEmpty) {
+    return RateHistoryStats.empty();
+  }
+
+  final rateValues = rates.map((r) => r.rate).toList();
+  final avg = rateValues.reduce((a, b) => a + b) / rateValues.length;
+  final max = rateValues.reduce((a, b) => a > b ? a : b);
+  final min = rateValues.reduce((a, b) => a < b ? a : b);
+  final latest = rateValues.first;
+  final oldest = rateValues.last;
+  final change = ((latest - oldest) / oldest) * 100;
+
+  return RateHistoryStats(
+    count: rates.length,
+    average: avg,
+    max: max,
+    min: min,
+    latest: latest,
+    changePercent: change,
+    oldestDate: DateTime.fromMillisecondsSinceEpoch(rates.last.date),
+    latestDate: DateTime.fromMillisecondsSinceEpoch(rates.first.date),
+  );
+});
+
+/// Rate history statistics model
+class RateHistoryStats {
+  final int count;
+  final double average;
+  final double max;
+  final double min;
+  final double latest;
+  final double changePercent;
+  final DateTime oldestDate;
+  final DateTime latestDate;
+
+  RateHistoryStats({
+    required this.count,
+    required this.average,
+    required this.max,
+    required this.min,
+    required this.latest,
+    required this.changePercent,
+    required this.oldestDate,
+    required this.latestDate,
+  });
+
+  factory RateHistoryStats.empty() => RateHistoryStats(
+    count: 0,
+    average: 0,
+    max: 0,
+    min: 0,
+    latest: 0,
+    changePercent: 0,
+    oldestDate: DateTime.now(),
+    latestDate: DateTime.now(),
+  );
+
+  String get trend => changePercent >= 0 ? '上涨' : '下跌';
+}
+
+/// Provider for checking if rates need update
+final ratesNeedUpdateProvider = FutureProvider<bool>((ref) async {
+  final db = ref.watch(databaseProvider);
+  final currencies = ref.watch(currenciesProvider);
+  
+  if (currencies.isEmpty) return false;
+
+  for (final currency in currencies) {
+    if (currency.id == 'CNY') continue;
+    
+    final latestDate = await db.exchangeRatesDao.getLatestRateDate(currency.id, 'CNY');
+    if (latestDate == null) return true;
+    
+    final age = DateTime.now().difference(latestDate);
+    if (age.inHours > 24) return true;
+  }
+  
+  return false;
 });

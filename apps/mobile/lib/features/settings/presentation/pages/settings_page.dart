@@ -95,11 +95,20 @@ class SettingsPage extends StatelessWidget {
             onTap: () => context.push('/closing'),
           ),
           const Divider(),
+          // Accessibility settings
+          ListTile(
+            leading: const Icon(Icons.accessibility_new),
+            title: const Text('无障碍设置'),
+            subtitle: const Text('屏幕阅读器、高对比度、文本大小'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/accessibility'),
+          ),
+          const Divider(),
           // About
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('关于'),
-            subtitle: const Text('版本 0.3.44'),
+            subtitle: const Text('版本 0.3.119'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/about'),
           ),

@@ -12,6 +12,7 @@ import 'core/presentation/widgets/gesture_config_provider.dart';
 import 'features/settings/data/theme_provider.dart';
 import 'features/settings/data/locale_provider.dart';
 import 'features/settings/data/security_provider.dart';
+import 'features/settings/data/accessibility_provider.dart';
 import 'features/budgets/data/budget_notification_service.dart';
 import 'features/recurring/data/recurring_provider.dart';
 import 'features/platform/data/platform_provider.dart';
@@ -104,31 +105,67 @@ class _FinanceAppState extends ConsumerState<FinanceApp> {
   Widget build(BuildContext context) {
     final themeSettings = ref.watch(themeProvider);
     final appLocale = ref.watch(localeProvider);
+    final accessibilitySettings = ref.watch(accessibilityProvider);
     final router = ref.watch(goRouterProvider);
 
     // Build themes with custom accent color and AMOLED black support
-    final lightTheme = AppTheme.buildLightTheme(accentColor: themeSettings.accentColor);
-    final darkTheme = AppTheme.buildDarkTheme(
-      accentColor: themeSettings.accentColor,
-      isAmoledBlack: themeSettings.mode == AppThemeMode.amoledBlack,
-    );
+    ThemeData lightTheme;
+    ThemeData darkTheme;
 
-    return MaterialApp.router(
-      title: '本地金融管家',
-      debugShowCheckedModeBanner: false,
-      theme: lightTheme,
-      darkTheme: darkTheme,
-      themeMode: ref.read(themeProvider.notifier).materialThemeMode,
-      locale: appLocale.locale,
-      supportedLocales: const [
-        Locale('zh', 'CN'),
-        Locale('zh', 'TW'),
-        Locale('en', 'US'),
-      ],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-      ],
-      routerConfig: router,
+    // Apply high contrast theme if enabled
+    if (accessibilitySettings.highContrastEnabled) {
+      lightTheme = AppTheme.buildHighContrastLightTheme();
+      darkTheme = AppTheme.buildHighContrastDarkTheme();
+    } else {
+      lightTheme = AppTheme.buildLightTheme(accentColor: themeSettings.accentColor);
+      darkTheme = AppTheme.buildDarkTheme(
+        accentColor: themeSettings.accentColor,
+        isAmoledBlack: themeSettings.mode == AppThemeMode.amoledBlack,
+      );
+    }
+
+    // Apply bold text if enabled
+    if (accessibilitySettings.boldText) {
+      lightTheme = _applyBoldText(lightTheme);
+      darkTheme = _applyBoldText(darkTheme);
+    }
+
+    return MediaQuery(
+      // Apply text scaling if not using system setting
+      data: MediaQuery.of(context).copyWith(
+        textScaler: accessibilitySettings.useSystemTextScale
+            ? MediaQuery.of(context).textScaler
+            : TextScaler.linear(accessibilitySettings.textScaleFactor),
+      ),
+      child: MaterialApp.router(
+        title: '本地金融管家',
+        debugShowCheckedModeBanner: false,
+        theme: lightTheme,
+        darkTheme: darkTheme,
+        themeMode: ref.read(themeProvider.notifier).materialThemeMode,
+        locale: appLocale.locale,
+        supportedLocales: const [
+          Locale('zh', 'CN'),
+          Locale('zh', 'TW'),
+          Locale('en', 'US'),
+        ],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+        ],
+        routerConfig: router,
+      ),
+    );
+  }
+
+  /// Apply bold text to all text styles in theme
+  ThemeData _applyBoldText(ThemeData theme) {
+    return theme.copyWith(
+      textTheme: theme.textTheme.apply(
+        fontWeightDelta: 1,
+      ),
+      primaryTextTheme: theme.primaryTextTheme.apply(
+        fontWeightDelta: 1,
+      ),
     );
   }
 }

@@ -3,6 +3,9 @@ import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import 'export_service.dart';
 import 'import_service.dart';
+import 'xlsx_export_service.dart';
+import 'custom_csv_export_service.dart';
+import 'pdf_export_service.dart';
 
 /// Export status enum
 enum ExportStatus {
@@ -88,10 +91,16 @@ class ImportState {
 class ExportNotifier extends StateNotifier<ExportState> {
   final Ref _ref;
   late final ExportService _exportService;
+  late final XlsxExportService _xlsxExportService;
+  late final CustomCsvExportService _customCsvExportService;
+  late final PdfExportService _pdfExportService;
 
   ExportNotifier(this._ref) : super(const ExportState()) {
     final db = _ref.read(databaseProvider);
     _exportService = ExportService(db);
+    _xlsxExportService = XlsxExportService(db);
+    _customCsvExportService = CustomCsvExportService(db);
+    _pdfExportService = PdfExportService(db);
   }
 
   /// Exports transactions to CSV

@@ -20,3 +20,5 @@ export 'src/models/cash_flow_statement.dart';
 export 'src/models/general_ledger.dart';
 export 'src/models/closing_entry.dart';
 export 'src/models/saved_search.dart';
+export 'src/models/investment_holding.dart';
+export 'src/models/investment_transaction.dart';

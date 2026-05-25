@@ -9,6 +9,8 @@ import '../../data/income_statement_provider.dart';
 import '../widgets/income_statement_section.dart';
 import '../../../export/data/export_service.dart';
 import '../../../export/data/export_provider.dart';
+import '../../../print/data/print_service.dart';
+import '../../../print/data/print_provider.dart';
 
 /// Income statement report page with date range filtering and period comparison.
 ///
@@ -137,6 +139,28 @@ class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage> {
     );
   }
 
+  void _handlePrint() async {
+    final statementWithComparison = ref.read(incomeStatementProvider).valueOrNull;
+    if (statementWithComparison == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('利润表数据未加载')),
+      );
+      return;
+    }
+
+    await PrintService.showPreview(
+      context: context,
+      title: '利润表 - 打印预览',
+      onLayout: (setup) async {
+        final pdfService = ref.read(pdfExportServiceProvider);
+        return pdfService.exportIncomeStatementToPDFBytes(
+          incomeStatement: statementWithComparison.current,
+          pageSetup: setup,
+        );
+      },
+    );
+  }
+
   void _handleComparisonTypeChanged(PeriodComparisonType? type) {
     if (type == null) return;
     setState(() {
@@ -154,6 +178,11 @@ class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage> {
       appBar: AppBar(
         title: const Text('利润表'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.print),
+            onPressed: _handlePrint,
+            tooltip: '打印',
+          ),
           IconButton(
             icon: const Icon(Icons.download),
             onPressed: _handleExport,

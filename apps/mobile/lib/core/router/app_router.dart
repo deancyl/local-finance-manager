@@ -34,6 +34,7 @@ import '../../features/attachments/presentation/pages/attachments_page.dart';
 import '../../features/attachments/presentation/pages/attachment_viewer_page.dart';
 import '../../features/reconciliation/presentation/pages/reconciliation_page.dart';
 import '../../features/settings/presentation/pages/currency_settings_page.dart';
+import '../../features/settings/presentation/pages/accessibility_settings_page.dart';
 import '../../features/closing/presentation/pages/period_closing_page.dart';
 import '../../features/currency/presentation/pages/exchange_rates_page.dart';
 import '../../features/templates/presentation/pages/template_list_page.dart' hide TemplateListPage;
@@ -273,6 +274,11 @@ GoRouter _createRouter(Ref ref) {
         path: '/settings/currency',
         name: 'currency',
         builder: (context, state) => const CurrencySettingsPage(),
+      ),
+      GoRoute(
+        path: '/settings/accessibility',
+        name: 'accessibility-settings',
+        builder: (context, state) => const AccessibilitySettingsPage(),
       ),
       GoRoute(
         path: '/import',

@@ -45,27 +45,33 @@ class TransactionCard extends ConsumerWidget {
 
         final card = Card(
           margin: const EdgeInsets.only(bottom: 8),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: isIncome
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+          child: Semantics(
+            label: '${isIncome ? "收入" : "支出"}: ${transaction.description ?? "未分类交易"}',
+            value: '¥${amount.abs().toStringAsFixed(2)}',
+            hint: '点击查看详情，长按显示更多选项',
+            button: true,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: isIncome
+                            ? Colors.green.withOpacity(0.1)
+                            : Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        isIncome ? Icons.arrow_downward : Icons.arrow_upward,
+                        color: isIncome ? Colors.green : Colors.red,
+                        semanticLabel: isIncome ? '收入' : '支出',
+                      ),
                     ),
-                    child: Icon(
-                      isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-                      color: isIncome ? Colors.green : Colors.red,
-                    ),
-                  ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
@@ -138,6 +144,7 @@ class TransactionCard extends ConsumerWidget {
                         color: Theme.of(context).colorScheme.error,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
+                        tooltip: '删除交易',
                       ),
                     ],
                   ),
