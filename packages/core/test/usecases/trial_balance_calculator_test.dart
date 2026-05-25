@@ -90,44 +90,41 @@ class MockTrialBalanceCalculator {
 
   /// Calculates hierarchical balances (sums child balances into parent)
   List<AccountBalance> calculateHierarchicalBalances(List<AccountBalance> accounts) {
-    // Create a copy with children populated
-    final result = <AccountBalance>[];
     final processedIds = <String>{};
+    final balanceMap = <String, AccountBalance>{};
 
-    void processAccount(AccountBalance account) {
-      if (processedIds.contains(account.accountId)) return;
+    AccountBalance processAccount(AccountBalance account) {
+      if (processedIds.contains(account.accountId)) {
+        return balanceMap[account.accountId]!;
+      }
       processedIds.add(account.accountId);
 
-      // Find children
       final children = accounts
           .where((acc) => acc.parentId == account.accountId)
           .toList();
 
-      // Process children first
-      for (final child in children) {
-        processAccount(child);
-      }
-
-      // Calculate total including children
       int totalDebit = account.debitNum;
       int totalCredit = account.creditNum;
 
       for (final child in children) {
-        totalDebit += child.debitNum;
-        totalCredit += child.creditNum;
+        final processedChild = processAccount(child);
+        totalDebit += processedChild.debitNum;
+        totalCredit += processedChild.creditNum;
       }
 
-      result.add(account.copyWith(
+      final resultAccount = account.copyWith(
         debitNum: totalDebit,
         creditNum: totalCredit,
-        children: children.isEmpty ? null : children,
-      ));
+        children: children.isEmpty ? null : children.map((c) => balanceMap[c.accountId]!).toList(),
+      );
+      balanceMap[account.accountId] = resultAccount;
+      return resultAccount;
     }
 
-    // Process root accounts (no parent)
+    final result = <AccountBalance>[];
     for (final account in accounts) {
       if (account.parentId == null) {
-        processAccount(account);
+        result.add(processAccount(account));
       }
     }
 
