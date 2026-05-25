@@ -5,6 +5,7 @@
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Startup phases for performance tracking.
 enum StartupPhase {

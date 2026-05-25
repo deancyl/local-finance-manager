@@ -216,5 +216,3 @@ class DeferredTaskQueue {
 
 /// Global deferred task queue instance.
 final deferredTasks = DeferredTaskQueue();
-
-typedef VoidCallback = void Function();

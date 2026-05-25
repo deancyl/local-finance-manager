@@ -4,6 +4,7 @@
 /// and circuit breaker patterns for improved stability.
 
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Retry configuration.
@@ -23,9 +24,9 @@ class RetryConfig {
   /// Calculates the delay for a given attempt.
   Duration delayForAttempt(int attempt) {
     final delayMs = initialDelay.inMilliseconds *
-        (backoffMultiplier ^ (attempt - 1)).toInt();
+        pow(backoffMultiplier, attempt - 1).toInt();
     return Duration(
-      milliseconds: delayMs.clamp(0, maxDelay.inMilliseconds),
+      milliseconds: delayMs.clamp(0, maxDelay.inMilliseconds) as int,
     );
   }
 }

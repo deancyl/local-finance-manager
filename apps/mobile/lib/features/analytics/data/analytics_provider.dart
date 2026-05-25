@@ -409,7 +409,7 @@ final monthlySavingsRateProvider = FutureProvider<MonthlySavingsRate>((ref) asyn
     income: income,
     expense: expense,
     savings: savings,
-    savingsRate: savingsRate,
+    savingsRate: savingsRate.toDouble(),
   );
 });
 
@@ -513,7 +513,7 @@ final monthComparisonProvider = FutureProvider<PeriodComparison>((ref) async {
     currentAmount: thisMonthExpense,
     previousAmount: lastMonthExpense,
     change: change,
-    changePercent: changePercent,
+    changePercent: changePercent.toDouble(),
     periodLabel: '本月 vs 上月',
   );
 });
@@ -587,7 +587,7 @@ final yearComparisonProvider = FutureProvider<PeriodComparison>((ref) async {
     currentAmount: thisYearExpense,
     previousAmount: lastYearExpense,
     change: change,
-    changePercent: changePercent,
+    changePercent: changePercent.toDouble(),
     periodLabel: '今年 vs 去年',
   );
 });
@@ -683,7 +683,7 @@ final spendingAnomaliesProvider = FutureProvider<List<SpendingAnomaly>>((ref) as
         category: category.name,
         expectedAmount: avgMonthlySpending,
         actualAmount: thisMonthSpending,
-        deviationPercent: deviation,
+        deviationPercent: deviation.toDouble(),
         description: '${category.name}支出比月均高出${deviation.toStringAsFixed(0)}%',
         detectedAt: now,
       ));
@@ -720,7 +720,7 @@ final incomeSourcesProvider = FutureProvider<List<IncomeSource>>((ref) async {
         .getSingleOrNull();
 
       if (account?.accountType == 'INCOME') {
-        final source = account.name;
+        final source = account!.name;
         final amount = split.valueNum.abs() / 100.0;
         sourceTotals[source] = (sourceTotals[source] ?? 0) + amount;
         sourceCounts[source] = (sourceCounts[source] ?? 0) + 1;
