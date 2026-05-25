@@ -24,6 +24,7 @@ class _AddRecurringDialogState extends ConsumerState<AddRecurringDialog> {
   final _memoController = TextEditingController();
   final _intervalController = TextEditingController(text: '1');
   final _maxOccurrencesController = TextEditingController();
+  final _reminderDaysController = TextEditingController();
   final _notesController = TextEditingController();
 
   String _selectedFrequency = 'monthly';
@@ -50,6 +51,7 @@ class _AddRecurringDialogState extends ConsumerState<AddRecurringDialog> {
       _memoController.text = r.memo ?? '';
       _intervalController.text = r.interval.toString();
       _maxOccurrencesController.text = r.maxOccurrences?.toString() ?? '';
+      _reminderDaysController.text = r.reminderDays?.toString() ?? '';
       _notesController.text = r.notes ?? '';
       _selectedFrequency = r.frequency;
       _selectedAccountId = r.accountId;
@@ -71,6 +73,7 @@ class _AddRecurringDialogState extends ConsumerState<AddRecurringDialog> {
     _memoController.dispose();
     _intervalController.dispose();
     _maxOccurrencesController.dispose();
+    _reminderDaysController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -213,6 +216,15 @@ class _AddRecurringDialogState extends ConsumerState<AddRecurringDialog> {
               ),
               const SizedBox(height: 16),
               TextFormField(
+                controller: _reminderDaysController,
+                decoration: const InputDecoration(
+                  labelText: '提前提醒天数（可选）',
+                  helperText: '在执行日期前N天发送提醒通知',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
                 controller: _memoController,
                 decoration: const InputDecoration(
                   labelText: '备注',
@@ -286,6 +298,9 @@ class _AddRecurringDialogState extends ConsumerState<AddRecurringDialog> {
     final maxOccurrences = _maxOccurrencesController.text.isNotEmpty 
         ? int.tryParse(_maxOccurrencesController.text) 
         : null;
+    final reminderDays = _reminderDaysController.text.isNotEmpty 
+        ? int.tryParse(_reminderDaysController.text) 
+        : null;
 
     if (widget.recurring == null) {
       ref.read(recurringNotifierProvider.notifier).createRecurring(
@@ -308,6 +323,7 @@ class _AddRecurringDialogState extends ConsumerState<AddRecurringDialog> {
         nextDate: _nextDate,
         endDate: _endDate,
         maxOccurrences: maxOccurrences,
+        reminderDays: reminderDays,
         notes: _notesController.text.trim().isNotEmpty 
             ? _notesController.text.trim() 
             : null,
@@ -333,6 +349,7 @@ class _AddRecurringDialogState extends ConsumerState<AddRecurringDialog> {
         nextDate: _nextDate,
         endDate: _endDate,
         maxOccurrences: maxOccurrences,
+        reminderDays: reminderDays,
         notes: _notesController.text.trim().isNotEmpty 
             ? _notesController.text.trim() 
             : null,
