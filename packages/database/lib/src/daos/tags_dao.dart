@@ -155,4 +155,152 @@ class TagsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TagsDaoMixin
     final result = await query.getSingle();
     return result.read(transactionTags.tagId.count()) ?? 0;
   }
+
+  // ============================================================
+  // TAG SEARCH AND AUTOCOMPLETE
+  // ============================================================
+
+  /// Searches tags by name (for autocomplete).
+  /// Returns tags ordered by usage count (most used first).
+  Stream<List<Tag>> searchTags(String query, {int limit = 10}) {
+    final searchPattern = '%$query%';
+    
+    return (select(tags)
+          ..where((t) => t.name.like(searchPattern) & t.deletedAt.isNull())
+          ..orderBy([(t) => drift.OrderingTerm.desc(t.usageCount)])
+          ..limit(limit))
+        .watch();
+  }
+
+  /// Gets tags matching any of the given IDs.
+  Future<List<Tag>> getTagsByIds(List<String> tagIds) async {
+    if (tagIds.isEmpty) return [];
+    
+    return (select(tags)
+          ..where((t) => t.id.isIn(tagIds) & t.deletedAt.isNull()))
+        .get();
+  }
+
+  /// Gets transaction IDs that have ALL specified tags (AND logic).
+  Future<List<String>> getTransactionIdsWithAllTags(List<String> tagIds) async {
+    if (tagIds.isEmpty) return [];
+    
+    // For each tag, get the transaction IDs
+    final transactionIdSets = <Set<String>>[];
+    
+    for (final tagId in tagIds) {
+      final ids = await (selectOnly(transactionTags)
+            ..addColumns([transactionTags.transactionId])
+            ..where(transactionTags.tagId.equals(tagId)))
+          .map((row) => row.read(transactionTags.transactionId)!)
+          .get();
+      
+      transactionIdSets.add(ids.toSet());
+    }
+    
+    // Intersect all sets to get transactions with ALL tags
+    if (transactionIdSets.isEmpty) return [];
+    
+    var result = transactionIdSets.first;
+    for (var i = 1; i < transactionIdSets.length; i++) {
+      result = result.intersection(transactionIdSets[i]);
+    }
+    
+    return result.toList();
+  }
+
+  /// Gets transaction IDs that have ANY of the specified tags (OR logic).
+  Future<List<String>> getTransactionIdsWithAnyTags(List<String> tagIds) async {
+    if (tagIds.isEmpty) return [];
+    
+    final query = selectOnly(transactionTags)
+      ..addColumns([transactionTags.transactionId])
+      ..where(transactionTags.tagId.isIn(tagIds));
+    
+    final results = await query.get();
+    final uniqueIds = results.map((r) => r.read(transactionTags.transactionId)!).toSet();
+    return uniqueIds.toList();
+  }
+
+  // ============================================================
+  // BULK TAG OPERATIONS
+  // ============================================================
+
+  /// Adds tags to multiple transactions (bulk operation).
+  Future<void> addTagsToTransactions(List<String> transactionIds, List<String> tagIds) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    
+    for (final transactionId in transactionIds) {
+      for (final tagId in tagIds) {
+        await into(transactionTags).insert(
+          TransactionTagsCompanion.insert(
+            transactionId: transactionId,
+            tagId: tagId,
+            createdAt: now,
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
+      }
+    }
+    
+    // Update usage counts for all added tags
+    for (final tagId in tagIds) {
+      final count = await getTagUsageCount(tagId);
+      await (update(tags)..where((t) => t.id.equals(tagId))).write(
+        TagsCompanion(usageCount: Value(count)),
+      );
+    }
+  }
+
+  /// Removes tags from multiple transactions (bulk operation).
+  Future<void> removeTagsFromTransactions(List<String> transactionIds, List<String> tagIds) async {
+    for (final transactionId in transactionIds) {
+      await (delete(transactionTags)
+            ..where((tt) =>
+                tt.transactionId.equals(transactionId) & tt.tagId.isIn(tagIds)))
+          .go();
+    }
+    
+    // Update usage counts for all removed tags
+    for (final tagId in tagIds) {
+      final count = await getTagUsageCount(tagId);
+      await (update(tags)..where((t) => t.id.equals(tagId))).write(
+        TagsCompanion(usageCount: Value(count)),
+      );
+    }
+  }
+
+  /// Replaces all tags on multiple transactions (bulk operation).
+  Future<void> setTagsOnTransactions(List<String> transactionIds, List<String> tagIds) async {
+    for (final transactionId in transactionIds) {
+      await updateTransactionTags(transactionId, tagIds);
+    }
+  }
+
+  /// Gets tags with their transaction counts for statistics.
+  Stream<List<(Tag, int)>> watchTagsWithTransactionCount() {
+    final query = select(tags).join([
+      leftJoin(transactionTags, transactionTags.tagId.equalsExp(tags.id)),
+    ]);
+    
+    query.where(tags.deletedAt.isNull());
+    query.groupBy([tags.id]);
+    query.orderBy([drift.OrderingTerm.desc(tags.usageCount)]);
+    
+    return query.watch().map((rows) {
+      return rows.map((row) {
+        final tag = row.readTable(tags);
+        return (tag, tag.usageCount);
+      }).toList();
+    });
+  }
+
+  /// Gets most popular tags (by usage count).
+  Future<List<Tag>> getPopularTags({int limit = 10}) async {
+    return (select(tags)
+          ..where((t) => t.deletedAt.isNull() & t.usageCount.isBiggerOrEqualValue(0))
+          ..orderBy([(t) => drift.OrderingTerm.desc(t.usageCount)])
+          ..limit(limit))
+        .get();
+  }
 }
