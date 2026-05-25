@@ -195,10 +195,8 @@ class RecurringNotificationService {
       final now = DateTime.now();
       final prefs = await SharedPreferences.getInstance();
 
-      // Get all active recurring transactions with reminders enabled
-      final allRecurring = await (db.select(db.recurringTransactions)
-            ..where((r) => r.isActive.equals(true) & r.deletedAt.isNull()))
-          .get();
+      // Get all active recurring transactions
+      final allRecurring = await db.recurringTransactionsDao.getAllActive();
 
       // Filter for reminderDays in Dart
       final withReminders = allRecurring.where((r) => r.reminderDays != null).toList();
