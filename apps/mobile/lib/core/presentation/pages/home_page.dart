@@ -16,6 +16,12 @@ class HomePage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('本地金融管家'),
         actions: [
+          // Analytics button
+          IconButton(
+            icon: const Icon(Icons.analytics_outlined),
+            onPressed: () => _navigateToAnalytics(context),
+            tooltip: '数据分析',
+          ),
           // Edit mode toggle button
           IconButton(
             icon: Icon(
@@ -107,6 +113,10 @@ class HomePage extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  void _navigateToAnalytics(BuildContext context) {
+    context.push('/analytics');
   }
 
   void _showResetConfirmationDialog(BuildContext context, WidgetRef ref) {

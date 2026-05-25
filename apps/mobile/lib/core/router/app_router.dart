@@ -39,6 +39,7 @@ import '../../features/currency/presentation/pages/exchange_rates_page.dart';
 import '../../features/templates/presentation/pages/template_list_page.dart' hide TemplateListPage;
 import '../../features/templates/presentation/template_page.dart';
 import '../../features/templates/data/template_provider.dart' show TemplateModel;
+import '../../features/dashboard/presentation/pages/analytics_dashboard_page.dart';
 // Sync temporarily disabled - PowerSync compatibility issues
 // import '../../features/sync/presentation/pages/sync_settings_page.dart';
 // import '../../features/sync/presentation/pages/sync_login_page.dart';
@@ -158,6 +159,11 @@ GoRouter _createRouter(Ref ref) {
             path: '/reports',
             name: 'reports',
             builder: (context, state) => const ReportsPage(),
+          ),
+          GoRoute(
+            path: '/analytics',
+            name: 'analytics',
+            builder: (context, state) => const AnalyticsDashboardPage(),
           ),
           GoRoute(
             path: '/reports/trial-balance',
