@@ -1,12 +1,11 @@
 import 'dart:typed_data';
 import 'csv_parser.dart';
-import 'excel_parser.dart';
 
-/// Unified file parser that supports both CSV and Excel files.
+/// Unified file parser that supports CSV files.
 ///
 /// Features:
-/// - Auto-detects file type (CSV or Excel)
-/// - Supports .csv, .xls, and .xlsx formats
+/// - Auto-detects file type (CSV)
+/// - Supports .csv format
 /// - Provides consistent interface for all file types
 /// - Handles encoding for CSV files
 class FileParser {
@@ -18,7 +17,6 @@ class FileParser {
   /// - [encoding]: Optional encoding hint (for CSV files)
   /// - [delimiter]: Field delimiter (for CSV files, default: auto-detect)
   /// - [hasHeader]: Whether first row is header
-  /// - [sheetIndex]: Sheet index for Excel files (default: 0)
   ///
   /// Returns:
   /// - FileParseResult with header, rows, and metadata
@@ -28,29 +26,11 @@ class FileParser {
     String? encoding,
     String? delimiter,
     bool hasHeader = true,
-    int sheetIndex = 0,
+    int sheetIndex = 0, // Kept for API compatibility, ignored for CSV
   }) {
     final fileType = detectFileType(filename, content);
 
     switch (fileType) {
-      case FileType.excel:
-        final excelResult = ExcelParser.parse(
-          content: content,
-          sheetIndex: sheetIndex,
-          hasHeader: hasHeader,
-        );
-
-        return FileParseResult(
-          header: excelResult.header,
-          rows: excelResult.rows,
-          fileType: fileType,
-          detectedEncoding: 'utf-8', // Excel files use UTF-8 internally
-          totalRows: excelResult.totalRows,
-          sheetNames: excelResult.sheetNames,
-          selectedSheet: excelResult.selectedSheet,
-          error: excelResult.error,
-        );
-
       case FileType.csv:
         final csvResult = CsvParser.parse(
           content: content,
@@ -75,7 +55,7 @@ class FileParser {
           fileType: fileType,
           detectedEncoding: encoding ?? 'utf-8',
           totalRows: 0,
-          error: '不支持的文件类型: $filename',
+          error: '不支持的文件类型: $filename (仅支持CSV)',
         );
     }
   }
@@ -126,31 +106,13 @@ class FileParser {
   static FileType detectFileType(String filename, Uint8List content) {
     final ext = filename.toLowerCase();
 
-    // Check Excel extensions
-    if (ext.endsWith('.xlsx') || ext.endsWith('.xls')) {
-      // Verify it's actually an Excel file
-      if (ExcelParser.isExcelFile(content)) {
-        return FileType.excel;
-      }
-    }
-
     // Check CSV extension
     if (ext.endsWith('.csv')) {
       return FileType.csv;
     }
 
-    // Try to detect from content
-    if (ExcelParser.isExcelFile(content)) {
-      return FileType.excel;
-    }
-
-    // Default to CSV for text-based content
-    return FileType.csv;
-  }
-
-  /// Check if file is an Excel file.
-  static bool isExcelFile(String filename, Uint8List content) {
-    return detectFileType(filename, content) == FileType.excel;
+    // Unsupported file type
+    return FileType.unknown;
   }
 
   /// Check if file is a CSV file.
@@ -159,13 +121,12 @@ class FileParser {
   }
 
   /// Get supported file extensions.
-  static List<String> get supportedExtensions => ['.csv', '.xls', '.xlsx'];
+  static List<String> get supportedExtensions => ['.csv'];
 }
 
 /// File type enumeration.
 enum FileType {
   csv,
-  excel,
   unknown,
 }
 
@@ -189,12 +150,6 @@ class FileParseResult {
   /// Total row count (including header).
   final int totalRows;
 
-  /// Sheet names (for Excel files).
-  final List<String> sheetNames;
-
-  /// Selected sheet name (for Excel files).
-  final String? selectedSheet;
-
   /// Error message if parsing failed.
   final String? error;
 
@@ -205,8 +160,6 @@ class FileParseResult {
     required this.detectedEncoding,
     this.detectedDelimiter,
     required this.totalRows,
-    this.sheetNames = const [],
-    this.selectedSheet,
     this.error,
   });
 
@@ -218,9 +171,6 @@ class FileParseResult {
 
   /// Returns true if parsing was successful.
   bool get isSuccess => error == null;
-
-  /// Returns true if this is an Excel file.
-  bool get isExcel => fileType == FileType.excel;
 
   /// Returns true if this is a CSV file.
   bool get isCsv => fileType == FileType.csv;

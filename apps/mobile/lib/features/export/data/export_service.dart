@@ -6,7 +6,7 @@ import 'package:drift/drift.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:database/database.dart';
+import 'package:database/database.dart' as db hide Transaction, Split;
 import 'package:core/core.dart';
 import 'package:decimal/decimal.dart';
 import 'qif_export_service.dart';
@@ -57,7 +57,7 @@ class ExportResult {
 
 /// Service for exporting data to CSV and JSON formats
 class ExportService {
-  final LocalFinanceDatabase _db;
+  final db.LocalFinanceDatabase _db;
 
   ExportService(this._db);
 
@@ -339,13 +339,13 @@ class ExportService {
     final attachments = await _db.select(_db.attachments).get();
 
     // Build splits map
-    final splitsByTransaction = <String, List<Split>>{};
+    final splitsByTransaction = <String, List<db.Split>>{};
     for (final split in splits) {
       splitsByTransaction.putIfAbsent(split.transactionId, () => []).add(split);
     }
 
     // Build attachments map
-    final attachmentsByTransaction = <String, List<Attachment>>{};
+    final attachmentsByTransaction = <String, List<db.Attachment>>{};
     for (final attachment in attachments) {
       attachmentsByTransaction.putIfAbsent(attachment.transactionId, () => []).add(attachment);
     }
@@ -714,7 +714,7 @@ class ExportService {
         .get();
 
     // Group splits by transaction
-    final splitsByTransaction = <String, List<Split>>{};
+    final splitsByTransaction = <String, List<db.Split>>{};
     for (final split in allSplits) {
       splitsByTransaction.putIfAbsent(split.transactionId, () => []).add(split);
     }

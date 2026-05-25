@@ -25,7 +25,6 @@ export 'src/banks/bocom_importer.dart';
 export 'src/banks/cmb_importer.dart';
 export 'src/banks/citic_importer.dart';
 export 'src/utils/csv_parser.dart';
-export 'src/utils/excel_parser.dart';
 export 'src/utils/file_parser.dart';
 export 'src/utils/encoding_detector.dart';
 export 'src/utils/date_parser.dart';
