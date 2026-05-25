@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../widgets/keyboard_shortcuts.dart';
-import '../../platform/data/platform_provider.dart';
+import '../../../features/platform/data/platform_provider.dart';
 
 // Sync temporarily disabled - PowerSync compatibility issues
 // import '../../features/sync/presentation/widgets/sync_status_indicator.dart';
