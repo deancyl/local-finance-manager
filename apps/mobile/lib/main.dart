@@ -7,10 +7,12 @@ import 'package:go_router/go_router.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/presentation/widgets/keyboard_shortcuts.dart';
 import 'features/settings/data/theme_provider.dart';
 import 'features/settings/data/locale_provider.dart';
 import 'features/budgets/data/budget_notification_service.dart';
 import 'features/recurring/data/recurring_provider.dart';
+import 'features/platform/data/platform_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +38,7 @@ class _FinanceAppState extends ConsumerState<FinanceApp> {
     super.initState();
     _setupNotificationHandler();
     _processRecurringTransactions();
+    _logPlatformInfo();
   }
 
   void _setupNotificationHandler() {
@@ -57,6 +60,21 @@ class _FinanceAppState extends ConsumerState<FinanceApp> {
       } catch (e) {
         print('Failed to process recurring transactions on startup: $e');
       }
+    });
+  }
+  
+  void _logPlatformInfo() {
+    // Log platform information for debugging (v0.3.86 Windows optimization)
+    Future.microtask(() {
+      final platformService = ref.read(platformServiceProvider);
+      final platform = platformService.platform;
+      print('=== Platform Info (v0.3.86) ===');
+      print('Platform: $platform');
+      print('isDesktop: ${platformService.isDesktop}');
+      print('isWindows: ${platformService.isWindows}');
+      print('Font scale: ${platformService.getFontScale()}');
+      print('Sidebar width: ${platformService.getSidebarWidth()}');
+      print('===============================');
     });
   }
 

@@ -13,6 +13,9 @@ enum PlatformType {
   mobile,
   web,
   desktop,
+  windows,
+  macOS,
+  linux,
   unknown,
 }
 
@@ -76,6 +79,33 @@ class OptimizationSettings {
   }
 }
 
+/// Windows-specific styling configuration
+class WindowsStyling {
+  // Font scaling for Windows (larger fonts for better readability)
+  static const double fontScale = 1.15;
+  
+  // Sidebar width for desktop layout
+  static const double sidebarWidth = 280.0;
+  
+  // Content padding
+  static const double contentPadding = 24.0;
+  
+  // Card elevation
+  static const double cardElevation = 2.0;
+  
+  // Border radius
+  static const double borderRadius = 8.0;
+  
+  // Icon sizes
+  static const double iconSizeSmall = 20.0;
+  static const double iconSizeMedium = 24.0;
+  static const double iconSizeLarge = 32.0;
+  
+  // Button sizes
+  static const double buttonHeight = 40.0;
+  static const double buttonMinWidth = 88.0;
+}
+
 // ============================================================
 // PLATFORM SERVICE
 // ============================================================
@@ -92,6 +122,18 @@ class PlatformService {
 
   /// Get platform capabilities
   PlatformCapabilities get capabilities => _capabilities;
+
+  /// Check if running on Windows
+  bool get isWindows => _platform == PlatformType.windows;
+  
+  /// Check if running on macOS
+  bool get isMacOS => _platform == PlatformType.macOS;
+  
+  /// Check if running on Linux
+  bool get isLinux => _platform == PlatformType.linux;
+  
+  /// Check if running on any desktop platform
+  bool get isDesktop => isWindows || isMacOS || isLinux;
 
   /// Check if platform supports a feature
   bool supportsFeature(String feature) {
@@ -124,9 +166,12 @@ class PlatformService {
         return 20;
       case PlatformType.web:
         return 50;
-      case PlatformType.desktop:
+      case PlatformType.windows:
+      case PlatformType.macOS:
+      case PlatformType.linux:
+      case PlatformType.desktop: // Legacy desktop type
         return 100;
-      default:
+      case PlatformType.unknown:
         return 30;
     }
   }
@@ -134,6 +179,22 @@ class PlatformService {
   /// Check if should use compact UI
   bool get shouldUseCompactUI {
     return _platform == PlatformType.mobile;
+  }
+  
+  /// Get sidebar width for desktop layout
+  double getSidebarWidth() {
+    if (isDesktop) {
+      return WindowsStyling.sidebarWidth;
+    }
+    return 0; // No sidebar on mobile
+  }
+  
+  /// Get font scale for current platform
+  double getFontScale() {
+    if (isWindows) {
+      return WindowsStyling.fontScale;
+    }
+    return 1.0;
   }
 
   /// Get default storage location
@@ -157,8 +218,12 @@ final platformTypeProvider = Provider<PlatformType>((ref) {
     return PlatformType.web;
   } else if (Platform.isAndroid || Platform.isIOS) {
     return PlatformType.mobile;
-  } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    return PlatformType.desktop;
+  } else if (Platform.isWindows) {
+    return PlatformType.windows;
+  } else if (Platform.isMacOS) {
+    return PlatformType.macOS;
+  } else if (Platform.isLinux) {
+    return PlatformType.linux;
   }
   return PlatformType.unknown;
 });
@@ -179,7 +244,10 @@ final platformCapabilitiesProvider = Provider<PlatformCapabilities>((ref) {
         supportsSharing: true,
         supportsHapticFeedback: true,
       );
-    case PlatformType.desktop:
+    case PlatformType.windows:
+    case PlatformType.macOS:
+    case PlatformType.linux:
+    case PlatformType.desktop: // Legacy desktop type
       return const PlatformCapabilities(
         supportsBiometrics: true,
         supportsSecureStorage: true,
@@ -201,7 +269,7 @@ final platformCapabilitiesProvider = Provider<PlatformCapabilities>((ref) {
         supportsSharing: true,
         supportsHapticFeedback: true,
       );
-    default:
+    case PlatformType.unknown:
       return const PlatformCapabilities();
   }
 });

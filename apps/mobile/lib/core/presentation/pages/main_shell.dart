@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../widgets/keyboard_shortcuts.dart';
+import '../../platform/data/platform_provider.dart';
 
 // Sync temporarily disabled - PowerSync compatibility issues
 // import '../../features/sync/presentation/widgets/sync_status_indicator.dart';
 
-class MainShell extends StatelessWidget {
+class MainShell extends ConsumerWidget {
   final Widget child;
 
   const MainShell({super.key, required this.child});
@@ -21,11 +25,38 @@ class MainShell extends StatelessWidget {
     };
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final selectedIndex = _getSelectedIndex(context);
+  void _handleShortcut(ShortcutAction action, BuildContext context, WidgetRef ref) {
+    final platformService = ref.read(platformServiceProvider);
+    
+    // Only handle shortcuts on desktop platforms
+    if (!platformService.isDesktop) return;
 
-    return Scaffold(
+    switch (action) {
+      case ShortcutAction.newTransaction:
+        context.push('/transactions/add');
+        break;
+      case ShortcutAction.search:
+        context.push('/transactions');
+        // Could open search dialog in the future
+        break;
+      case ShortcutAction.escape:
+        // Close dialog or go back
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+        break;
+      default:
+        // Other shortcuts handled by specific pages
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedIndex = _getSelectedIndex(context);
+    final platformService = ref.watch(platformServiceProvider);
+
+    Widget scaffold = Scaffold(
       appBar: AppBar(
         actions: const [
           // SyncStatusIndicator(),  // Temporarily disabled
@@ -74,5 +105,21 @@ class MainShell extends StatelessWidget {
         ],
       ),
     );
+
+    // Wrap with keyboard shortcuts on desktop platforms
+    if (platformService.isDesktop) {
+      return ShortcutsActionWidget(
+        onNewTransaction: () => context.push('/transactions/add'),
+        onSearch: () => context.push('/transactions'),
+        onEscape: () {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        },
+        child: scaffold,
+      );
+    }
+
+    return scaffold;
   }
 }
