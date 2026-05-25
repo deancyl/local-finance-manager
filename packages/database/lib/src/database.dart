@@ -77,7 +77,6 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final TransactionTemplatesDao transactionTemplatesDao = TransactionTemplatesDao(this);
   late final IncomeStatementDao incomeStatementDao = IncomeStatementDao(this);
   late final BalanceSheetDao balanceSheetDao = BalanceSheetDao(this);
-  late final SavedSearchDao savedSearchDao = SavedSearchDao(this);
 
   @override
   int get schemaVersion => 13;
@@ -374,9 +373,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
           );
         }
         if (from < 13) {
-          // Version 13: Add saved searches and FTS5 for advanced search
-          await m.createTable(savedSearches);
-          await m.createTable(searchHistory);
+          // Version 13: Add FTS5 for advanced search
           // Create FTS5 virtual table for full-text search
           await customStatement('''
             CREATE VIRTUAL TABLE IF NOT EXISTS transactions_fts USING fts5(

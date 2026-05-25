@@ -564,19 +564,15 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
 
   /// Gets transaction IDs that have all the specified tags.
   Future<Set<String>> _getTransactionsWithTags(List<String> tagIds) async {
-    final query = selectOnly(transactionTags)
-      ..where(transactionTags.tagId.isIn(tagIds))
-      ..addColumns([transactionTags.transactionId]);
+    final query = select(transactionTags)
+      ..where((t) => t.tagId.isIn(tagIds));
 
     final results = await query.get();
-    
+
     // Group by transaction and count tags
     final transactionTagCounts = <String, int>{};
     for (final row in results) {
-      final transactionId = row.read(transactionTags.transactionId);
-      if (transactionId != null) {
-        transactionTagCounts[transactionId] = (transactionTagCounts[transactionId] ?? 0) + 1;
-      }
+      transactionTagCounts[row.transactionId] = (transactionTagCounts[row.transactionId] ?? 0) + 1;
     }
 
     // Return only transactions that have all requested tags

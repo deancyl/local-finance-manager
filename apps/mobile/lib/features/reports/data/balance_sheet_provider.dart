@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:database/database.dart' hide Account, AccountBalanceRaw;
+import 'package:database/database.dart' hide Account, AccountBalanceRaw, LiquidityType;
 import 'package:core/core.dart';
 import '../../accounts/data/account_provider.dart';
 import 'currency_conversion_service.dart';
