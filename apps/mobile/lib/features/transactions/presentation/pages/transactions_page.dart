@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:database/database.dart';
+import 'package:finance_app/features/voice/presentation/widgets/voice_input_button.dart';
 import '../../data/transaction_provider.dart';
 import '../../data/transaction_filter.dart';
 import '../widgets/transaction_card.dart';
@@ -114,6 +115,19 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               icon: const Icon(Icons.search),
               onPressed: () {
                 setState(() => _isSearching = true);
+              },
+            ),
+          if (!_isSearching)
+            VoiceInputButton(
+              controller: _searchController,
+              mode: VoiceInputMode.search,
+              showLocaleSelector: true,
+              hint: '说出要搜索的内容',
+              onStart: () {
+                setState(() => _isSearching = true);
+              },
+              onResult: (text) {
+                _updateSearchQuery(text);
               },
             ),
           if (!_isSearching)

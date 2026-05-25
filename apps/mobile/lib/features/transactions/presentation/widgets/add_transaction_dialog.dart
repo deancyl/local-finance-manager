@@ -10,6 +10,7 @@ import 'package:finance_app/features/accounts/data/account_provider.dart';
 import 'package:finance_app/features/categories/data/category_provider.dart';
 import 'package:finance_app/features/tags/presentation/widgets/tag_selector.dart';
 import 'package:finance_app/features/attachments/presentation/widgets/attachment_section.dart';
+import 'package:finance_app/features/voice/presentation/widgets/voice_input_button.dart';
 import '../../data/transaction_provider.dart';
 import '../../data/ai_provider.dart';
 import '../../../templates/data/template_provider.dart' show templatesProvider, recentTemplatesProvider, templateNotifierProvider, TemplateModel, SplitTemplateData;
@@ -369,9 +370,18 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
               // 备注
               TextFormField(
                 controller: _notesController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: '备注（可选）',
-                  prefixIcon: Icon(Icons.notes_outlined),
+                  prefixIcon: const Icon(Icons.notes_outlined),
+                  suffixIcon: VoiceInputButton(
+                    controller: _notesController,
+                    showLocaleSelector: true,
+                    hint: '说点什么...',
+                    onResult: (text) {
+                      // Auto-save after voice input
+                      setState(() {});
+                    },
+                  ),
                 ),
                 maxLines: 2,
               ),

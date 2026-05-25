@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:finance_app/features/voice/presentation/widgets/voice_input_button.dart';
 
 /// Calculator-style quick amount input widget.
 /// Provides a number pad for quick amount entry on mobile devices.
@@ -7,12 +8,14 @@ class QuickAmountInput extends StatefulWidget {
   final TextEditingController controller;
   final String? Function(String?)? validator;
   final bool autoFocus;
+  final bool enableVoiceInput;
 
   const QuickAmountInput({
     super.key,
     required this.controller,
     this.validator,
     this.autoFocus = false,
+    this.enableVoiceInput = true,
   });
 
   @override
@@ -108,6 +111,21 @@ class _QuickAmountInputState extends State<QuickAmountInput> {
                 suffixIcon: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (widget.enableVoiceInput)
+                      VoiceInputButton(
+                        controller: _internalController,
+                        mode: VoiceInputMode.amount,
+                        hint: '说出金额',
+                        onResult: (text) {
+                          // Validate the amount
+                          final amount = double.tryParse(text);
+                          if (amount != null && amount > 0) {
+                            setState(() {
+                              widget.controller.text = text;
+                            });
+                          }
+                        },
+                      ),
                     if (_internalController.text.isNotEmpty)
                       IconButton(
                         icon: const Icon(Icons.clear, size: 20),
