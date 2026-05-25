@@ -38,14 +38,13 @@ jobs:
       - name: Run analysis
         run: melos run analyze
       
-      # Tests temporarily disabled due to pre-existing failures
-      # - name: Run tests
-      #   run: melos run test
+      - name: Run tests
+        run: melos run test
 
-      # - name: Upload coverage to Codecov
-      #   uses: codecov/codecov-action@v4
-      #   with:
-      #     files: ./coverage/lcov.info
-      #     fail_ci_if_error: true
-      #   env:
-      #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
