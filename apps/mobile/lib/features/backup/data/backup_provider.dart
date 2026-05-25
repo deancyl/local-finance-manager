@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -359,10 +360,9 @@ class BackupService {
   }
 
   Future<String> _calculateChecksum(List<int> bytes) async {
-    // Simple CRC32 checksum using archive package
-    final crc = Crc32();
-    final checksumValue = crc.calculate(bytes);
-    return checksumValue.toRadixString(16).padLeft(8, '0');
+    // Simple checksum using SHA-256 from dart:convert
+    final digest = sha256.convert(bytes);
+    return digest.toString().substring(0, 16);
   }
 }
 
