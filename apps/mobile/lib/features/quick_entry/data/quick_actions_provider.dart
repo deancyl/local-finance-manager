@@ -388,12 +388,8 @@ final quickActionShortcutsProvider = StateNotifierProvider<QuickActionShortcutsN
 /// Notifier for managing quick action shortcuts
 class QuickActionShortcutsNotifier extends StateNotifier<List<QuickActionItem>> {
   static const _key = 'quick_action_shortcuts';
-
-  QuickActionShortcutsNotifier() : super(_getDefaultActions()) {
-    _loadShortcuts();
-  }
-
-  List<QuickActionItem> _getDefaultActions() {
+  
+  static List<QuickActionItem> _getDefaultActions() {
     return [
       QuickActionItem(
         type: QuickActionType.expense,
@@ -412,6 +408,10 @@ class QuickActionShortcutsNotifier extends StateNotifier<List<QuickActionItem>> 
         label: '模板',
       ),
     ];
+  }
+  
+  QuickActionShortcutsNotifier() : super(_getDefaultActions()) {
+    _loadShortcuts();
   }
 
   Future<void> _loadShortcuts() async {

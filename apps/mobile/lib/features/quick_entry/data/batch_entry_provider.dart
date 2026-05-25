@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart' as uuid_pkg;
 
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
@@ -161,7 +161,7 @@ class BatchEntryNotifier extends StateNotifier<BatchEntryState> {
         for (final entry in state.pendingEntries) {
           if (!entry.isValid) continue;
           
-          final transactionId = const Uuid().v4();
+          final transactionId = const uuid_pkg.Uuid().v4();
           final postDate = entry.date.millisecondsSinceEpoch;
           final amountNum = ((entry.amount ?? 0) * 100).round();
           
@@ -180,7 +180,7 @@ class BatchEntryNotifier extends StateNotifier<BatchEntryState> {
           );
           
           // Create split (expense = debit)
-          final splitId = const Uuid().v4();
+          final splitId = const uuid_pkg.Uuid().v4();
           await _db.into(_db.splits).insert(
             SplitsCompanion.insert(
               id: splitId,

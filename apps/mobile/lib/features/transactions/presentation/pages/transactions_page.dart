@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:database/database.dart';
 import 'package:finance_app/features/voice/presentation/widgets/voice_input_button.dart';
+import 'package:finance_app/features/accounts/data/account_provider.dart';
 import '../../../../core/presentation/widgets/gesture_controls.dart';
 import '../../data/transaction_provider.dart';
 import '../../data/transaction_filter.dart';
@@ -14,8 +15,8 @@ import '../widgets/add_transaction_dialog.dart';
 import '../widgets/transfer_dialog.dart';
 import '../widgets/transaction_filter_dialog.dart';
 import '../../../print/data/print_service.dart';
+import '../../../print/data/print_provider.dart';
 import '../../../export/data/export_service.dart';
-import '../../../export/data/export_provider.dart';
 
 class TransactionsPage extends ConsumerStatefulWidget {
   final TransactionFilter? initialFilter;
@@ -517,8 +518,8 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
           FilledButton(
             onPressed: () async {
               // Update transaction notes
-              // Get the first split for this transaction
-              final splits = await ref.read(databaseProvider).select(db.splits)
+              final db = ref.read(databaseProvider);
+              final splits = await db.select(db.splits)
                   .where((s) => s.transactionId.equals(transaction.id))
                   .get();
               

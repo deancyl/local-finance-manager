@@ -237,11 +237,14 @@ class SmartDefaults {
     this.suggestedAccountId,
     this.suggestedCategoryId,
     this.suggestedAmount,
-    this.frequentAccounts = [],
-    this.frequentCategories = [],
-    this.averageAmountByCategory = {},
-    this.commonCategoryForDescription = {},
-  });
+    List<String>? frequentAccounts,
+    List<String>? frequentCategories,
+    Map<String, double>? averageAmountByCategory,
+    Map<String, String>? commonCategoryForDescription,
+  }) : frequentAccounts = frequentAccounts ?? [],
+       frequentCategories = frequentCategories ?? [],
+       averageAmountByCategory = averageAmountByCategory ?? {},
+       commonCategoryForDescription = commonCategoryForDescription ?? {};
 }
 
 /// Provider for smart defaults based on past transaction patterns
@@ -264,9 +267,9 @@ final smartDefaultsProvider = FutureProvider<SmartDefaults>((ref) async {
   }
   
   final frequentAccounts = accountCounts.entries
-      .sorted((a, b) => b.value.compareTo(a.value))
-      .map((e) => e.key)
-      .toList();
+      .toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+  final frequentAccountIds = frequentAccounts.map((e) => e.key).toList();
   
   // Analyze category frequency
   final categoryCounts = <String, int>{};
@@ -277,9 +280,9 @@ final smartDefaultsProvider = FutureProvider<SmartDefaults>((ref) async {
   }
   
   final frequentCategories = categoryCounts.entries
-      .sorted((a, b) => b.value.compareTo(a.value))
-      .map((e) => e.key)
-      .toList();
+      .toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+  final frequentCategoryIds = frequentCategories.map((e) => e.key).toList();
   
   // Calculate average amounts by category
   final amountsByCategory = <String, List<int>>{};
@@ -326,11 +329,11 @@ final smartDefaultsProvider = FutureProvider<SmartDefaults>((ref) async {
   }
   
   return SmartDefaults(
-    suggestedAccountId: frequentAccounts.isNotEmpty ? frequentAccounts.first : null,
-    suggestedCategoryId: frequentCategories.isNotEmpty ? frequentCategories.first : null,
-    suggestedAmount: averageAmountByCategory[frequentCategories.firstOrNull] ?? 100.0,
-    frequentAccounts: frequentAccounts.take(5).toList(),
-    frequentCategories: frequentCategories.take(5).toList(),
+    suggestedAccountId: frequentAccountIds.isNotEmpty ? frequentAccountIds.first : null,
+    suggestedCategoryId: frequentCategoryIds.isNotEmpty ? frequentCategoryIds.first : null,
+    suggestedAmount: averageAmountByCategory[frequentCategoryIds.firstOrNull] ?? 100.0,
+    frequentAccounts: frequentAccountIds.take(5).toList(),
+    frequentCategories: frequentCategoryIds.take(5).toList(),
     averageAmountByCategory: averageAmountByCategory,
     commonCategoryForDescription: descriptionToCategory,
   );
