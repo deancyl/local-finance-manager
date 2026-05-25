@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../widgets/keyboard_shortcuts.dart';
 import '../../../features/platform/data/platform_provider.dart';
+import '../../../core/performance/background_sync.dart';
 
 // Sync temporarily disabled - PowerSync compatibility issues
 // import '../../features/sync/presentation/widgets/sync_status_indicator.dart';
@@ -55,10 +56,15 @@ class MainShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = _getSelectedIndex(context);
     final platformService = ref.watch(platformServiceProvider);
+    final syncStatus = ref.watch(backgroundSyncProvider);
 
     Widget scaffold = Scaffold(
       appBar: AppBar(
-        actions: const [
+        title: const Text('本地金融管家'),
+        actions: [
+          // Background sync status indicator (v0.3.120)
+          _buildSyncStatusIndicator(syncStatus),
+          const SizedBox(width: 8),
           // SyncStatusIndicator(),  // Temporarily disabled
         ],
       ),
@@ -121,5 +127,51 @@ class MainShell extends ConsumerWidget {
     }
 
     return scaffold;
+  }
+  
+  /// Builds the sync status indicator (v0.3.120)
+  Widget _buildSyncStatusIndicator(SyncStatus status) {
+    IconData icon;
+    Color color;
+    String tooltip;
+    
+    switch (status) {
+      case SyncStatus.syncing:
+        icon = Icons.sync;
+        color = Colors.blue;
+        tooltip = '正在同步...';
+        break;
+      case SyncStatus.success:
+        icon = Icons.cloud_done;
+        color = Colors.green;
+        tooltip = '同步完成';
+        break;
+      case SyncStatus.error:
+        icon = Icons.sync_problem;
+        color = Colors.red;
+        tooltip = '同步失败';
+        break;
+      case SyncStatus.offline:
+        icon = Icons.cloud_off;
+        color = Colors.grey;
+        tooltip = '离线模式';
+        break;
+      case SyncStatus.conflict:
+        icon = Icons.warning;
+        color = Colors.orange;
+        tooltip = '同步冲突';
+        break;
+      case SyncStatus.idle:
+      default:
+        icon = Icons.cloud_queue;
+        color = Colors.grey;
+        tooltip = '等待同步';
+        break;
+    }
+    
+    return Tooltip(
+      message: tooltip,
+      child: Icon(icon, color: color),
+    );
   }
 }

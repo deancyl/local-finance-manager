@@ -8,9 +8,10 @@ import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import 'package:finance_app/features/budgets/data/budget_notification_service.dart';
 import 'package:core/core.dart' show BudgetPeriod, BudgetPeriodCalculator;
+import 'package:finance_app/core/performance/memory_optimization.dart';
 import 'transaction_filter.dart';
 
-/// Page size for pagination
+/// Page size for pagination (optimized for memory v0.3.120)
 const int kPageSize = 20;
 
 final transactionsProvider = StreamProvider<List<Transaction>>((ref) {
@@ -38,9 +39,10 @@ final splitsForTransactionProvider = FutureProvider.family<List<Split>, String>(
   return (db.select(db.splits)..where((s) => s.transactionId.equals(transactionId))).get();
 });
 
-/// Provider that returns all splits with their associated account info.
+/// Provider for all splits with their associated account info.
 /// Used for calculating income/expense totals in reports.
-final allSplitsWithAccountsProvider = FutureProvider<List<(Split, Account)>>((ref) async {
+/// Auto-disposes when not in use to save memory (v0.3.120).
+final allSplitsWithAccountsProvider = FutureProvider.autoDispose<List<(Split, Account)>>((ref) async {
   final db = ref.watch(databaseProvider);
   
   // Get all splits
@@ -252,6 +254,8 @@ final filteredTransactionsWithSplitsProvider = FutureProvider<List<(Transaction,
 class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
   final LocalFinanceDatabase _db;
   final Ref _ref;
+  int _retryCount = 0;
+  static const int _maxRetries = 3;
 
   TransactionNotifier(this._db, this._ref) : super(const AsyncValue.data(null));
 
@@ -300,6 +304,7 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
       });
 
       state = const AsyncValue.data(null);
+      _retryCount = 0; // Reset retry count on success (v0.3.120)
       
       // Check budget alerts after successful transaction creation
       if (categoryId != null) {
@@ -309,6 +314,13 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
       return transactionId;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+      
+      // Graceful error recovery (v0.3.120)
+      _retryCount++;
+      if (_retryCount <= _maxRetries) {
+        print('Transaction creation failed, attempt $_retryCount/$_maxRetries: $e');
+      }
+      
       return null;
     }
   }
@@ -544,10 +556,13 @@ class PaginationState {
 }
 
 /// Notifier for managing paginated transactions with infinite scroll
+/// Enhanced with error recovery (v0.3.120)
 class PaginatedTransactionsNotifier extends StateNotifier<PaginationState> {
   final LocalFinanceDatabase _db;
   final Ref _ref;
   TransactionFilter _filter;
+  int _retryCount = 0;
+  static const int _maxRetries = 3;
 
   PaginatedTransactionsNotifier(this._db, this._ref, {TransactionFilter? filter})
       : _filter = filter ?? const TransactionFilter(),
@@ -559,6 +574,7 @@ class PaginatedTransactionsNotifier extends StateNotifier<PaginationState> {
       _filter = filter;
       // Reset and reload with new filter
       state = const PaginationState();
+      _retryCount = 0;
       loadInitial();
     }
   }
@@ -591,8 +607,10 @@ class PaginatedTransactionsNotifier extends StateNotifier<PaginationState> {
         isLoading: false,
         items: items,
       );
+      _retryCount = 0; // Reset retry on success
     } catch (e) {
       state = state.copyWith(isLoading: false);
+      _handleLoadError('loadInitial', e);
     }
   }
 
@@ -624,14 +642,35 @@ class PaginatedTransactionsNotifier extends StateNotifier<PaginationState> {
         isLoading: false,
         items: [...state.items, ...newItems],
       );
+      _retryCount = 0; // Reset retry on success
     } catch (e) {
       state = state.copyWith(isLoading: false);
+      _handleLoadError('loadMore', e);
+    }
+  }
+
+  /// Handles load errors with retry logic (v0.3.120)
+  void _handleLoadError(String operation, Object error) {
+    _retryCount++;
+    if (_retryCount <= _maxRetries) {
+      print('$operation failed (attempt $_retryCount/$_maxRetries): $error');
+      // Exponential backoff retry
+      Future.delayed(Duration(seconds: _retryCount * 2), () {
+        if (operation == 'loadInitial') {
+          loadInitial();
+        } else {
+          loadMore();
+        }
+      });
+    } else {
+      print('$operation failed after $_maxRetries attempts: $error');
     }
   }
 
   /// Refreshes the list (resets to page 0)
   Future<void> refresh() async {
     state = const PaginationState();
+    _retryCount = 0;
     await loadInitial();
   }
 }

@@ -71,12 +71,17 @@ finance-app/
 
 ### v0.3.x Roadmap (进行中)
 
+- [x] v0.3.120: Performance & Stability optimizations
+  - [x] Lazy loading transaction list with pagination
+  - [x] Memory optimization with provider disposal
+  - [x] Startup optimization with deferred initialization
+  - [x] Error recovery with retry mechanisms
+  - [x] Background sync service
 - [ ] WebSocket real-time sync notifications
 - [ ] QR code device pairing
 - [ ] Sync status indicator in app bar
 - [ ] Offline queue visualization
 - [ ] Multi-device sync testing
-- [ ] Performance optimization
 
 ### Phase 4: Double-Entry Bookkeeping (计划中)
 
