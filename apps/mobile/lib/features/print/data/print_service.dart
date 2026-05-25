@@ -80,10 +80,9 @@ class PrintService {
     String? printer,
   }) async {
     try {
-      await Printing.directPrint(
+      await Printing.printPdf(
         bytes: pdfBytes,
         name: title,
-        printer: printer,
       );
       return true;
     } catch (e) {

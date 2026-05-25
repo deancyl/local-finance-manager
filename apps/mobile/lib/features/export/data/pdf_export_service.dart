@@ -930,7 +930,7 @@ class PdfExportService {
           pw.Padding(
             padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
             child: pw.Text(
-              '¥${_formatDecimal(item.toDecimal)}',
+              '¥${_formatDecimal(item.amount)}',
               style: pw.TextStyle(
                 fontSize: 10,
                 fontWeight: depth == 0 ? pw.FontWeight.bold : pw.FontWeight.normal,
@@ -1258,7 +1258,7 @@ class PdfExportService {
           pw.Padding(
             padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
             child: pw.Text(
-              '¥${_formatDecimal(item.toDecimal)}',
+              '¥${_formatDecimal(item.amount)}',
               style: pw.TextStyle(
                 fontSize: 10,
                 fontWeight: depth == 0 ? pw.FontWeight.bold : pw.FontWeight.normal,

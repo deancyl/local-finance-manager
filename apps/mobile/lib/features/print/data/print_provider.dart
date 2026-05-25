@@ -61,5 +61,5 @@ final printTransactionsPreviewProvider =
     FutureProvider.family<Uint8List, ExportFilters>((ref, filters) async {
   final pdfService = ref.watch(pdfExportServiceProvider);
   final result = await pdfService.exportToPDF(filters: filters);
-  return result.bytes;
+  return result.bytes ?? Uint8List(0);
 });
