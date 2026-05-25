@@ -144,7 +144,8 @@ class TransactionValidator extends Validator<TransactionValidationInput> {
       ));
     } else {
       // Verify currency exists
-      final currency = await db.commoditiesDao.getById(input.currencyId!);
+      final currency = await (db.select(db.commodities)
+        ..where((c) => c.id.equals(input.currencyId!))).getSingleOrNull();
       if (currency == null) {
         issues.add(ValidationIssue(
           code: 'TXN_INVALID_CURRENCY',
@@ -295,7 +296,8 @@ class AccountValidator extends Validator<AccountValidationInput> {
         field: 'commodityId',
       ));
     } else {
-      final currency = await db.commoditiesDao.getById(input.commodityId!);
+      final currency = await (db.select(db.commodities)
+        ..where((c) => c.id.equals(input.commodityId!))).getSingleOrNull();
       if (currency == null) {
         issues.add(ValidationIssue(
           code: 'ACC_INVALID_CURRENCY',

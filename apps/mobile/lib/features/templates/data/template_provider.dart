@@ -189,7 +189,7 @@ class TemplateNotifier extends StateNotifier<AsyncValue<void>> {
   Future<void> updateTemplate(TemplateModel template) async {
     state = const AsyncValue.loading();
     try {
-      await _db.transactionTemplatesDao.update(
+      await _db.transactionTemplatesDao.updateTemplate(
         TransactionTemplatesCompanion(
           id: drift.Value(template.id),
           name: drift.Value(template.name),
@@ -203,7 +203,7 @@ class TemplateNotifier extends StateNotifier<AsyncValue<void>> {
           ),
           isFavorite: drift.Value(template.isFavorite),
           sortOrder: drift.Value(template.sortOrder),
-          updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+          updatedAt: drift.Value(DateTime.now()),
         ),
       );
 
@@ -232,7 +232,7 @@ class TemplateNotifier extends StateNotifier<AsyncValue<void>> {
 
   /// Delete a template
   Future<void> deleteTemplate(String id) async {
-    await _db.transactionTemplatesDao.delete(id);
+    await _db.transactionTemplatesDao.deleteTemplate(id);
     _ref.invalidate(templatesProvider);
     _ref.invalidate(favoriteTemplatesProvider);
   }

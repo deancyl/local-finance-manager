@@ -47,7 +47,7 @@ class CreateAccountCommand extends UndoableCommand {
   final String commodityId;
   final String? parentId;
   final String? code;
-  final String? description;
+  final String? accountDescription;
   final bool isPlaceholder;
   final int sortOrder;
 
@@ -58,7 +58,7 @@ class CreateAccountCommand extends UndoableCommand {
     required this.commodityId,
     this.parentId,
     this.code,
-    this.description,
+    this.accountDescription,
     this.isPlaceholder = false,
     this.sortOrder = 0,
     String? id,
@@ -87,8 +87,9 @@ class CreateAccountCommand extends UndoableCommand {
         commodityId: commodityId,
         parentId: drift.Value(parentId),
         code: drift.Value(code),
-        description: drift.Value(description),
+        description: drift.Value(accountDescription),
         isPlaceholder: drift.Value(isPlaceholder),
+        isHidden: const drift.Value(false),
         sortOrder: drift.Value(sortOrder),
         createdAt: now,
         updatedAt: now,
@@ -113,7 +114,7 @@ class CreateAccountCommand extends UndoableCommand {
     'commodityId': commodityId,
     'parentId': parentId,
     'code': code,
-    'description': description,
+    'accountDescription': accountDescription,
     'isPlaceholder': isPlaceholder,
     'sortOrder': sortOrder,
   };
@@ -127,7 +128,7 @@ class CreateAccountCommand extends UndoableCommand {
       commodityId: json['commodityId'],
       parentId: json['parentId'],
       code: json['code'],
-      description: json['description'],
+      accountDescription: json['accountDescription'],
       isPlaceholder: json['isPlaceholder'] ?? false,
       sortOrder: json['sortOrder'] ?? 0,
       timestamp: DateTime.parse(json['timestamp']),
@@ -167,6 +168,7 @@ class UpdateAccountCommand extends UndoableCommand {
         code: drift.Value(after.code),
         description: drift.Value(after.description),
         isPlaceholder: drift.Value(after.isPlaceholder),
+        isHidden: drift.Value(after.isHidden),
         sortOrder: drift.Value(after.sortOrder),
         updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
         version: drift.Value(after.version + 1),
@@ -184,6 +186,7 @@ class UpdateAccountCommand extends UndoableCommand {
         code: drift.Value(before.code),
         description: drift.Value(before.description),
         isPlaceholder: drift.Value(before.isPlaceholder),
+        isHidden: drift.Value(before.isHidden),
         sortOrder: drift.Value(before.sortOrder),
         updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
         version: drift.Value(before.version),
@@ -206,6 +209,7 @@ class UpdateAccountCommand extends UndoableCommand {
       'code': before.code,
       'description': before.description,
       'isPlaceholder': before.isPlaceholder,
+      'isHidden': before.isHidden,
       'sortOrder': before.sortOrder,
       'createdAt': before.createdAt,
       'version': before.version,
@@ -219,6 +223,7 @@ class UpdateAccountCommand extends UndoableCommand {
       'code': after.code,
       'description': after.description,
       'isPlaceholder': after.isPlaceholder,
+      'isHidden': after.isHidden,
       'sortOrder': after.sortOrder,
       'createdAt': after.createdAt,
       'version': after.version,
@@ -238,6 +243,7 @@ class UpdateAccountCommand extends UndoableCommand {
         code: json['before']['code'],
         description: json['before']['description'],
         isPlaceholder: json['before']['isPlaceholder'],
+        isHidden: json['before']['isHidden'] ?? false,
         sortOrder: json['before']['sortOrder'],
         createdAt: json['before']['createdAt'],
         updatedAt: DateTime.now().millisecondsSinceEpoch,
@@ -252,6 +258,7 @@ class UpdateAccountCommand extends UndoableCommand {
         code: json['after']['code'],
         description: json['after']['description'],
         isPlaceholder: json['after']['isPlaceholder'],
+        isHidden: json['after']['isHidden'] ?? false,
         sortOrder: json['after']['sortOrder'],
         createdAt: json['after']['createdAt'],
         updatedAt: DateTime.now().millisecondsSinceEpoch,
@@ -298,6 +305,7 @@ class DeleteAccountCommand extends UndoableCommand {
         code: drift.Value(account.code),
         description: drift.Value(account.description),
         isPlaceholder: drift.Value(account.isPlaceholder),
+        isHidden: drift.Value(account.isHidden),
         sortOrder: drift.Value(account.sortOrder),
         createdAt: account.createdAt,
         updatedAt: DateTime.now().millisecondsSinceEpoch,
@@ -320,6 +328,7 @@ class DeleteAccountCommand extends UndoableCommand {
       'code': account.code,
       'description': account.description,
       'isPlaceholder': account.isPlaceholder,
+      'isHidden': account.isHidden,
       'sortOrder': account.sortOrder,
       'createdAt': account.createdAt,
       'version': account.version,
@@ -340,6 +349,7 @@ class DeleteAccountCommand extends UndoableCommand {
         code: acc['code'],
         description: acc['description'],
         isPlaceholder: acc['isPlaceholder'],
+        isHidden: acc['isHidden'] ?? false,
         sortOrder: acc['sortOrder'],
         createdAt: acc['createdAt'],
         updatedAt: DateTime.now().millisecondsSinceEpoch,
@@ -354,7 +364,7 @@ class CreateTransactionCommand extends UndoableCommand {
   final String transactionId;
   final int postDate;
   final String currencyId;
-  final String? description;
+  final String? transactionDescription;
   final String? notes;
   final List<SplitData> splits;
 
@@ -362,7 +372,7 @@ class CreateTransactionCommand extends UndoableCommand {
     required this.transactionId,
     required this.postDate,
     required this.currencyId,
-    this.description,
+    this.transactionDescription,
     this.notes,
     required this.splits,
     String? id,
@@ -370,14 +380,14 @@ class CreateTransactionCommand extends UndoableCommand {
   }) : super(
     id: id,
     timestamp: timestamp,
-    description: '创建交易: ${description ?? "无描述"}',
+    description: '创建交易: ${transactionDescription ?? "无描述"}',
   );
 
   @override
   String get type => 'create_transaction';
 
   @override
-  String get summary => '创建交易 "${description ?? "无描述"}"';
+  String get summary => '创建交易 "${transactionDescription ?? "无描述"}"';
 
   @override
   Future<void> execute(LocalFinanceDatabase db) async {
@@ -390,7 +400,7 @@ class CreateTransactionCommand extends UndoableCommand {
           postDate: postDate,
           enterDate: now,
           currencyId: currencyId,
-          description: drift.Value(description),
+          description: drift.Value(transactionDescription),
           notes: drift.Value(notes),
           createdAt: now,
           updatedAt: now,
@@ -406,9 +416,9 @@ class CreateTransactionCommand extends UndoableCommand {
             categoryId: drift.Value(split.categoryId),
             costCenterId: drift.Value(split.costCenterId),
             valueNum: split.valueNum,
-            valueDenom: split.valueDenom,
+            valueDenom: drift.Value(split.valueDenom),
             quantityNum: split.quantityNum,
-            quantityDenom: split.quantityDenom,
+            quantityDenom: drift.Value(split.quantityDenom),
             memo: drift.Value(split.memo),
             createdAt: now,
           ),
@@ -434,6 +444,7 @@ class CreateTransactionCommand extends UndoableCommand {
     'transactionId': transactionId,
     'postDate': postDate,
     'currencyId': currencyId,
+    'transactionDescription': transactionDescription,
     'notes': notes,
     'splits': splits.map((s) => s.toJson()).toList(),
   };
@@ -445,7 +456,7 @@ class CreateTransactionCommand extends UndoableCommand {
       transactionId: json['transactionId'],
       postDate: json['postDate'],
       currencyId: json['currencyId'],
-      description: json['description'],
+      transactionDescription: json['transactionDescription'],
       notes: json['notes'],
       splits: (json['splits'] as List).map((s) => SplitData.fromJson(s)).toList(),
     );
@@ -555,9 +566,9 @@ class UpdateTransactionCommand extends UndoableCommand {
             categoryId: drift.Value(split.categoryId),
             costCenterId: drift.Value(split.costCenterId),
             valueNum: split.valueNum,
-            valueDenom: split.valueDenom,
+            valueDenom: drift.Value(split.valueDenom),
             quantityNum: split.quantityNum,
-            quantityDenom: split.quantityDenom,
+            quantityDenom: drift.Value(split.quantityDenom),
             memo: drift.Value(split.memo),
             createdAt: split.createdAt,
           ),
@@ -592,9 +603,9 @@ class UpdateTransactionCommand extends UndoableCommand {
             categoryId: drift.Value(split.categoryId),
             costCenterId: drift.Value(split.costCenterId),
             valueNum: split.valueNum,
-            valueDenom: split.valueDenom,
+            valueDenom: drift.Value(split.valueDenom),
             quantityNum: split.quantityNum,
-            quantityDenom: split.quantityDenom,
+            quantityDenom: drift.Value(split.quantityDenom),
             memo: drift.Value(split.memo),
             createdAt: split.createdAt,
           ),
@@ -703,9 +714,9 @@ class DeleteTransactionCommand extends UndoableCommand {
             categoryId: drift.Value(split.categoryId),
             costCenterId: drift.Value(split.costCenterId),
             valueNum: split.valueNum,
-            valueDenom: split.valueDenom,
+            valueDenom: drift.Value(split.valueDenom),
             quantityNum: split.quantityNum,
-            quantityDenom: split.quantityDenom,
+            quantityDenom: drift.Value(split.quantityDenom),
             memo: drift.Value(split.memo),
             createdAt: split.createdAt,
           ),
@@ -906,7 +917,7 @@ extension UndoRedoExtension on UndoRedoNotifier {
     required String commodityId,
     String? parentId,
     String? code,
-    String? description,
+    String? accountDescription,
     bool isPlaceholder = false,
     int sortOrder = 0,
   }) async {
@@ -920,7 +931,7 @@ extension UndoRedoExtension on UndoRedoNotifier {
         commodityId: commodityId,
         parentId: parentId,
         code: code,
-        description: description,
+        accountDescription: accountDescription,
         isPlaceholder: isPlaceholder,
         sortOrder: sortOrder,
       ),
@@ -946,7 +957,7 @@ extension UndoRedoExtension on UndoRedoNotifier {
     required String transactionId,
     required int postDate,
     required String currencyId,
-    String? description,
+    String? transactionDescription,
     String? notes,
     required List<SplitData> splits,
   }) async {
@@ -955,7 +966,7 @@ extension UndoRedoExtension on UndoRedoNotifier {
         transactionId: transactionId,
         postDate: postDate,
         currencyId: currencyId,
-        description: description,
+        transactionDescription: transactionDescription,
         notes: notes,
         splits: splits,
       ),

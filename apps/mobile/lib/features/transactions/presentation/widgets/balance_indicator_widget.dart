@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:database/database.dart';
+import 'package:database/database.dart' as db;
 
 /// Widget that displays running totals and validation status for journal entries.
 ///
@@ -10,7 +10,7 @@ import 'package:database/database.dart';
 /// - Color-coded status (green = balanced, red = unbalanced)
 class BalanceIndicatorWidget extends StatelessWidget {
   /// List of splits to calculate balance for.
-  final List<Split> splits;
+  final List<db.Split> splits;
 
   const BalanceIndicatorWidget({
     super.key,
