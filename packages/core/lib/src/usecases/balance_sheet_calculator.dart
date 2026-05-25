@@ -407,6 +407,8 @@ class BalanceSheetCalculator {
         return '收入';
       case AccountType.expense:
         return '支出';
+      case AccountType.investment:
+        return '投资';
     }
   }
 

@@ -102,7 +102,7 @@ class InvestmentHoldingsDao extends DatabaseAccessor<LocalFinanceDatabase>
       final unrealizedGain = marketValue - costBasis;
       final unrealizedGainPercent = costBasis > 0 
           ? (unrealizedGain / costBasis) * 100 
-          : 0;
+          : 0.0;
       
       return HoldingWithPerformance(
         holding: h,

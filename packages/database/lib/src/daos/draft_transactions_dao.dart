@@ -2,7 +2,8 @@ part of '../database.dart';
 
 /// DAO for managing draft transactions (auto-saved incomplete entries)
 @DriftAccessor(tables: [DraftTransactions])
-class DraftTransactionsDao extends _$DraftTransactionsDao {
+class DraftTransactionsDao extends DatabaseAccessor<LocalFinanceDatabase>
+    with _$DraftTransactionsDaoMixin {
   DraftTransactionsDao(super.db);
 
   /// Create a new draft transaction

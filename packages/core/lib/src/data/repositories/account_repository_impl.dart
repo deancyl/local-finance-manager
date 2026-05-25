@@ -143,6 +143,8 @@ class AccountRepositoryImpl implements AccountRepository {
         return 'INCOME';
       case AccountType.expense:
         return 'EXPENSE';
+      case AccountType.investment:
+        return 'INVESTMENT';
     }
   }
 
@@ -158,6 +160,8 @@ class AccountRepositoryImpl implements AccountRepository {
         return AccountType.income;
       case 'EXPENSE':
         return AccountType.expense;
+      case 'INVESTMENT':
+        return AccountType.investment;
       default:
         return AccountType.asset;
     }
