@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:database/database.dart' as db hide Transaction, Split;
+import 'package:database/database.dart' as db;
 import 'package:core/core.dart';
 import 'package:decimal/decimal.dart';
 import 'export_service.dart';
@@ -89,7 +89,7 @@ class PdfExportService {
     required Map<String, double> summary,
     required List<CategoryBreakdown> categoryBreakdown,
     required List<MonthlyData> monthlyTrend,
-    required List<(Transaction, List<db.Split>)> transactionsWithSplits,
+    required List<(db.Transaction, List<db.Split>)> transactionsWithSplits,
     required Map<String, db.Account> accountMap,
     required Map<String, db.Category> categoryMap,
     required Map<String, db.Commodity> commodityMap,
@@ -410,7 +410,7 @@ class PdfExportService {
 
   /// Builds transaction rows.
   List<pw.Widget> _buildTransactionRows(
-    List<(Transaction, List<db.Split>)> transactionsWithSplits,
+    List<(db.Transaction, List<db.Split>)> transactionsWithSplits,
     Map<String, db.Account> accountMap,
     Map<String, db.Category> categoryMap,
     Map<String, db.Commodity> commodityMap,
@@ -493,7 +493,7 @@ class PdfExportService {
 
   /// Calculates summary totals.
   Map<String, double> _calculateSummary(
-    List<(Transaction, List<db.Split>)> transactionsWithSplits,
+    List<(db.Transaction, List<db.Split>)> transactionsWithSplits,
     Map<String, db.Category> categoryMap,
   ) {
     double income = 0;
@@ -521,7 +521,7 @@ class PdfExportService {
 
   /// Calculates category breakdown.
   List<CategoryBreakdown> _calculateCategoryBreakdown(
-    List<(Transaction, List<db.Split>)> transactionsWithSplits,
+    List<(db.Transaction, List<db.Split>)> transactionsWithSplits,
     Map<String, db.Category> categoryMap,
   ) {
     final breakdown = <String, CategoryBreakdown>{};
@@ -579,7 +579,7 @@ class PdfExportService {
 
   /// Calculates monthly trend.
   List<MonthlyData> _calculateMonthlyTrend(
-    List<(Transaction, List<db.Split>)> transactionsWithSplits,
+    List<(db.Transaction, List<db.Split>)> transactionsWithSplits,
   ) {
     final monthlyData = <String, MonthlyData>{};
 
@@ -616,7 +616,7 @@ class PdfExportService {
   }
 
   /// Fetches filtered transactions with their splits.
-  Future<List<(Transaction, List<db.Split>)>> _fetchFilteredTransactions(
+  Future<List<(db.Transaction, List<db.Split>)>> _fetchFilteredTransactions(
     ExportFilters filters,
   ) async {
     var query = _db.select(_db.transactions);
@@ -661,7 +661,7 @@ class PdfExportService {
       splitsByTransaction.putIfAbsent(split.transactionId, () => []).add(split);
     }
 
-    final result = <(Transaction, List<db.Split>)>[];
+    final result = <(db.Transaction, List<db.Split>)>[];
     for (final transaction in transactions) {
       var splits = splitsByTransaction[transaction.id] ?? [];
 

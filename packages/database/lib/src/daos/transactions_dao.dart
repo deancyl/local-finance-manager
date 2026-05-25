@@ -1,7 +1,7 @@
 part of '../database.dart';
 
 /// Data Access Object for transactions.
-@DriftAccessor(tables: [Transactions, Splits])
+@DriftAccessor(tables: [Transactions, Splits, TransactionTags])
 class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TransactionsDaoMixin {
   TransactionsDao(super.db);
 

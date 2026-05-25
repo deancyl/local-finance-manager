@@ -6,7 +6,7 @@ import 'package:drift/drift.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:database/database.dart' as db hide Transaction, Split;
+import 'package:database/database.dart' as db;
 import 'package:core/core.dart';
 import 'package:decimal/decimal.dart';
 import 'qif_export_service.dart';
@@ -670,7 +670,7 @@ class ExportService {
   }
 
   /// Fetches filtered transactions with their splits
-  Future<List<(Transaction, List<Split>)>> _fetchFilteredTransactions(
+  Future<List<(db.Transaction, List<db.Split>)>> _fetchFilteredTransactions(
     ExportFilters filters,
   ) async {
     // Build base query
@@ -720,7 +720,7 @@ class ExportService {
     }
 
     // Build result with category/account filtering
-    final result = <(Transaction, List<Split>)>[];
+    final result = <(db.Transaction, List<db.Split>)>[];
     for (final transaction in transactions) {
       var splits = splitsByTransaction[transaction.id] ?? [];
 
