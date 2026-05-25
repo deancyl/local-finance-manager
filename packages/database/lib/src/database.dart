@@ -15,6 +15,9 @@ import 'tables/exchange_rates.dart';
 import 'tables/cost_centers.dart';
 import 'tables/audit_logs.dart';
 import 'tables/transaction_templates.dart';
+import 'tables/investment_holdings.dart';
+import 'tables/investment_transactions.dart';
+import 'tables/draft_transactions.dart';
 
 part 'database.g.dart';
 part 'daos/accounts_dao.dart';
@@ -33,6 +36,9 @@ part 'daos/audit_logs_dao.dart';
 part 'daos/transaction_templates_dao.dart';
 part 'daos/income_statement_dao.dart';
 part 'daos/balance_sheet_dao.dart';
+part 'daos/investment_holdings_dao.dart';
+part 'daos/investment_transactions_dao.dart';
+part 'daos/draft_transactions_dao.dart';
 
 /// Local finance database with all tables.
 @DriftDatabase(
@@ -54,6 +60,9 @@ part 'daos/balance_sheet_dao.dart';
     CostCenters,
     AuditLogs,
     TransactionTemplates,
+    InvestmentHoldings,
+    InvestmentTransactions,
+    DraftTransactions,
   ],
 )
 class LocalFinanceDatabase extends _$LocalFinanceDatabase {
@@ -77,9 +86,12 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final TransactionTemplatesDao transactionTemplatesDao = TransactionTemplatesDao(this);
   late final IncomeStatementDao incomeStatementDao = IncomeStatementDao(this);
   late final BalanceSheetDao balanceSheetDao = BalanceSheetDao(this);
+  late final InvestmentHoldingsDao investmentHoldingsDao = InvestmentHoldingsDao(this);
+  late final InvestmentTransactionsDao investmentTransactionsDao = InvestmentTransactionsDao(this);
+  late final DraftTransactionsDao draftTransactionsDao = DraftTransactionsDao(this);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration {
@@ -406,6 +418,47 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
               VALUES (new.rowid, new.id, new.description, new.notes, new.reference_num);
             END
           ''');
+        }
+        if (from < 14) {
+          // Version 14: Add investment holdings and transactions tables
+          await m.createTable(investmentHoldings);
+          await m.createTable(investmentTransactions);
+          
+          // Create indexes for investment holdings
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_investment_holdings_account '
+            'ON investment_holdings(account_id)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_investment_holdings_symbol '
+            'ON investment_holdings(symbol)',
+          );
+          
+          // Create indexes for investment transactions
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_investment_transactions_account '
+            'ON investment_transactions(account_id)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_investment_transactions_holding '
+            'ON investment_transactions(holding_id)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_investment_transactions_date '
+            'ON investment_transactions(transaction_date)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_investment_transactions_type '
+            'ON investment_transactions(transaction_type)',
+          );
+        }
+        if (from < 15) {
+          // Version 15: Add draft transactions table for auto-save
+          await m.createTable(draftTransactions);
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_draft_transactions_updated '
+            'ON draft_transactions(updated_at DESC)',
+          );
         }
       },
     );

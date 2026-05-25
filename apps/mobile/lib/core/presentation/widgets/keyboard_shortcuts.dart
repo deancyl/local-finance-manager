@@ -10,12 +10,20 @@ import 'dart:io';
 enum ShortcutAction {
   newTransaction,
   save,
+  saveDraft,
   edit,
   delete,
   search,
   escape,
   tabNext,
   tabPrevious,
+  submit,
+  addNew,
+  toggleMode,
+  quickAmount10,
+  quickAmount50,
+  quickAmount100,
+  quickAmount500,
 }
 
 /// Callback type for shortcut actions
@@ -63,6 +71,7 @@ class _KeyboardShortcutsState extends ConsumerState<KeyboardShortcuts> {
 
     final isCtrlPressed = HardwareKeyboard.instance.isControlPressed;
     final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+    final isAltPressed = HardwareKeyboard.instance.isAltPressed;
 
     // Ctrl+N: New transaction
     if (isCtrlPressed && event.logicalKey == LogicalKeyboardKey.keyN) {
@@ -73,6 +82,12 @@ class _KeyboardShortcutsState extends ConsumerState<KeyboardShortcuts> {
     // Ctrl+S: Save current form
     if (isCtrlPressed && event.logicalKey == LogicalKeyboardKey.keyS) {
       widget.onShortcut?.call(ShortcutAction.save);
+      return KeyEventResult.handled;
+    }
+
+    // Ctrl+Shift+S: Save draft
+    if (isCtrlPressed && isShiftPressed && event.logicalKey == LogicalKeyboardKey.keyS) {
+      widget.onShortcut?.call(ShortcutAction.saveDraft);
       return KeyEventResult.handled;
     }
 
@@ -110,6 +125,48 @@ class _KeyboardShortcutsState extends ConsumerState<KeyboardShortcuts> {
       return KeyEventResult.handled;
     }
 
+    // Enter: Submit form
+    if (event.logicalKey == LogicalKeyboardKey.enter) {
+      widget.onShortcut?.call(ShortcutAction.submit);
+      return KeyEventResult.handled;
+    }
+
+    // Ctrl+A: Add new entry (batch mode)
+    if (isCtrlPressed && event.logicalKey == LogicalKeyboardKey.keyA) {
+      widget.onShortcut?.call(ShortcutAction.addNew);
+      return KeyEventResult.handled;
+    }
+
+    // Ctrl+M: Toggle entry mode
+    if (isCtrlPressed && event.logicalKey == LogicalKeyboardKey.keyM) {
+      widget.onShortcut?.call(ShortcutAction.toggleMode);
+      return KeyEventResult.handled;
+    }
+
+    // Alt+1: Quick amount 10
+    if (isAltPressed && event.logicalKey == LogicalKeyboardKey.key1) {
+      widget.onShortcut?.call(ShortcutAction.quickAmount10);
+      return KeyEventResult.handled;
+    }
+
+    // Alt+2: Quick amount 50
+    if (isAltPressed && event.logicalKey == LogicalKeyboardKey.key2) {
+      widget.onShortcut?.call(ShortcutAction.quickAmount50);
+      return KeyEventResult.handled;
+    }
+
+    // Alt+3: Quick amount 100
+    if (isAltPressed && event.logicalKey == LogicalKeyboardKey.key3) {
+      widget.onShortcut?.call(ShortcutAction.quickAmount100);
+      return KeyEventResult.handled;
+    }
+
+    // Alt+4: Quick amount 500
+    if (isAltPressed && event.logicalKey == LogicalKeyboardKey.key4) {
+      widget.onShortcut?.call(ShortcutAction.quickAmount500);
+      return KeyEventResult.handled;
+    }
+
     return KeyEventResult.ignored;
   }
 
@@ -133,24 +190,40 @@ class ShortcutsActionWidget extends StatelessWidget {
   final Widget child;
   final VoidCallback? onNewTransaction;
   final VoidCallback? onSave;
+  final VoidCallback? onSaveDraft;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onSearch;
   final VoidCallback? onEscape;
   final VoidCallback? onTabNext;
   final VoidCallback? onTabPrevious;
+  final VoidCallback? onSubmit;
+  final VoidCallback? onAddNew;
+  final VoidCallback? onToggleMode;
+  final VoidCallback? onQuickAmount10;
+  final VoidCallback? onQuickAmount50;
+  final VoidCallback? onQuickAmount100;
+  final VoidCallback? onQuickAmount500;
 
   const ShortcutsActionWidget({
     super.key,
     required this.child,
     this.onNewTransaction,
     this.onSave,
+    this.onSaveDraft,
     this.onEdit,
     this.onDelete,
     this.onSearch,
     this.onEscape,
     this.onTabNext,
     this.onTabPrevious,
+    this.onSubmit,
+    this.onAddNew,
+    this.onToggleMode,
+    this.onQuickAmount10,
+    this.onQuickAmount50,
+    this.onQuickAmount100,
+    this.onQuickAmount500,
   });
 
   void _handleShortcut(ShortcutAction action, BuildContext context) {
@@ -160,6 +233,9 @@ class ShortcutsActionWidget extends StatelessWidget {
         break;
       case ShortcutAction.save:
         onSave?.call();
+        break;
+      case ShortcutAction.saveDraft:
+        onSaveDraft?.call();
         break;
       case ShortcutAction.edit:
         onEdit?.call();
@@ -178,6 +254,27 @@ class ShortcutsActionWidget extends StatelessWidget {
         break;
       case ShortcutAction.tabPrevious:
         onTabPrevious?.call();
+        break;
+      case ShortcutAction.submit:
+        onSubmit?.call();
+        break;
+      case ShortcutAction.addNew:
+        onAddNew?.call();
+        break;
+      case ShortcutAction.toggleMode:
+        onToggleMode?.call();
+        break;
+      case ShortcutAction.quickAmount10:
+        onQuickAmount10?.call();
+        break;
+      case ShortcutAction.quickAmount50:
+        onQuickAmount50?.call();
+        break;
+      case ShortcutAction.quickAmount100:
+        onQuickAmount100?.call();
+        break;
+      case ShortcutAction.quickAmount500:
+        onQuickAmount500?.call();
         break;
     }
   }
@@ -236,6 +333,13 @@ class AppShortcuts {
       linuxKey: 'Ctrl+S',
     ),
     ShortcutDefinition(
+      label: 'Save Draft',
+      description: 'Save current entry as draft',
+      windowsKey: 'Ctrl+Shift+S',
+      macOSKey: '⌘⇧S',
+      linuxKey: 'Ctrl+Shift+S',
+    ),
+    ShortcutDefinition(
       label: 'Edit',
       description: 'Edit the selected item',
       windowsKey: 'Ctrl+E',
@@ -269,6 +373,55 @@ class AppShortcuts {
       windowsKey: 'Tab / Shift+Tab',
       macOSKey: 'Tab / ⇧Tab',
       linuxKey: 'Tab / Shift+Tab',
+    ),
+    ShortcutDefinition(
+      label: 'Submit',
+      description: 'Submit the current entry',
+      windowsKey: 'Enter',
+      macOSKey: 'Enter',
+      linuxKey: 'Enter',
+    ),
+    ShortcutDefinition(
+      label: 'Add New (Batch)',
+      description: 'Add new entry in batch mode',
+      windowsKey: 'Ctrl+A',
+      macOSKey: '⌘A',
+      linuxKey: 'Ctrl+A',
+    ),
+    ShortcutDefinition(
+      label: 'Toggle Mode',
+      description: 'Toggle entry mode',
+      windowsKey: 'Ctrl+M',
+      macOSKey: '⌘M',
+      linuxKey: 'Ctrl+M',
+    ),
+    ShortcutDefinition(
+      label: 'Quick Amount 10',
+      description: 'Set amount to ¥10',
+      windowsKey: 'Alt+1',
+      macOSKey: '⌥1',
+      linuxKey: 'Alt+1',
+    ),
+    ShortcutDefinition(
+      label: 'Quick Amount 50',
+      description: 'Set amount to ¥50',
+      windowsKey: 'Alt+2',
+      macOSKey: '⌥2',
+      linuxKey: 'Alt+2',
+    ),
+    ShortcutDefinition(
+      label: 'Quick Amount 100',
+      description: 'Set amount to ¥100',
+      windowsKey: 'Alt+3',
+      macOSKey: '⌥3',
+      linuxKey: 'Alt+3',
+    ),
+    ShortcutDefinition(
+      label: 'Quick Amount 500',
+      description: 'Set amount to ¥500',
+      windowsKey: 'Alt+4',
+      macOSKey: '⌥4',
+      linuxKey: 'Alt+4',
     ),
   ];
 }
