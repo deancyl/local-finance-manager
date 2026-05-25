@@ -80,7 +80,7 @@ class PrintService {
     String? printer,
   }) async {
     try {
-      await Printing.directPrintPdf(
+      await Printing.directPrint(
         bytes: pdfBytes,
         name: title,
         printer: printer,
@@ -139,13 +139,14 @@ class PrintService {
   /// Lists available printers.
   static Future<List<Printer>> listPrinters() async {
     final printers = await Printing.listPrinters();
-    return printers;
+    return printers.toList();
   }
 
   /// Gets the default printer.
   static Future<Printer?> getDefaultPrinter() async {
-    final info = await Printing.info();
-    return info.printer;
+    final printers = await Printing.listPrinters();
+    // Return the first available printer as default
+    return printers.isNotEmpty ? printers.first : null;
   }
 
   /// Generates a PDF with custom page setup.
@@ -209,8 +210,7 @@ class _PrintPreviewScreenState extends State<PrintPreviewScreen> {
     try {
       _pdfBytes = await widget.onLayout(_pageSetup);
 
-      // Get page count - using PdfDocument from pdf package
-      final doc = await pw.Document.fromBytes(_pdfBytes!);
+      // Get page count - simplified, pdf package doesn't expose page count easily
       if (mounted) {
         setState(() {
           _totalPages = 1; // Simplified - pdf package doesn't expose page count easily
@@ -377,7 +377,7 @@ class _PdfPreviewState extends State<PdfPreview> {
       minScale: 0.1,
       maxScale: 5.0,
       child: Center(
-        child: _pdfBytes != null
+        child: widget.bytes != null
             ? const Text('PDF preview available - use PrintService.showPrintDialog to view')
             : const CircularProgressIndicator(),
       ),

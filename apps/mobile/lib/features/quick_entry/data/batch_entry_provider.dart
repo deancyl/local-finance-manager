@@ -66,9 +66,10 @@ class BatchEntryState {
   
   BatchEntryState({
     BatchEntry? currentEntry,
-    this.pendingEntries = [],
+    List<BatchEntry>? pendingEntries,
     this.isSubmitting = false,
-  }) : currentEntry = currentEntry ?? BatchEntry();
+  }) : currentEntry = currentEntry ?? BatchEntry(),
+       pendingEntries = pendingEntries ?? const [];
   
   BatchEntryState copyWith({
     BatchEntry? currentEntry,

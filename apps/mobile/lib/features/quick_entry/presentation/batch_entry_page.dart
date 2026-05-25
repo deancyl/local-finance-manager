@@ -138,7 +138,7 @@ class _BatchEntryPageState extends ConsumerState<BatchEntryPage> {
               ),
               value: currentEntry.categoryId,
               items: categories
-                  .map((c) => DropdownMenuItem(
+                  .map((c) => DropdownMenuItem<String>(
                         value: c.id,
                         child: Row(
                           children: [

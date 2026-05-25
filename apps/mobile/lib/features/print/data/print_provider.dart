@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:database/database.dart';
 import '../data/print_service.dart';
@@ -5,6 +6,7 @@ import '../../export/data/pdf_export_service.dart';
 import '../../export/data/export_service.dart';
 import '../../reports/data/balance_sheet_provider.dart';
 import '../../reports/data/income_statement_provider.dart';
+import '../../accounts/data/account_provider.dart';
 import 'package:core/core.dart';
 
 /// Print service provider.

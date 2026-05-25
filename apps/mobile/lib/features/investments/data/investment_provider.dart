@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart' as uuid_pkg;
-import 'package:core/core.dart';
+import 'package:core/core.dart' hide InvestmentHolding, InvestmentTransaction;
 
-import 'package:database/database.dart' hide InvestmentHolding, InvestmentTransaction;
+import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 
 /// Provider for all investment holdings for an account.

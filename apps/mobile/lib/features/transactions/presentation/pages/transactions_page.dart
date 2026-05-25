@@ -519,9 +519,9 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
             onPressed: () async {
               // Update transaction notes
               final db = ref.read(databaseProvider);
-              final splits = await db.select(db.splits)
-                  .where((s) => s.transactionId.equals(transaction.id))
-                  .get();
+              final query = db.select(db.splits)
+                  ..where((s) => s.transactionId.equals(transaction.id));
+              final splits = await query.get();
               
               if (splits.isNotEmpty) {
                 final updatedSplit = splits.first.copyWith(
