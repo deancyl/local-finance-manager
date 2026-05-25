@@ -12,7 +12,7 @@ import 'package:finance_app/features/tags/presentation/widgets/tag_selector.dart
 import 'package:finance_app/features/attachments/presentation/widgets/attachment_section.dart';
 import '../../data/transaction_provider.dart';
 import '../../data/ai_provider.dart';
-import '../../templates/data/template_provider.dart';
+import '../../templates/data/template_provider.dart' show templatesProvider, recentTemplatesProvider, templateNotifierProvider, TemplateModel, SplitTemplateData;
 import 'quick_amount_input.dart';
 
 class AddTransactionDialog extends ConsumerStatefulWidget {

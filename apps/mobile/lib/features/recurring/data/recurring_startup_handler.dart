@@ -118,15 +118,13 @@ class RecurringStartupHandler {
     final now = DateTime.now().millisecondsSinceEpoch;
     final endDate = DateTime.now().millisecondsSinceEpoch + (days * 24 * 60 * 60 * 1000);
 
-    final upcoming = await (_db.select(_db.recurringTransactions)
-          ..where((r) =>
-              r.isActive.equals(true) &
-              r.deletedAt.isNull() &
-              r.nextDate.isBiggerOrEqualValue(now) &
-              r.nextDate.isSmallerOrEqualValue(endDate)))
+    // Get all active recurring transactions and filter in Dart
+    final allActive = await (_db.select(_db.recurringTransactions)
+          ..where((r) => r.isActive.equals(true) & r.deletedAt.isNull()))
         .get();
 
-    return upcoming;
+    return allActive.where((r) => 
+        r.nextDate >= now && r.nextDate <= endDate).toList();
   }
 }
 

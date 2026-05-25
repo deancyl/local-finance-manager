@@ -279,19 +279,13 @@ class TagsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TagsDaoMixin
 
   /// Gets tags with their transaction counts for statistics.
   Stream<List<(Tag, int)>> watchTagsWithTransactionCount() {
-    final query = select(tags).join([
-      leftJoin(transactionTags, transactionTags.tagId.equalsExp(tags.id)),
-    ]);
-    
-    query.where(tags.deletedAt.isNull());
-    query.groupBy([tags.id]);
-    query.orderBy([OrderingTerm.desc(tags.usageCount)]);
-    
-    return query.watch().map((rows) {
-      return rows.map((row) {
-        final tag = row.readTable(tags);
-        return (tag, tag.usageCount);
-      }).toList();
+    // Simple implementation without join - use usage count from tags table
+    return (select(tags)
+          ..where((t) => t.deletedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.usageCount)]))
+        .watch()
+        .map((tagsList) {
+      return tagsList.map((tag) => (tag, tag.usageCount)).toList();
     });
   }
 
