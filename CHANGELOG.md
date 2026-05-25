@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.107] - 2026-05-25
+
+### Added
+- **Investment Account Support**: Complete investment tracking system
+  - **Investment Holdings**: Track securities/shares owned
+    - Symbol, security name, security type (stock, fund, bond, ETF)
+    - Quantity tracking with average cost basis
+    - Current market price updates
+    - Unrealized gain/loss calculations
+  - **Investment Transactions**: Record investment operations
+    - Buy transactions with quantity, price, fees
+    - Sell transactions with realized gains tracking
+    - Dividend income recording
+    - Dividend reinvestment support
+    - Stock splits and transfers
+  - **Performance Metrics**: Portfolio analysis
+    - Cost basis calculation
+    - Market value tracking
+    - Unrealized gains/losses per holding
+    - ROI percentage calculation
+    - Total dividends received
+    - Realized gains using FIFO method
+    - Portfolio-level performance summary
+  - **Account Types**: Investment account type in chart of accounts
+    - Hierarchical investment account groups
+    - Support for both stocks and funds
+
+### Technical Details
+- `packages/database/lib/src/tables/investment_holdings.dart` - Holdings table with fixed-point arithmetic
+- `packages/database/lib/src/tables/investment_transactions.dart` - Transaction types enum and table
+- `packages/database/lib/src/daos/investment_holdings_dao.dart` - Holdings DAO with performance queries
+- `packages/database/lib/src/daos/investment_transactions_dao.dart` - Transactions DAO with type filtering
+- `apps/mobile/lib/features/investments/data/investment_provider.dart` - Riverpod state management
+- `apps/mobile/lib/features/investments/domain/investment_service.dart` - Performance calculation service
+- Database schema v14 with investment tables and indexes
+- Account type enum extended with 'investment' type
+
 ## [v0.3.117] - 2026-05-25
 
 ### Added
