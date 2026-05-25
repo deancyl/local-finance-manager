@@ -1,0 +1,24 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    unused_import: ignore
+    unused_field: ignore
+    unused_local_variable: ignore
+    unused_element: ignore
+    deprecated_member_use: ignore
+    dead_null_aware_expression: ignore
+    unnecessary_null_comparison: ignore
+    invalid_dependency: ignore
+    depend_on_referenced_packages: ignore
+    duplicate_import: ignore
+    unnecessary_import: ignore
+    avoid_print: ignore
+    avoid_renaming_method_parameters: ignore
+    prefer_final_fields: ignore
+    prefer_const_constructors: ignore
+    prefer_const_declarations: ignore
+    use_super_parameters: ignore
+
+linter:
+  rules:
