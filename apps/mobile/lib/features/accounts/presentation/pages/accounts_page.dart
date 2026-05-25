@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:database/database.dart';
 import '../../data/account_provider.dart';
@@ -43,6 +44,11 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           IconButton(
             icon: Icon(_isSearchExpanded ? Icons.close : Icons.search),
             onPressed: () => _toggleSearch(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.account_tree),
+            tooltip: '层级视图',
+            onPressed: () => context.go('/accounts/hierarchy'),
           ),
           IconButton(
             icon: const Icon(Icons.add),
