@@ -12,6 +12,7 @@ import 'package:finance_app/features/tags/presentation/widgets/tag_selector.dart
 import 'package:finance_app/features/attachments/presentation/widgets/attachment_section.dart';
 import '../../data/transaction_provider.dart';
 import '../../data/ai_provider.dart';
+import '../../templates/data/template_provider.dart';
 import 'quick_amount_input.dart';
 
 class AddTransactionDialog extends ConsumerStatefulWidget {
@@ -198,9 +199,22 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                widget.transaction == null ? '记一笔' : '编辑交易',
-                style: Theme.of(context).textTheme.titleLarge,
+              // Header with template selector
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.transaction == null ? '记一笔' : '编辑交易',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  if (widget.transaction == null)
+                    TextButton.icon(
+                      icon: const Icon(Icons.receipt_long, size: 18),
+                      label: const Text('模板'),
+                      onPressed: () => _showTemplateSelector(context),
+                    ),
+                ],
               ),
               const SizedBox(height: 16),
               
@@ -631,5 +645,265 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  /// Show template selector bottom sheet
+  void _showTemplateSelector(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) {
+          final templatesAsync = ref.watch(templatesProvider);
+          final recentTemplatesAsync = ref.watch(recentTemplatesProvider);
+
+          return Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outline,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Text(
+                      '选择模板',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('新建'),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showSaveAsTemplateDialog();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Template list
+              Expanded(
+                child: templatesAsync.when(
+                  data: (templates) {
+                    if (templates.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.receipt_long,
+                              size: 48,
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text('暂无模板'),
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showSaveAsTemplateDialog();
+                              },
+                              child: const Text('创建模板'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    // Show recent templates first
+                    return ListView(
+                      controller: scrollController,
+                      children: [
+                        // Recent templates
+                        recentTemplatesAsync.when(
+                          data: (recent) {
+                            if (recent.isEmpty) return const SizedBox.shrink();
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                  child: Text(
+                                    '最近使用',
+                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                          color: Theme.of(context).colorScheme.outline,
+                                        ),
+                                  ),
+                                ),
+                                ...recent.take(5).map((t) => _buildTemplateItem(context, t)),
+                                const Divider(),
+                              ],
+                            );
+                          },
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                        ),
+                        // All templates
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                          child: Text(
+                            '全部模板',
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.outline,
+                                ),
+                          ),
+                        ),
+                        ...templates.map((t) => _buildTemplateItem(context, t)),
+                      ],
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('加载失败: $e')),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTemplateItem(BuildContext context, TemplateModel template) {
+    return ListTile(
+      leading: Icon(
+        template.isFavorite ? Icons.star : Icons.receipt_long,
+        color: template.isFavorite ? Colors.amber : null,
+      ),
+      title: Text(template.name),
+      subtitle: Text(
+        '${template.splits.length} 分录 · 使用 ${template.useCount} 次',
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+      onTap: () {
+        Navigator.pop(context);
+        _applyTemplate(template);
+      },
+    );
+  }
+
+  /// Apply template to form
+  void _applyTemplate(TemplateModel template) {
+    if (template.splits.isEmpty) return;
+
+    final split = template.splits.first;
+    final amount = split.amount.abs();
+
+    setState(() {
+      _amountController.text = amount.toString();
+      _selectedAccountId = split.accountId;
+      _selectedCategoryId = split.categoryId;
+      _isIncome = split.amount > 0;
+      if (template.defaultTxnDescription != null) {
+        _descriptionController.text = template.defaultTxnDescription!;
+      }
+      if (template.defaultNotes != null) {
+        _notesController.text = template.defaultNotes!;
+      }
+    });
+
+    // Record usage
+    ref.read(templateNotifierProvider.notifier).recordUsage(template.id);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已应用模板: ${template.name}')),
+    );
+  }
+
+  /// Show dialog to save current form as template
+  void _showSaveAsTemplateDialog() {
+    final nameController = TextEditingController();
+    final categoryController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('保存为模板'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: '模板名称',
+                  hintText: '例如：月薪、房租',
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: categoryController,
+                decoration: const InputDecoration(
+                  labelText: '分类（可选）',
+                  hintText: '例如：收入、支出',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('请输入模板名称')),
+                );
+                return;
+              }
+
+              final amount = double.tryParse(_amountController.text) ?? 0;
+              final finalAmount = _isIncome ? amount : -amount;
+
+              await ref.read(templateNotifierProvider.notifier).createTemplate(
+                    name: nameController.text,
+                    category: categoryController.text.isEmpty
+                        ? null
+                        : categoryController.text,
+                    currencyId: _selectedCurrency,
+                    defaultTxnDescription: _descriptionController.text.isEmpty
+                        ? null
+                        : _descriptionController.text,
+                    defaultNotes: _notesController.text.isEmpty
+                        ? null
+                        : _notesController.text,
+                    splits: [
+                      SplitTemplateData(
+                        accountId: _selectedAccountId ?? '',
+                        categoryId: _selectedCategoryId,
+                        amount: finalAmount,
+                      ),
+                    ],
+                  );
+
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('模板已保存')),
+                );
+              }
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
   }
 }
