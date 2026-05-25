@@ -681,8 +681,8 @@ final spendingAnomaliesProvider = FutureProvider<List<SpendingAnomaly>>((ref) as
       anomalies.add(SpendingAnomaly(
         type: 'high_spending',
         category: category.name,
-        expectedAmount: avgMonthlySpending,
-        actualAmount: thisMonthSpending,
+        expectedAmount: avgMonthlySpending.toDouble(),
+        actualAmount: thisMonthSpending.toDouble(),
         deviationPercent: deviation.toDouble(),
         description: '${category.name}支出比月均高出${deviation.toStringAsFixed(0)}%',
         detectedAt: now,

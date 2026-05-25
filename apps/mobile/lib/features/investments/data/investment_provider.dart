@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart' as uuid_pkg;
 import 'package:core/core.dart';
 
-import 'package:database/database.dart';
+import 'package:database/database.dart' hide InvestmentHolding, InvestmentTransaction;
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 
 /// Provider for all investment holdings for an account.
@@ -173,7 +173,7 @@ class InvestmentHoldingsNotifier extends StateNotifier<AsyncValue<void>> {
   }) async {
     final db = _ref.read(databaseProvider);
     final now = DateTime.now().millisecondsSinceEpoch;
-    final id = const Uuid().v4();
+    final id = const uuid_pkg.Uuid().v4();
     
     // Use fixed-point arithmetic (4 decimal places for quantity, 2 for cost)
     final quantityNum = (quantity * 10000).round();
@@ -220,7 +220,7 @@ class InvestmentHoldingsNotifier extends StateNotifier<AsyncValue<void>> {
 }
 
 /// Provider for holdings notifier.
-final investmentHoldingsNotifierProvider = StateNotifierProvider<InvestHoldingsNotifier, AsyncValue<void>>((ref) {
+final investmentHoldingsNotifierProvider = StateNotifierProvider<InvestmentHoldingsNotifier, AsyncValue<void>>((ref) {
   return InvestmentHoldingsNotifier(ref);
 });
 
@@ -247,7 +247,7 @@ class InvestmentTransactionsNotifier extends StateNotifier<AsyncValue<void>> {
   }) async {
     final db = _ref.read(databaseProvider);
     final now = DateTime.now().millisecondsSinceEpoch;
-    final id = const Uuid().v4();
+    final id = const uuid_pkg.Uuid().v4();
     
     final quantityNum = (quantity * 10000).round();
     final priceNum = (price * 100).round();
@@ -302,7 +302,7 @@ class InvestmentTransactionsNotifier extends StateNotifier<AsyncValue<void>> {
   }) async {
     final db = _ref.read(databaseProvider);
     final now = DateTime.now().millisecondsSinceEpoch;
-    final id = const Uuid().v4();
+    final id = const uuid_pkg.Uuid().v4();
     
     final quantityNum = (quantity * 10000).round();
     final priceNum = (price * 100).round();
@@ -352,7 +352,7 @@ class InvestmentTransactionsNotifier extends StateNotifier<AsyncValue<void>> {
   }) async {
     final db = _ref.read(databaseProvider);
     final now = DateTime.now().millisecondsSinceEpoch;
-    final id = const Uuid().v4();
+    final id = const uuid_pkg.Uuid().v4();
     
     final amountNum = (amount * 100).round();
     

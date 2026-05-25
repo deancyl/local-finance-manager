@@ -144,25 +144,25 @@ class _KeyboardShortcutsState extends ConsumerState<KeyboardShortcuts> {
     }
 
     // Alt+1: Quick amount 10
-    if (isAltPressed && event.logicalKey == LogicalKeyboardKey.key1) {
+    if (isAltPressed && event.logicalKey == LogicalKeyboardKey.digit1) {
       widget.onShortcut?.call(ShortcutAction.quickAmount10);
       return KeyEventResult.handled;
     }
 
     // Alt+2: Quick amount 50
-    if (isAltPressed && event.logicalKey == LogicalKeyboardKey.key2) {
+    if (isAltPressed && event.logicalKey == LogicalKeyboardKey.digit2) {
       widget.onShortcut?.call(ShortcutAction.quickAmount50);
       return KeyEventResult.handled;
     }
 
     // Alt+3: Quick amount 100
-    if (isAltPressed && event.logicalKey == LogicalKeyboardKey.key3) {
+    if (isAltPressed && event.logicalKey == LogicalKeyboardKey.digit3) {
       widget.onShortcut?.call(ShortcutAction.quickAmount100);
       return KeyEventResult.handled;
     }
 
     // Alt+4: Quick amount 500
-    if (isAltPressed && event.logicalKey == LogicalKeyboardKey.key4) {
+    if (isAltPressed && event.logicalKey == LogicalKeyboardKey.digit4) {
       widget.onShortcut?.call(ShortcutAction.quickAmount500);
       return KeyEventResult.handled;
     }

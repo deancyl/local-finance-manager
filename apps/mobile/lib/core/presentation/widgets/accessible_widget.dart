@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../features/settings/data/accessibility_provider.dart';
+import '../../../features/settings/data/accessibility_provider.dart';
 
 /// A wrapper widget that provides accessibility enhancements based on settings.
 /// 

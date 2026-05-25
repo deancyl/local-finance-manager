@@ -4,6 +4,7 @@
 /// to improve app startup time and memory usage.
 
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 /// Lazy initializer that defers computation until first access.
 /// 
