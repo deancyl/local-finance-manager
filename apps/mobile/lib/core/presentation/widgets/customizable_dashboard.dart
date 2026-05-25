@@ -10,6 +10,7 @@ import 'dashboard_widget_registry.dart';
 import 'package:finance_app/features/home/data/home_providers.dart';
 import 'package:finance_app/features/budgets/data/budget_provider.dart';
 import 'package:finance_app/features/recurring/data/recurring_provider.dart';
+import 'package:finance_app/features/quick_entry/presentation/widgets/quick_actions_panel.dart';
 
 /// Customizable dashboard with reorderable widgets.
 class CustomizableDashboard extends ConsumerStatefulWidget {
@@ -613,16 +614,25 @@ class _QuickStatsWidget extends ConsumerWidget {
   }
 }
 
-class _QuickActionsWidget extends StatelessWidget {
+class _QuickActionsWidget extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Quick actions panel
+          const QuickActionsPanel(
+            showCategories: false, // Disabled to keep dashboard compact
+            showPayees: false,     // Disabled to keep dashboard compact
+            showOneTap: true,      // Show one-tap templates
+          ),
+          
+          // Traditional quick action buttons
+          const SizedBox(height: 16),
           Text(
-            '快捷操作',
+            '快捷功能',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),

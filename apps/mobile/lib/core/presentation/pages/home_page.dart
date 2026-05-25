@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:finance_app/core/presentation/widgets/customizable_dashboard.dart';
 import 'package:finance_app/core/presentation/widgets/dashboard_config_provider.dart';
+import 'package:finance_app/features/quick_entry/presentation/widgets/quick_add_fab.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -63,11 +64,7 @@ class HomePage extends ConsumerWidget {
       ),
       floatingActionButton: config.isEditMode
           ? null
-          : FloatingActionButton.extended(
-              onPressed: () => context.push('/transactions/add'),
-              icon: const Icon(Icons.add),
-              label: const Text('记一笔'),
-            ),
+          : const QuickAddFAB(),
     );
   }
 

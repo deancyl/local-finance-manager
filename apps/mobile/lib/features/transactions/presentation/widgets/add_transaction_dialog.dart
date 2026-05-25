@@ -11,6 +11,9 @@ import 'package:finance_app/features/categories/data/category_provider.dart';
 import 'package:finance_app/features/tags/presentation/widgets/tag_selector.dart';
 import 'package:finance_app/features/attachments/presentation/widgets/attachment_section.dart';
 import 'package:finance_app/features/voice/presentation/widgets/voice_input_button.dart';
+import 'package:finance_app/features/quick_entry/presentation/widgets/quick_category_select.dart';
+import 'package:finance_app/features/quick_entry/presentation/widgets/recent_payees_widget.dart';
+import 'package:finance_app/features/quick_entry/data/quick_actions_provider.dart';
 import '../../data/transaction_provider.dart';
 import '../../data/ai_provider.dart';
 import '../../../templates/data/template_provider.dart' show templatesProvider, recentTemplatesProvider, templateNotifierProvider, TemplateModel, SplitTemplateData;
@@ -278,25 +281,55 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
                     _selectedCategoryId = filteredCategories.first.id;
                   }
                   
-                  return DropdownButtonFormField<String>(
-                    value: _selectedCategoryId ?? filteredCategories.first.id,
-                    decoration: const InputDecoration(
-                      labelText: '分类',
-                      prefixIcon: Icon(Icons.category_outlined),
-                    ),
-                    items: filteredCategories.map((category) {
-                      return DropdownMenuItem(
-                        value: category.id,
-                        child: Text(category.name),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() => _selectedCategoryId = value);
-                    },
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DropdownButtonFormField<String>(
+                        value: _selectedCategoryId ?? filteredCategories.first.id,
+                        decoration: const InputDecoration(
+                          labelText: '分类',
+                          prefixIcon: Icon(Icons.category_outlined),
+                        ),
+                        items: filteredCategories.map((category) {
+                          return DropdownMenuItem(
+                            value: category.id,
+                            child: Text(category.name),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() => _selectedCategoryId = value);
+                        },
+                      ),
+                      
+                      // Quick category select
+                      const SizedBox(height: 12),
+                      QuickCategorySelect(
+                        selectedCategoryId: _selectedCategoryId,
+                        onCategorySelected: (categoryId) {
+                          setState(() => _selectedCategoryId = categoryId);
+                        },
+                        isIncome: _isIncome,
+                        maxItems: 6,
+                      ),
+                    ],
                   );
                 },
                 loading: () => const CircularProgressIndicator(),
                 error: (_, __) => const Text('加载分类失败'),
+              ),
+              const SizedBox(height: 16),
+              
+              // Recent payees
+              RecentPayeesWidget(
+                selectedPayee: _descriptionController.text,
+                onPayeeSelected: (payee) {
+                  setState(() {
+                    _descriptionController.text = payee.description;
+                    if (payee.categoryId != null) {
+                      _selectedCategoryId = payee.categoryId;
+                    }
+                  });
+                },
               ),
               const SizedBox(height: 16),
               
