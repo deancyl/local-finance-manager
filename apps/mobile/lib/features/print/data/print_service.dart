@@ -80,9 +80,9 @@ class PrintService {
     String? printer,
   }) async {
     try {
-      await Printing.printPdf(
+      await Printing.sharePdf(
         bytes: pdfBytes,
-        name: title,
+        filename: title,
       );
       return true;
     } catch (e) {
