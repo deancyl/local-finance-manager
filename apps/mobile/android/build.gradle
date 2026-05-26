@@ -8,9 +8,6 @@ allprojects {
 rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
-}
-subprojects {
-    project.evaluationDependsOn(":app")
     
     // Fix for packages without namespace (like image_gallery_saver)
     afterEvaluate {
@@ -22,6 +19,9 @@ subprojects {
             }
         }
     }
+}
+subprojects {
+    project.evaluationDependsOn(":app")
 }
 
 tasks.register("clean", Delete) {

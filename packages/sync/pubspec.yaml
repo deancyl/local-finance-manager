@@ -9,7 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  powersync: ^1.9.0
+  # powersync: ^1.9.0  # Temporarily disabled - see sync_client.dart
   drift: ^2.22.1
   path_provider: ^2.1.5
   path: ^1.9.0

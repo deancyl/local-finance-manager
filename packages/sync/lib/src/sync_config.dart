@@ -1,8 +1,16 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:powersync/powersync.dart';
 import 'package:uuid/uuid.dart';
 
 import 'models/sync_models.dart';
+
+/// PowerSync Schema placeholder.
+/// 
+/// Defined locally to avoid dependency on powersync package while sync is disabled.
+class Schema {
+  final List<dynamic> tables;
+  
+  const Schema([this.tables = const []]);
+}
 
 /// Result of an authentication operation.
 class AuthResult {

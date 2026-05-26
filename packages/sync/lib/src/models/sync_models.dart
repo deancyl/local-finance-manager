@@ -1,4 +1,20 @@
-import 'package:powersync/powersync.dart';
+/// PowerSync credentials placeholder.
+/// 
+/// Defined locally to avoid dependency on powersync package while sync is disabled.
+/// When PowerSync is re-integrated, this should use the real PowerSyncCredentials.
+class PowerSyncCredentials {
+  final String endpoint;
+  final String token;
+  final String? userId;
+  final DateTime? expiresAt;
+
+  PowerSyncCredentials({
+    required this.endpoint,
+    required this.token,
+    this.userId,
+    this.expiresAt,
+  });
+}
 
 /// Credentials for PowerSync synchronization.
 /// 

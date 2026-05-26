@@ -3,7 +3,8 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
-import 'package:powersync/powersync.dart';
+
+import '../sync_config.dart' show Schema;
 
 /// Result of a compatibility check for a specific component.
 class CompatibilityCheckResult {
