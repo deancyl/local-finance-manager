@@ -6,6 +6,7 @@ import 'package:sync/sync.dart';
 import '../../data/sync_providers.dart';
 import '../../data/sync_feature_flag.dart';
 import '../../data/device_pairing_providers.dart';
+import '../../data/device_pairing_service.dart';
 import '../widgets/qr_display_widget.dart';
 import '../widgets/qr_scanner_widget.dart';
 

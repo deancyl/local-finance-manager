@@ -64,12 +64,8 @@ class PairingTokenNotifier extends StateNotifier<AsyncValue<PairingToken?>> {
     try {
       final token = await _service.generatePairingToken();
       state = AsyncValue.data(token);
-      
-      if (token != null) {
-        _ref.read(pairingTokenProvider.notifier).state = AsyncValue.data(token);
-      }
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    } catch (e) {
+      state = AsyncValue.error(e, null);
     }
   }
   
@@ -128,7 +124,7 @@ class DevicePairingNotifier extends StateNotifier<AsyncValue<PairingResult?>> {
       }
       
       return result;
-    } catch (e, st) {
+    } catch (e) {
       final result = PairingResult.failure('网络错误: $e');
       state = AsyncValue.data(result);
       return result;

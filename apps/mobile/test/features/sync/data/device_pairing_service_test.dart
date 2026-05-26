@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:finance_app/features/sync/data/device_pairing_service.dart';
+import 'package:finance_app/features/sync/presentation/widgets/qr_scanner_widget.dart';
 
 void main() {
   group('DeviceInfo', () {
