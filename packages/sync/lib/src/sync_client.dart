@@ -5,7 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:powersync/powersync.dart';
+import 'package:powersync/powersync.dart' hide SyncStatus;
 
 import 'connector/backend_connector.dart';
 import 'encryption/encryption_service.dart';
@@ -66,7 +66,7 @@ class SyncClient {
   bool _initialized = false;
   
   /// Subscription to PowerSync status updates.
-  StreamSubscription<SyncStatus>? _powerSyncSubscription;
+  StreamSubscription? _powerSyncSubscription;
 
   SyncClient({
     required this.config,
@@ -183,10 +183,9 @@ class SyncClient {
     _updateStatus(SyncStatus.connecting);
 
     try {
-      // Connect to PowerSync
+      // Connect to PowerSync (no crudThrottle parameter in current API)
       await _powerSyncDb.connect(
         connector: _connector,
-        crudThrottle: Duration(seconds: config.syncIntervalSeconds),
       );
 
       // Watch for status changes
@@ -237,7 +236,8 @@ class SyncClient {
     _log.info('Triggering manual sync');
     
     try {
-      await _powerSyncDb.uploadCrud();
+      // Trigger upload via connector's uploadData method
+      await _connector.uploadData(_powerSyncDb);
       _lastSyncTime = DateTime.now();
       _log.info('Manual sync completed');
     } catch (e, stackTrace) {
@@ -280,8 +280,8 @@ class SyncClient {
     // Get pending upload count from PowerSync
     int pendingUploads = 0;
     try {
-      final batch = await _powerSyncDb.getCrudBatch();
-      pendingUploads = batch?.crud.length ?? 0;
+      final transaction = await _powerSyncDb.getNextCrudTransaction();
+      pendingUploads = transaction?.crud.length ?? 0;
     } catch (e) {
       _log.warning('Failed to get pending uploads: $e');
     }
@@ -304,10 +304,27 @@ class SyncClient {
   }
 
   /// Handles PowerSync status changes.
-  void _onPowerSyncStatus(SyncStatus status) {
+  void _onPowerSyncStatus(dynamic status) {
     _log.fine('PowerSync status: $status');
     // Map PowerSync status to our status
-    // PowerSync uses different status values
+    // PowerSync uses a status object with connected, connecting, etc.
+    if (status is Map) {
+      final connected = status['connected'] as bool? ?? false;
+      final connecting = status['connecting'] as bool? ?? false;
+      final downloadError = status['downloadError'];
+      final uploadError = status['uploadError'];
+      
+      if (downloadError != null || uploadError != null) {
+        _updateStatus(SyncStatus.error);
+        _errorMessage = downloadError?.toString() ?? uploadError?.toString();
+      } else if (connected) {
+        _updateStatus(SyncStatus.connected);
+      } else if (connecting) {
+        _updateStatus(SyncStatus.connecting);
+      } else {
+        _updateStatus(SyncStatus.disconnected);
+      }
+    }
   }
 
   /// Handles PowerSync errors.
@@ -341,23 +358,38 @@ class _PowerSyncQueryExecutor extends QueryExecutor {
   _PowerSyncQueryExecutor(this._db);
   
   @override
-  late final StreamQueries streamQueries = _PowerSyncStreamQueries(_db);
+  SqlDialect get dialect => SqlDialect.sqlite;
+  
+  @override
+  Future<bool> ensureOpen(QueryExecutorUser user) async {
+    return true; // PowerSync manages its own connection
+  }
+  
+  @override
+  TransactionExecutor beginTransaction() {
+    return _PowerSyncTransactionExecutor(_db);
+  }
+  
+  @override
+  QueryExecutor beginExclusive() {
+    return this; // PowerSync handles exclusivity internally
+  }
   
   @override
   Future<void> runBatched(BatchedStatements statements) async {
     for (final stmt in statements.statements) {
-      await _db.execute(stmt.sql, stmt.arguments);
+      await _db.execute(stmt.sql, stmt.arguments ?? []);
     }
   }
   
   @override
   Future<void> runCustom(String statement, [List<Object?>? args]) async {
-    await _db.execute(statement, args);
+    await _db.execute(statement, args ?? []);
   }
   
   @override
   Future<int> runInsert(String statement, [List<Object?>? args]) async {
-    await _db.execute(statement, args);
+    await _db.execute(statement, args ?? []);
     // Get last insert row id
     final result = await _db.execute('SELECT last_insert_rowid()');
     return result.first?['last_insert_rowid()'] as int? ?? 0;
@@ -365,7 +397,7 @@ class _PowerSyncQueryExecutor extends QueryExecutor {
   
   @override
   Future<int> runUpdate(String statement, [List<Object?>? args]) async {
-    await _db.execute(statement, args);
+    await _db.execute(statement, args ?? []);
     // Get changes count
     final result = await _db.execute('SELECT changes()');
     return result.first?['changes()'] as int? ?? 0;
@@ -381,54 +413,104 @@ class _PowerSyncQueryExecutor extends QueryExecutor {
     String statement, [
     List<Object?>? args,
   ]) async {
-    return _db.execute(statement, args);
-  }
-  
-  @override
-  Future<bool> ensureOpen() async {
-    return true; // PowerSync manages its own connection
+    return _db.execute(statement, args ?? []);
   }
   
   @override
   Future<void> close() async {
     // PowerSync manages its own lifecycle
   }
-  
-  @override
-  Future<T> runWithInterceptor<T>(
-    Future<T> Function() operation, {
-    Interceptor? interceptor,
-  }) {
-    return operation();
-  }
 }
 
-/// Stream queries implementation for PowerSync.
-class _PowerSyncStreamQueries extends StreamQueries {
+/// Transaction executor for PowerSync.
+class _PowerSyncTransactionExecutor extends TransactionExecutor {
   final PowerSyncDatabase _db;
+  bool _isOpen = false;
   
-  _PowerSyncStreamQueries(this._db);
+  _PowerSyncTransactionExecutor(this._db);
   
   @override
-  Stream<QueryRow> queryStream(
-    String sql, [
-    List<Object?>? args,
-    bool cacheResult = true,
-  ]) {
-    // Use PowerSync's watch functionality
-    return _db.watch(sql, parameters: args ?? []).map((rows) {
-      // Convert to QueryRow - this is a simplified implementation
-      return rows.map((row) => _PowerSyncQueryRow(row)).toList().first;
-    });
+  Future<void> start() async {
+    await _db.execute('BEGIN TRANSACTION');
+    _isOpen = true;
   }
-}
-
-/// A simple QueryRow wrapper for PowerSync results.
-class _PowerSyncQueryRow extends QueryRow {
-  final Map<String, Object?> _data;
-  
-  _PowerSyncQueryRow(this._data);
   
   @override
-  Object? readColumn(String column) => _data[column];
+  Future<void> send() async {
+    await _db.execute('COMMIT');
+    _isOpen = false;
+  }
+  
+  @override
+  Future<void> rollback() async {
+    await _db.execute('ROLLBACK');
+    _isOpen = false;
+  }
+  
+  @override
+  Future<bool> ensureOpen(QueryExecutorUser user) async {
+    if (!_isOpen) {
+      await start();
+    }
+    return true;
+  }
+  
+  @override
+  SqlDialect get dialect => SqlDialect.sqlite;
+  
+  @override
+  QueryExecutor beginExclusive() {
+    return this;
+  }
+  
+  @override
+  TransactionExecutor beginTransaction() {
+    return this;
+  }
+  
+  @override
+  Future<void> runBatched(BatchedStatements statements) async {
+    for (final stmt in statements.statements) {
+      await _db.execute(stmt.sql, stmt.arguments ?? []);
+    }
+  }
+  
+  @override
+  Future<void> runCustom(String statement, [List<Object?>? args]) async {
+    await _db.execute(statement, args ?? []);
+  }
+  
+  @override
+  Future<int> runInsert(String statement, [List<Object?>? args]) async {
+    await _db.execute(statement, args ?? []);
+    final result = await _db.execute('SELECT last_insert_rowid()');
+    return result.first?['last_insert_rowid()'] as int? ?? 0;
+  }
+  
+  @override
+  Future<int> runUpdate(String statement, [List<Object?>? args]) async {
+    await _db.execute(statement, args ?? []);
+    final result = await _db.execute('SELECT changes()');
+    return result.first?['changes()'] as int? ?? 0;
+  }
+  
+  @override
+  Future<int> runDelete(String statement, [List<Object?>? args]) async {
+    return runUpdate(statement, args);
+  }
+  
+  @override
+  Future<List<Map<String, Object?>>> runSelect(
+    String statement, [
+    List<Object?>? args,
+  ]) async {
+    return _db.execute(statement, args ?? []);
+  }
+  
+  @override
+  Future<void> close() async {
+    if (_isOpen) {
+      await rollback();
+    }
+  }
 }

@@ -1,4 +1,4 @@
-import 'models/sync_models.dart';
+import '../models/sync_models.dart';
 
 /// Strategy for resolving sync conflicts.
 enum ConflictResolutionStrategy {

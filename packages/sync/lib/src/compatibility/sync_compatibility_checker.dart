@@ -140,7 +140,7 @@ class SyncDiagnosticReport {
       'schemaCompatible': schemaCompatible,
       'networkConnected': networkConnected,
       'summary': summary,
-      'checks': checks.map((c) => {
+      'checks': checks.map((c) {
         return {
           'success': c.success,
           'checkName': c.checkName,
