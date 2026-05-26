@@ -237,9 +237,11 @@ class SyncStatusCard extends StatelessWidget {
   }
 
   Widget _buildLoadingContent(BuildContext context) {
-    return const Center(
+    return const Padding(
       padding: EdgeInsets.all(24),
-      child: CircularProgressIndicator(),
+      child: Center(
+        child: CircularProgressIndicator(),
+      ),
     );
   }
 

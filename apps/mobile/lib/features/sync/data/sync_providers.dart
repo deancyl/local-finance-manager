@@ -7,10 +7,10 @@ import 'package:logging/logging.dart';
 import 'package:sync/sync.dart';
 import 'sync_feature_flag.dart';
 
-final _log = Logger('SyncProvider');
-
 /// Re-exports feature flag providers
 export 'sync_feature_flag.dart';
+
+final _log = Logger('SyncProvider');
 
 /// Sync status stream provider.
 /// 

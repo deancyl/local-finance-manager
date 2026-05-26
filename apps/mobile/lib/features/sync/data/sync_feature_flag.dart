@@ -1,10 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:sync/sync.dart';
-
-part 'sync_feature_flag.g.dart';
 
 /// Key for storing sync feature flag in SharedPreferences.
 const String _syncFeatureFlagKey = 'sync_feature_enabled';

@@ -396,9 +396,11 @@ class SyncSettingsPage extends ConsumerWidget {
                   ).toList(),
                 );
               },
-              loading: () => const Center(
+              loading: () => const Padding(
                 padding: EdgeInsets.all(24),
-                child: CircularProgressIndicator(),
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
               ),
               error: (error, _) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
