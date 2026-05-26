@@ -87,9 +87,15 @@ class FinanceAppConnector extends PowerSyncBackendConnector {
       return null;
     }
 
+    // Token should not be null at this point if we passed the earlier check
+    final token = _currentToken;
+    if (token == null) {
+      return null;
+    }
+
     return PowerSyncCredentials(
       endpoint: serverUrl,
-      token: _currentToken,
+      token: token,
     );
   }
   

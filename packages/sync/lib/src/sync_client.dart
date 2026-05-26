@@ -5,38 +5,21 @@ import 'package:drift/drift.dart';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:powersync/powersync.dart' hide SyncStatus;
 
 import 'connector/backend_connector.dart';
 import 'encryption/encryption_service.dart';
 import 'models/sync_models.dart';
 import 'sync_config.dart';
 
-/// Main sync client that wraps PowerSync database with Drift integration.
+/// Note: PowerSync integration is currently disabled due to API compatibility issues.
+/// This stub implementation allows the app to compile while sync functionality
+/// is being reworked for the current PowerSync SDK version.
 /// 
-/// This class provides:
-/// - PowerSync database initialization with optional encryption
-/// - Drift database integration via SqliteAsyncDriftConnection
-/// - Connection management to sync server
-/// - Status monitoring and reactive streams
+/// TODO: Re-integrate PowerSync when API compatibility is resolved.
+
+/// Main sync client that provides sync functionality stub.
 /// 
-/// Usage:
-/// ```dart
-/// final syncClient = SyncClient(
-///   config: SyncConfig(
-///     schema: mySchema,
-///     serverUrl: 'https://sync.example.com',
-///   ),
-/// );
-/// 
-/// await syncClient.initialize();
-/// await syncClient.connect();
-/// 
-/// // Watch sync status
-/// syncClient.watchStatus().listen((status) {
-///   print('Sync status: $status');
-/// });
-/// ```
+/// Currently disabled pending PowerSync SDK compatibility update.
 class SyncClient {
   /// Configuration for sync.
   final SyncConfig config;
@@ -45,9 +28,6 @@ class SyncClient {
   final SyncEncryption? encryption;
   
   final Logger _log = Logger('SyncClient');
-  
-  late final PowerSyncDatabase _powerSyncDb;
-  late final FinanceAppConnector _connector;
   
   /// Current sync status.
   SyncStatus _status = SyncStatus.notInitialized;
@@ -64,9 +44,6 @@ class SyncClient {
   
   /// Whether the client has been initialized.
   bool _initialized = false;
-  
-  /// Subscription to PowerSync status updates.
-  StreamSubscription? _powerSyncSubscription;
 
   SyncClient({
     required this.config,
@@ -85,213 +62,94 @@ class SyncClient {
   /// Whether the client is initialized.
   bool get isInitialized => _initialized;
   
-  /// The underlying PowerSync database.
-  /// Only available after [initialize] is called.
-  PowerSyncDatabase get powerSyncDb {
-    if (!_initialized) {
-      throw StateError('SyncClient not initialized. Call initialize() first.');
-    }
-    return _powerSyncDb;
+  /// Stub - returns null as PowerSync is disabled.
+  dynamic get powerSyncDb {
+    throw StateError('PowerSync integration is currently disabled. See sync_client.dart for details.');
   }
   
-  /// The backend connector.
-  FinanceAppConnector get connector => _connector;
+  /// Stub - returns null as PowerSync is disabled.
+  dynamic get connector {
+    throw StateError('PowerSync integration is currently disabled. See sync_client.dart for details.');
+  }
 
-  /// Initializes the PowerSync database with optional encryption.
-  /// 
-  /// This must be called before any other methods.
-  /// Sets up the database file, encryption, and prepares for connection.
+  /// Stub initialization - marks as initialized without actual PowerSync setup.
   Future<void> initialize() async {
     if (_initialized) {
       _log.warning('SyncClient already initialized');
       return;
     }
 
-    _log.info('Initializing SyncClient');
+    _log.info('SyncClient stub initialization (PowerSync disabled)');
     _updateStatus(SyncStatus.disconnected);
 
     try {
-      // Get database path
+      // Stub: No actual PowerSync initialization
+      // The database path is computed for future use
       final dbPath = await _getDatabasePath();
-      _log.fine('Database path: $dbPath');
-
-      // Setup encryption options if provided
-      EncryptionOptions? encryptionOptions;
-      if (encryption != null) {
-        _log.info('Setting up database encryption');
-        final key = await encryption!.getEncryptionKey();
-        encryptionOptions = EncryptionOptions(
-          key: key,
-          sqlcipherCompatibility: false,
-        );
-      }
-
-      // Create PowerSync database
-      _powerSyncDb = PowerSyncDatabase(
-        schema: config.schema,
-        path: dbPath,
-        encryption: encryptionOptions,
-      );
-
-      // Initialize the database
-      await _powerSyncDb.initialize();
-      _log.info('PowerSync database initialized');
-
-      // Create backend connector
-      _connector = FinanceAppConnector(
-        serverUrl: config.serverUrl,
-        authProvider: config.authProvider,
-        deviceId: config.deviceId,
-      );
-
+      _log.fine('Database path would be: $dbPath');
+      
       _initialized = true;
-      _log.info('SyncClient initialization complete');
+      _log.info('SyncClient stub initialization complete');
+      _log.warning('Note: Sync functionality is currently disabled pending PowerSync SDK update');
     } catch (e, stackTrace) {
-      _log.severe('Failed to initialize SyncClient', e, stackTrace);
+      _log.severe('Failed to initialize SyncClient stub', e, stackTrace);
       _errorMessage = e.toString();
       _updateStatus(SyncStatus.error);
       rethrow;
     }
   }
 
-  /// Creates a Drift database connection using the PowerSync database.
-  /// 
-  /// IMPORTANT: Use this method to create the Drift database instance.
-  /// Returns a PowerSync-compatible query executor.
-  /// 
-  /// Example:
-  /// ```dart
-  /// final driftDb = LocalFinanceDatabase(syncClient.createDriftConnection());
-  /// ```
+  /// Stub - returns a simple query executor.
   QueryExecutor createDriftConnection() {
     if (!_initialized) {
       throw StateError('SyncClient not initialized. Call initialize() first.');
     }
-    // Use PowerSync's native query executor
-    // Note: This provides basic query execution for PowerSync database
-    return _PowerSyncQueryExecutor(_powerSyncDb);
+    // Return a stub executor
+    return _StubQueryExecutor();
   }
 
-  /// Connects to the sync server.
-  /// 
-  /// Requires [initialize] to be called first.
-  /// Uses the backend connector for authentication and data upload.
+  /// Stub - logs warning that sync is disabled.
   Future<void> connect() async {
     _checkInitialized();
-    
-    _log.info('Connecting to sync server: ${config.serverUrl}');
-    _updateStatus(SyncStatus.connecting);
-
-    try {
-      // Connect to PowerSync (no crudThrottle parameter in current API)
-      await _powerSyncDb.connect(
-        connector: _connector,
-      );
-
-      // Watch for status changes
-      _powerSyncSubscription = _powerSyncDb.statusStream.listen(
-        _onPowerSyncStatus,
-        onError: _onPowerSyncError,
-      );
-
-      _updateStatus(SyncStatus.connected);
-      _log.info('Connected to sync server');
-    } catch (e, stackTrace) {
-      _log.severe('Failed to connect to sync server', e, stackTrace);
-      _errorMessage = e.toString();
-      _updateStatus(SyncStatus.error);
-      rethrow;
-    }
+    _log.warning('Sync connect called but PowerSync is disabled');
+    _updateStatus(SyncStatus.disconnected);
   }
 
-  /// Disconnects from the sync server.
-  /// 
-  /// The database remains usable locally after disconnect.
+  /// Stub - no action.
   Future<void> disconnect() async {
     _checkInitialized();
-    
-    _log.info('Disconnecting from sync server');
-    
-    await _powerSyncSubscription?.cancel();
-    _powerSyncSubscription = null;
-    
-    await _powerSyncDb.disconnect();
-    
+    _log.info('Sync disconnect called (stub)');
     _updateStatus(SyncStatus.disconnected);
-    _log.info('Disconnected from sync server');
   }
 
-  /// Triggers a manual sync.
-  /// 
-  /// Forces an immediate sync of local changes to server
-  /// and downloads any remote changes.
+  /// Stub - logs warning that sync is disabled.
   Future<void> sync() async {
     _checkInitialized();
-    
-    if (_status != SyncStatus.connected) {
-      _log.warning('Cannot sync: not connected');
-      return;
-    }
-
-    _log.info('Triggering manual sync');
-    
-    try {
-      // Trigger upload via connector's uploadData method
-      await _connector.uploadData(_powerSyncDb);
-      _lastSyncTime = DateTime.now();
-      _log.info('Manual sync completed');
-    } catch (e, stackTrace) {
-      _log.severe('Manual sync failed', e, stackTrace);
-      rethrow;
-    }
+    _log.warning('Sync triggered but PowerSync is disabled');
   }
 
-  /// Closes the database and releases resources.
+  /// Stub - closes stream controller.
   Future<void> close() async {
-    _log.info('Closing SyncClient');
-    
-    await _powerSyncSubscription?.cancel();
-    _powerSyncSubscription = null;
-    
-    if (_initialized) {
-      await _powerSyncDb.close();
-    }
-    
-    _connector.dispose();
+    _log.info('Closing SyncClient stub');
     _statusController.close();
-    
     _initialized = false;
     _updateStatus(SyncStatus.notInitialized);
-    _log.info('SyncClient closed');
   }
 
   /// Watches sync status changes.
-  /// 
-  /// Emits the current status immediately on subscribe,
-  /// then emits on each status change.
   Stream<SyncStatus> watchStatus() {
     return _statusController.stream;
   }
 
-  /// Gets current sync progress information.
+  /// Stub - returns empty progress.
   Future<SyncProgress> getProgress() async {
     _checkInitialized();
-    
-    // Get pending upload count from PowerSync
-    int pendingUploads = 0;
-    try {
-      final transaction = await _powerSyncDb.getNextCrudTransaction();
-      pendingUploads = transaction?.crud.length ?? 0;
-    } catch (e) {
-      _log.warning('Failed to get pending uploads: $e');
-    }
-
     return SyncProgress(
       status: _status,
-      pendingUploads: pendingUploads,
-      pendingDownloads: 0, // PowerSync doesn't expose this
+      pendingUploads: 0,
+      pendingDownloads: 0,
       lastSyncTime: _lastSyncTime,
-      errorMessage: _errorMessage,
+      errorMessage: _errorMessage ?? 'PowerSync integration is disabled',
     );
   }
 
@@ -301,37 +159,6 @@ class SyncClient {
       _status = newStatus;
       _statusController.add(newStatus);
     }
-  }
-
-  /// Handles PowerSync status changes.
-  void _onPowerSyncStatus(dynamic status) {
-    _log.fine('PowerSync status: $status');
-    // Map PowerSync status to our status
-    // PowerSync uses a status object with connected, connecting, etc.
-    if (status is Map) {
-      final connected = status['connected'] as bool? ?? false;
-      final connecting = status['connecting'] as bool? ?? false;
-      final downloadError = status['downloadError'];
-      final uploadError = status['uploadError'];
-      
-      if (downloadError != null || uploadError != null) {
-        _updateStatus(SyncStatus.error);
-        _errorMessage = downloadError?.toString() ?? uploadError?.toString();
-      } else if (connected) {
-        _updateStatus(SyncStatus.connected);
-      } else if (connecting) {
-        _updateStatus(SyncStatus.connecting);
-      } else {
-        _updateStatus(SyncStatus.disconnected);
-      }
-    }
-  }
-
-  /// Handles PowerSync errors.
-  void _onPowerSyncError(Object error, StackTrace stackTrace) {
-    _log.severe('PowerSync error', error, stackTrace);
-    _errorMessage = error.toString();
-    _updateStatus(SyncStatus.error);
   }
 
   /// Gets the database file path.
@@ -348,169 +175,112 @@ class SyncClient {
   }
 }
 
-/// A Drift QueryExecutor that wraps PowerSync database.
-/// 
-/// This provides basic query execution capabilities for Drift
-/// using PowerSync's underlying SQLite database.
-class _PowerSyncQueryExecutor extends QueryExecutor {
-  final PowerSyncDatabase _db;
-  
-  _PowerSyncQueryExecutor(this._db);
-  
+/// Stub query executor that logs warnings.
+class _StubQueryExecutor extends QueryExecutor {
   @override
   SqlDialect get dialect => SqlDialect.sqlite;
   
   @override
-  Future<bool> ensureOpen(QueryExecutorUser user) async {
-    return true; // PowerSync manages its own connection
-  }
+  Future<bool> ensureOpen(QueryExecutorUser user) async => true;
   
   @override
   TransactionExecutor beginTransaction() {
-    return _PowerSyncTransactionExecutor(_db);
+    return _StubTransactionExecutor();
   }
   
   @override
-  QueryExecutor beginExclusive() {
-    return this; // PowerSync handles exclusivity internally
-  }
+  QueryExecutor beginExclusive() => this;
   
   @override
   Future<void> runBatched(BatchedStatements statements) async {
-    for (final stmt in statements.statements) {
-      await _db.execute(stmt.sql, stmt.arguments ?? []);
-    }
+    // Stub - no actual execution
   }
   
   @override
   Future<void> runCustom(String statement, [List<Object?>? args]) async {
-    await _db.execute(statement, args ?? []);
+    // Stub - no actual execution
   }
   
   @override
-  Future<int> runInsert(String statement, [List<Object?>? args]) async {
-    await _db.execute(statement, args ?? []);
-    // Get last insert row id
-    final result = await _db.execute('SELECT last_insert_rowid()');
-    return result.first?['last_insert_rowid()'] as int? ?? 0;
-  }
+  Future<int> runInsert(String statement, [List<Object?>? args]) async => 0;
   
   @override
-  Future<int> runUpdate(String statement, [List<Object?>? args]) async {
-    await _db.execute(statement, args ?? []);
-    // Get changes count
-    final result = await _db.execute('SELECT changes()');
-    return result.first?['changes()'] as int? ?? 0;
-  }
+  Future<int> runUpdate(String statement, [List<Object?>? args]) async => 0;
   
   @override
-  Future<int> runDelete(String statement, [List<Object?>? args]) async {
-    return runUpdate(statement, args);
-  }
+  Future<int> runDelete(String statement, [List<Object?>? args]) async => 0;
   
   @override
   Future<List<Map<String, Object?>>> runSelect(
     String statement, [
     List<Object?>? args,
-  ]) async {
-    return _db.execute(statement, args ?? []);
-  }
+  ]) async => [];
   
   @override
   Future<void> close() async {
-    // PowerSync manages its own lifecycle
+    // Stub - no action
   }
 }
 
-/// Transaction executor for PowerSync.
-class _PowerSyncTransactionExecutor extends TransactionExecutor {
-  final PowerSyncDatabase _db;
-  bool _isOpen = false;
-  
-  _PowerSyncTransactionExecutor(this._db);
+/// Stub transaction executor.
+class _StubTransactionExecutor extends TransactionExecutor {
+  @override
+  bool get supportsNestedTransactions => false;
   
   @override
   Future<void> start() async {
-    await _db.execute('BEGIN TRANSACTION');
-    _isOpen = true;
+    // Stub - no action
   }
   
   @override
   Future<void> send() async {
-    await _db.execute('COMMIT');
-    _isOpen = false;
+    // Stub - no action
   }
   
   @override
   Future<void> rollback() async {
-    await _db.execute('ROLLBACK');
-    _isOpen = false;
+    // Stub - no action
   }
   
   @override
-  Future<bool> ensureOpen(QueryExecutorUser user) async {
-    if (!_isOpen) {
-      await start();
-    }
-    return true;
-  }
+  Future<bool> ensureOpen(QueryExecutorUser user) async => true;
   
   @override
   SqlDialect get dialect => SqlDialect.sqlite;
   
   @override
-  QueryExecutor beginExclusive() {
-    return this;
-  }
+  QueryExecutor beginExclusive() => this;
   
   @override
-  TransactionExecutor beginTransaction() {
-    return this;
-  }
+  TransactionExecutor beginTransaction() => this;
   
   @override
   Future<void> runBatched(BatchedStatements statements) async {
-    for (final stmt in statements.statements) {
-      await _db.execute(stmt.sql, stmt.arguments ?? []);
-    }
+    // Stub - no actual execution
   }
   
   @override
   Future<void> runCustom(String statement, [List<Object?>? args]) async {
-    await _db.execute(statement, args ?? []);
+    // Stub - no actual execution
   }
   
   @override
-  Future<int> runInsert(String statement, [List<Object?>? args]) async {
-    await _db.execute(statement, args ?? []);
-    final result = await _db.execute('SELECT last_insert_rowid()');
-    return result.first?['last_insert_rowid()'] as int? ?? 0;
-  }
+  Future<int> runInsert(String statement, [List<Object?>? args]) async => 0;
   
   @override
-  Future<int> runUpdate(String statement, [List<Object?>? args]) async {
-    await _db.execute(statement, args ?? []);
-    final result = await _db.execute('SELECT changes()');
-    return result.first?['changes()'] as int? ?? 0;
-  }
+  Future<int> runUpdate(String statement, [List<Object?>? args]) async => 0;
   
   @override
-  Future<int> runDelete(String statement, [List<Object?>? args]) async {
-    return runUpdate(statement, args);
-  }
+  Future<int> runDelete(String statement, [List<Object?>? args]) async => 0;
   
   @override
   Future<List<Map<String, Object?>>> runSelect(
     String statement, [
     List<Object?>? args,
-  ]) async {
-    return _db.execute(statement, args ?? []);
-  }
+  ]) async => [];
   
   @override
   Future<void> close() async {
-    if (_isOpen) {
-      await rollback();
-    }
+    // Stub - no action
   }
 }

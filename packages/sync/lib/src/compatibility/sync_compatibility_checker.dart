@@ -287,7 +287,8 @@ class SyncCompatibilityChecker {
     _log.fine('Checking schema compatibility');
 
     try {
-      if (schema == null) {
+      final currentSchema = schema;
+      if (currentSchema == null) {
         return CompatibilityCheckResult.failure(
           checkName: 'Schema Compatibility',
           message: 'No schema provided for validation',
@@ -298,7 +299,7 @@ class SyncCompatibilityChecker {
       }
 
       // Validate schema has required tables
-      final tables = schema.tables;
+      final tables = currentSchema.tables;
       if (tables.isEmpty) {
         return CompatibilityCheckResult.failure(
           checkName: 'Schema Compatibility',
