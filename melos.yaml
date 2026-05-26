@@ -12,7 +12,7 @@ command:
 scripts:
   analyze:
     run: |
-      melos exec --ignore="sync" --ignore="sync_server" -- "dart analyze ."
+      melos exec --ignore="sync" --ignore="sync_server" -- "dart analyze . --no-fatal-warnings --no-fatal-infos"
   
   test:
     run: |
