@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sync/sync.dart';
 import '../../data/sync_feature_flag.dart';
 import '../../data/sync_providers.dart';
+import '../../data/websocket_provider.dart';
 import '../widgets/sync_status_card.dart';
 import '../widgets/device_list_tile.dart';
 
@@ -37,6 +38,12 @@ class SyncSettingsPage extends ConsumerWidget {
           _buildFeatureToggleSection(context, ref, isEnabled, canEnableAsync),
           
           const SizedBox(height: 24),
+          
+          // WebSocket real-time sync toggle (only shown when sync is enabled)
+          if (isEnabled) ...[
+            _buildWebsocketToggleSection(context, ref),
+            const SizedBox(height: 24),
+          ],
           
           // Compatibility status (shown when trying to enable)
           if (!isEnabled) ...[
@@ -151,6 +158,99 @@ class SyncSettingsPage extends ConsumerWidget {
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebsocketToggleSection(
+    BuildContext context,
+    WidgetRef ref,
+  ) {
+    final isWebsocketEnabled = ref.watch(websocketFeatureFlagProvider);
+    final websocketConnected = ref.watch(websocketConnectedProvider);
+    final websocketAvailable = ref.watch(isWebsocketAvailableProvider);
+    final websocketStatus = ref.watch(websocketStatusDisplayProvider);
+    
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.sync,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '实时同步',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Switch(
+                  value: isWebsocketEnabled,
+                  onChanged: (value) async {
+                    await ref.read(websocketFeatureFlagProvider.notifier).setEnabled(value);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isWebsocketEnabled 
+                  ? '实时同步已启用，数据变更会立即同步到其他设备'
+                  : '实时同步已禁用，数据仅在手动同步时更新',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (isWebsocketEnabled) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: websocketConnected 
+                      ? Colors.green.withOpacity(0.1)
+                      : Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      websocketConnected ? Icons.check_circle : Icons.pending,
+                      size: 20,
+                      color: websocketConnected 
+                          ? Colors.green 
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'WebSocket状态: $websocketStatus',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: websocketConnected 
+                              ? Colors.green 
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    if (!websocketAvailable && isWebsocketEnabled)
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                   ],
                 ),
               ),

@@ -1,29 +1,58 @@
-// DISABLED: sync package is temporarily disabled due to PowerSync compatibility issues
-// Original content commented out below
-
-/*
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:logging/logging.dart';
 
 import 'package:sync/sync.dart';
-import 'sync_provider.dart';
+
+final _log = Logger('AuthProviderImpl');
 
 /// Provider for the sync auth implementation.
 final authProviderImplProvider = Provider<SyncAuthProviderImpl?>((ref) {
-  final config = ref.watch(syncConfigProvider);
-  
-  return config.when(
-    data: (config) {
-      if (config == null) return null;
-      return SyncAuthProviderImpl(serverUrl: config.serverUrl);
-    },
-    loading: () => null,
-    error: (_, __) => null,
-  );
+  // Auth provider is available but requires user to configure server URL
+  // For now, return null until user sets up sync server
+  return null;
 });
+
+/// Provider for stored auth token.
+/// 
+/// Returns the JWT token if available, null otherwise.
+final storedAuthTokenProvider = FutureProvider<String?>((ref) async {
+  const storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+  return await storage.read(key: _keyToken);
+});
+
+/// Provider for stored user ID.
+/// 
+/// Returns the user ID if available, null otherwise.
+final storedUserIdProvider = FutureProvider<String?>((ref) async {
+  const storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+  return await storage.read(key: _keyUserId);
+});
+
+/// Provider for checking if user is authenticated.
+final isAuthenticatedProvider = FutureProvider<bool>((ref) async {
+  final token = await ref.watch(storedAuthTokenProvider.future);
+  return token != null;
+});
+
+/// Storage key for user ID.
+const String _keyUserId = 'sync_user_id';
+
+/// Storage key for auth token.
+const String _keyToken = 'sync_token';
+
+/// Storage key for refresh token.
+const String _keyRefreshToken = 'sync_refresh_token';
+
+/// Storage key for token expiry.
+const String _keyTokenExpiry = 'sync_token_expiry';
 
 /// Implementation of AuthProvider for the sync system.
 /// 
@@ -39,18 +68,6 @@ class SyncAuthProviderImpl implements AuthProvider {
   /// HTTP client for API calls.
   final http.Client _httpClient;
   
-  /// Storage key for user ID.
-  static const _keyUserId = 'sync_user_id';
-  
-  /// Storage key for auth token.
-  static const _keyToken = 'sync_token';
-  
-  /// Storage key for refresh token.
-  static const _keyRefreshToken = 'sync_refresh_token';
-  
-  /// Storage key for token expiry.
-  static const _keyTokenExpiry = 'sync_token_expiry';
-
   SyncAuthProviderImpl({
     required this.serverUrl,
     FlutterSecureStorage? storage,
@@ -61,10 +78,10 @@ class SyncAuthProviderImpl implements AuthProvider {
         _httpClient = httpClient ?? http.Client();
 
   /// Logs in with email and password.
-  /// 
-  /// Returns an [AuthResult] indicating success or failure.
   @override
   Future<AuthResult> login(String email, String password) async {
+    _log.info('Attempting login for: $email');
+    
     try {
       final response = await _httpClient.post(
         Uri.parse('$serverUrl/api/auth/login'),
@@ -87,6 +104,7 @@ class SyncAuthProviderImpl implements AuthProvider {
               : null,
         );
 
+        _log.info('Login successful for user: ${data['userId']}');
         return AuthResult.success(
           userId: data['userId'] as String,
           token: data['token'] as String,
@@ -94,18 +112,20 @@ class SyncAuthProviderImpl implements AuthProvider {
       } else {
         final error = jsonDecode(response.body)['error'] as String? 
             ?? 'Login failed';
+        _log.warning('Login failed: $error');
         return AuthResult.failure(error);
       }
     } catch (e) {
+      _log.severe('Login network error: $e');
       return AuthResult.failure('Network error: $e');
     }
   }
 
   /// Registers a new account with email and password.
-  /// 
-  /// Returns an [AuthResult] indicating success or failure.
   @override
   Future<AuthResult> register(String email, String password) async {
+    _log.info('Attempting registration for: $email');
+    
     try {
       final response = await _httpClient.post(
         Uri.parse('$serverUrl/api/auth/register'),
@@ -128,6 +148,7 @@ class SyncAuthProviderImpl implements AuthProvider {
               : null,
         );
 
+        _log.info('Registration successful for user: ${data['userId']}');
         return AuthResult.success(
           userId: data['userId'] as String,
           token: data['token'] as String,
@@ -135,9 +156,11 @@ class SyncAuthProviderImpl implements AuthProvider {
       } else {
         final error = jsonDecode(response.body)['error'] as String? 
             ?? 'Registration failed';
+        _log.warning('Registration failed: $error');
         return AuthResult.failure(error);
       }
     } catch (e) {
+      _log.severe('Registration network error: $e');
       return AuthResult.failure('Network error: $e');
     }
   }
@@ -145,6 +168,8 @@ class SyncAuthProviderImpl implements AuthProvider {
   /// Logs out and clears stored credentials.
   @override
   Future<void> logout() async {
+    _log.info('Logging out...');
+    
     try {
       final token = await getToken();
       if (token != null) {
@@ -158,11 +183,11 @@ class SyncAuthProviderImpl implements AuthProvider {
         );
       }
     } catch (_) {
-      // Ignore logout API errors
+      _log.warning('Logout API call failed, proceeding with local logout');
     }
     
-    // Clear stored credentials
     await _clearCredentials();
+    _log.info('Logout complete');
   }
 
   /// Gets the stored authentication token.
@@ -202,10 +227,10 @@ class SyncAuthProviderImpl implements AuthProvider {
   }
 
   /// Refreshes the authentication token.
-  /// 
-  /// Throws an exception if refresh fails.
   @override
   Future<void> refreshToken() async {
+    _log.info('Refreshing token...');
+    
     final refreshToken = await _storage.read(key: _keyRefreshToken);
     if (refreshToken == null) {
       throw StateError('No refresh token available');
@@ -229,13 +254,15 @@ class SyncAuthProviderImpl implements AuthProvider {
               ? DateTime.parse(data['expiresAt'] as String)
               : null,
         );
+        
+        _log.info('Token refresh successful');
       } else {
-        // Refresh failed, clear credentials
         await _clearCredentials();
         throw Exception('Token refresh failed');
       }
     } catch (e) {
       await _clearCredentials();
+      _log.severe('Token refresh failed: $e');
       rethrow;
     }
   }
@@ -272,4 +299,3 @@ class SyncAuthProviderImpl implements AuthProvider {
     _httpClient.close();
   }
 }
-*/

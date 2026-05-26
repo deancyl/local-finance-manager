@@ -1,13 +1,13 @@
-// DISABLED: sync package is temporarily disabled due to PowerSync compatibility issues
-/*
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/sync_provider.dart';
 import 'package:sync/sync.dart';
+
+import '../../data/sync_providers.dart';
+import '../../data/websocket_provider.dart';
 
 /// Sync status indicator for AppBar.
 /// 
-/// Shows sync status icon with pending operations badge.
+/// Shows sync status icon with WebSocket connection status.
 class SyncStatusIndicator extends ConsumerWidget {
   const SyncStatusIndicator({super.key});
   
@@ -15,17 +15,19 @@ class SyncStatusIndicator extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(syncStatusProvider);
     final progress = ref.watch(syncProgressProvider);
+    final websocketConnected = ref.watch(websocketConnectedProvider);
+    final websocketAvailable = ref.watch(isWebsocketAvailableProvider);
     
     return Stack(
       alignment: Alignment.center,
       children: [
         IconButton(
           icon: Icon(
-            _getIcon(status),
-            color: _getColor(status),
+            _getIcon(status, websocketConnected, websocketAvailable),
+            color: _getColor(status, websocketConnected),
           ),
           onPressed: () => _showStatusSheet(context, ref),
-          tooltip: _getTooltip(status),
+          tooltip: _getTooltip(status, websocketConnected, websocketAvailable),
         ),
         if (_hasPending(progress))
           Positioned(
@@ -49,7 +51,12 @@ class SyncStatusIndicator extends ConsumerWidget {
     );
   }
   
-  IconData _getIcon(AsyncValue<SyncStatus> status) {
+  IconData _getIcon(AsyncValue<SyncStatus> status, bool websocketConnected, bool websocketAvailable) {
+    // If WebSocket is available and connected, show real-time sync indicator
+    if (websocketAvailable && websocketConnected) {
+      return Icons.sync;
+    }
+    
     return status.when(
       data: (s) => switch (s) {
         SyncStatus.connected => Icons.cloud_done_outlined,
@@ -63,7 +70,11 @@ class SyncStatusIndicator extends ConsumerWidget {
     );
   }
   
-  Color _getColor(AsyncValue<SyncStatus> status) {
+  Color _getColor(AsyncValue<SyncStatus> status, bool websocketConnected) {
+    if (websocketConnected) {
+      return Colors.green;
+    }
+    
     return status.when(
       data: (s) => switch (s) {
         SyncStatus.connected => Colors.green,
@@ -77,8 +88,8 @@ class SyncStatusIndicator extends ConsumerWidget {
     );
   }
   
-  String _getTooltip(AsyncValue<SyncStatus> status) {
-    return status.when(
+  String _getTooltip(AsyncValue<SyncStatus> status, bool websocketConnected, bool websocketAvailable) {
+    final baseTooltip = status.when(
       data: (s) => switch (s) {
         SyncStatus.connected => '已连接',
         SyncStatus.connecting => '正在连接...',
@@ -89,6 +100,12 @@ class SyncStatusIndicator extends ConsumerWidget {
       loading: () => '未连接',
       error: (_, __) => '同步错误',
     );
+    
+    if (websocketAvailable) {
+      return '$baseTooltip\n实时同步: ${websocketConnected ? "已连接" : "未连接"}';
+    }
+    
+    return baseTooltip;
   }
   
   bool _hasPending(AsyncValue<SyncProgress> progress) {
@@ -115,9 +132,9 @@ class SyncStatusIndicator extends ConsumerWidget {
   }
 }
 
-/// Placeholder for sync status bottom sheet.
+/// Sync status bottom sheet.
 /// 
-/// TODO: Implement full status sheet with sync details.
+/// Shows detailed sync status including WebSocket connection state.
 class SyncStatusSheet extends ConsumerWidget {
   const SyncStatusSheet({super.key});
   
@@ -125,6 +142,9 @@ class SyncStatusSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(syncStatusProvider);
     final progress = ref.watch(syncProgressProvider);
+    final websocketConnected = ref.watch(websocketConnectedProvider);
+    final websocketAvailable = ref.watch(isWebsocketAvailableProvider);
+    final websocketStatus = ref.watch(websocketStatusDisplayProvider);
     
     return Container(
       padding: const EdgeInsets.all(16),
@@ -138,7 +158,7 @@ class SyncStatusSheet extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           status.when(
-            data: (s) => _buildStatusInfo(context, s, progress),
+            data: (s) => _buildStatusInfo(context, s, progress, websocketAvailable, websocketConnected, websocketStatus),
             loading: () => const Text('加载中...'),
             error: (e, __) => Text('错误: $e'),
           ),
@@ -152,15 +172,22 @@ class SyncStatusSheet extends ConsumerWidget {
     );
   }
   
-  Widget _buildStatusInfo(BuildContext context, SyncStatus status, AsyncValue<SyncProgress> progress) {
+  Widget _buildStatusInfo(
+    BuildContext context, 
+    SyncStatus status, 
+    AsyncValue<SyncProgress> progress,
+    bool websocketAvailable,
+    bool websocketConnected,
+    String websocketStatus,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Icon(
-              _getStatusIcon(status),
-              color: _getStatusColor(status),
+              _getStatusIcon(status, websocketConnected),
+              color: _getStatusColor(status, websocketConnected),
             ),
             const SizedBox(width: 8),
             Text(
@@ -169,6 +196,23 @@ class SyncStatusSheet extends ConsumerWidget {
             ),
           ],
         ),
+        if (websocketAvailable) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(
+                websocketConnected ? Icons.sync : Icons.sync_disabled,
+                color: websocketConnected ? Colors.green : Colors.grey,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '实时同步: $websocketStatus',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ],
         if (status == SyncStatus.connected) ...[
           const SizedBox(height: 8),
           progress.when(
@@ -184,7 +228,11 @@ class SyncStatusSheet extends ConsumerWidget {
     );
   }
   
-  IconData _getStatusIcon(SyncStatus status) {
+  IconData _getStatusIcon(SyncStatus status, bool websocketConnected) {
+    if (websocketConnected) {
+      return Icons.sync;
+    }
+    
     return switch (status) {
       SyncStatus.connected => Icons.cloud_done_outlined,
       SyncStatus.connecting => Icons.cloud_sync_outlined,
@@ -194,7 +242,11 @@ class SyncStatusSheet extends ConsumerWidget {
     };
   }
   
-  Color _getStatusColor(SyncStatus status) {
+  Color _getStatusColor(SyncStatus status, bool websocketConnected) {
+    if (websocketConnected) {
+      return Colors.green;
+    }
+    
     return switch (status) {
       SyncStatus.connected => Colors.green,
       SyncStatus.connecting => Colors.orange,
@@ -204,4 +256,3 @@ class SyncStatusSheet extends ConsumerWidget {
     };
   }
 }
-*/

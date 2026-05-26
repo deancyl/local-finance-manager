@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:finance_app/core/presentation/widgets/customizable_dashboard.dart';
 import 'package:finance_app/core/presentation/widgets/dashboard_config_provider.dart';
 import 'package:finance_app/features/quick_entry/presentation/widgets/quick_add_fab.dart';
+import 'package:finance_app/features/sync/presentation/widgets/sync_status_indicator.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -17,6 +18,8 @@ class HomePage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('本地金融管家'),
         actions: [
+          // Sync status indicator
+          const SyncStatusIndicator(),
           // Analytics button
           IconButton(
             icon: const Icon(Icons.analytics_outlined),
