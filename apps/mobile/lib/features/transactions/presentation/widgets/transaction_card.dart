@@ -72,89 +72,88 @@ class TransactionCard extends ConsumerWidget {
                         semanticLabel: isIncome ? '收入' : '支出',
                       ),
                     ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              transaction.description ?? '未分类交易',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                            ),
-                            // Attachment indicator
-                            attachmentCountAsync.when(
-                              data: (count) {
-                                if (count > 0) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(left: 8),
-                                    child: Icon(
-                                      Icons.attach_file,
-                                      size: 16,
-                                      color: Theme.of(context).colorScheme.primary,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                transaction.description ?? '未分类交易',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
                                     ),
-                                  );
-                                }
-                                return const SizedBox.shrink();
-                              },
-                              loading: () => const SizedBox.shrink(),
-                              error: (_, __) => const SizedBox.shrink(),
+                              ),
+                              attachmentCountAsync.when(
+                                data: (count) {
+                                  if (count > 0) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(left: 8),
+                                      child: Icon(
+                                        Icons.attach_file,
+                                        size: 16,
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                },
+                                loading: () => const SizedBox.shrink(),
+                                error: (_, __) => const SizedBox.shrink(),
+                              ),
+                            ],
+                          ),
+                          if (transaction.notes != null && transaction.notes!.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              transaction.notes!,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
-                        ),
-                        if (transaction.notes != null && transaction.notes!.isNotEmpty) ...[
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 4),
                           Text(
-                            transaction.notes!,
+                            DateFormat('HH:mm').format(
+                              DateTime.fromMillisecondsSinceEpoch(transaction.postDate),
+                            ),
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
-                        const SizedBox(height: 4),
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
                         Text(
-                          DateFormat('HH:mm').format(
-                            DateTime.fromMillisecondsSinceEpoch(transaction.postDate),
-                          ),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          '${isIncome ? '+' : '-'}¥${amount.abs().toStringAsFixed(2)}',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: isIncome ? Colors.green : Colors.red,
                               ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 20),
+                          onPressed: onDelete,
+                          color: Theme.of(context).colorScheme.error,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          tooltip: '删除交易',
                         ),
                       ],
                     ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '${isIncome ? '+' : '-'}¥${amount.abs().toStringAsFixed(2)}',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: isIncome ? Colors.green : Colors.red,
-                            ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, size: 20),
-                        onPressed: onDelete,
-                        color: Theme.of(context).colorScheme.error,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        tooltip: '删除交易',
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         );
 
-        // Wrap with gesture controls
         return SwipeableAction(
           leftAction: gestureConfig.swipeLeft,
           rightAction: gestureConfig.swipeRight,
@@ -176,7 +175,12 @@ class TransactionCard extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Card(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
+      loading: () => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: CircularProgressIndicator(),
+        ),
+      ),
       error: (_, __) => const SizedBox.shrink(),
     );
   }
