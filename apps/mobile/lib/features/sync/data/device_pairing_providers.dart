@@ -64,8 +64,8 @@ class PairingTokenNotifier extends StateNotifier<AsyncValue<PairingToken?>> {
     try {
       final token = await _service.generatePairingToken();
       state = AsyncValue.data(token);
-    } catch (e) {
-      state = AsyncValue.error(e, null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
     }
   }
   
