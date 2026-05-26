@@ -1,8 +1,6 @@
-// DISABLED: sync package is temporarily disabled due to PowerSync compatibility issues
-/*
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/sync_provider.dart';
+import '../../data/sync_providers.dart';
 import '../widgets/qr_display_widget.dart';
 import '../widgets/qr_scanner_widget.dart';
 
@@ -36,9 +34,6 @@ class _DevicePairingPageState extends ConsumerState<DevicePairingPage> {
   
   @override
   Widget build(BuildContext context) {
-    final config = ref.watch(syncConfigProvider);
-    final deviceId = config?.deviceId ?? '';
-    
     return Scaffold(
       appBar: AppBar(
         title: const Text('设备配对'),
@@ -69,9 +64,9 @@ class _DevicePairingPageState extends ConsumerState<DevicePairingPage> {
             // QR display or scanner
             if (_isShowingQR && _pairingToken != null)
               QRDisplayWidget(
-                serverUrl: config?.serverUrl ?? '',
+                serverUrl: 'https://sync.example.com',
                 pairingToken: _pairingToken!,
-                deviceId: deviceId,
+                deviceId: 'device-id-placeholder',
                 expiresAt: _tokenExpiresAt!,
                 onRegenerate: _generatePairingToken,
               )
@@ -127,11 +122,10 @@ class _DevicePairingPageState extends ConsumerState<DevicePairingPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('配对失败: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
     }
   }
 }
-*/

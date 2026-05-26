@@ -1,5 +1,3 @@
-// DISABLED: sync package is temporarily disabled due to PowerSync compatibility issues
-/*
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -127,7 +125,7 @@ class _QRScannerWidgetState extends State<QRScannerWidget> {
   void _showError(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red),
+        SnackBar(content: Text(message), backgroundColor: Theme.of(context).colorScheme.error),
       );
       _scanned = false;
       _controller.start();
@@ -149,4 +147,3 @@ class QRPairingData {
     required this.timestamp,
   });
 }
-*/

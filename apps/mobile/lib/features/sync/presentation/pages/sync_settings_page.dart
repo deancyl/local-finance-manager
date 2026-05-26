@@ -1,29 +1,30 @@
-// DISABLED: sync package is temporarily disabled
-/*
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import 'package:sync/sync.dart';
-import '../../data/sync_provider.dart';
+import '../../data/sync_feature_flag.dart';
+import '../../data/sync_providers.dart';
 import '../widgets/sync_status_card.dart';
 import '../widgets/device_list_tile.dart';
-import 'sync_login_page.dart';
 
-/// Sync settings page.
+/// Sync settings page with feature flag support.
 /// 
-/// Provides UI for configuring sync server, viewing sync status,
-/// managing devices, and triggering manual sync operations.
+/// Provides UI for:
+/// - Enabling/disabling sync feature
+/// - Viewing compatibility status
+/// - Viewing diagnostic information
+/// - Managing sync connections
 class SyncSettingsPage extends ConsumerWidget {
   const SyncSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isEnabled = ref.watch(syncFeatureFlagProvider);
+    final diagnosticAsync = ref.watch(syncDiagnosticProvider);
+    final canEnableAsync = ref.watch(canEnableSyncProvider);
     final statusAsync = ref.watch(syncStatusProvider);
-    final progressAsync = ref.watch(syncProgressProvider);
     final devicesAsync = ref.watch(registeredDevicesProvider);
-    final isConfigured = ref.watch(isSyncEnabledProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -32,40 +33,50 @@ class SyncSettingsPage extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Server configuration section
-          _buildServerConfigSection(context, ref, isConfigured),
+          // Feature toggle section
+          _buildFeatureToggleSection(context, ref, isEnabled, canEnableAsync),
           
           const SizedBox(height: 24),
           
-          // Sync status card
-          SyncStatusCard(
-            status: statusAsync,
-            progress: progressAsync,
-          ),
+          // Compatibility status (shown when trying to enable)
+          if (!isEnabled) ...[
+            _buildCompatibilitySection(context, ref, canEnableAsync),
+            const SizedBox(height: 24),
+          ],
           
-          const SizedBox(height: 24),
+          // Sync status card (only shown when enabled)
+          if (isEnabled) ...[
+            SyncStatusCard(
+              status: statusAsync,
+              progress: ref.watch(syncProgressProvider),
+            ),
+            const SizedBox(height: 24),
+          ],
           
-          // Sync actions
-          _buildSyncActionsSection(context, ref, statusAsync),
+          // Sync actions (only shown when enabled)
+          if (isEnabled) ...[
+            _buildSyncActionsSection(context, ref, statusAsync),
+            const SizedBox(height: 24),
+          ],
           
-          const SizedBox(height: 24),
+          // Registered devices (only shown when enabled)
+          if (isEnabled) ...[
+            _buildDevicesSection(context, ref, devicesAsync),
+            const SizedBox(height: 24),
+          ],
           
-          // Registered devices
-          _buildDevicesSection(context, ref, devicesAsync),
-          
-          const SizedBox(height: 24),
-          
-          // Logout button (if authenticated)
-          if (isConfigured) _buildLogoutSection(context, ref),
+          // Diagnostic info
+          _buildDiagnosticSection(context, ref, diagnosticAsync),
         ],
       ),
     );
   }
 
-  Widget _buildServerConfigSection(
+  Widget _buildFeatureToggleSection(
     BuildContext context,
     WidgetRef ref,
-    bool isConfigured,
+    bool isEnabled,
+    AsyncValue<SyncEnableCheckResult> canEnableAsync,
   ) {
     return Card(
       child: Padding(
@@ -76,12 +87,100 @@ class SyncSettingsPage extends ConsumerWidget {
             Row(
               children: [
                 Icon(
-                  Icons.dns,
+                  Icons.sync,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '同步功能',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Switch(
+                  value: isEnabled,
+                  onChanged: (value) async {
+                    if (value) {
+                      // Check if we can enable sync
+                      final canEnable = await ref.read(canEnableSyncProvider.future);
+                      if (canEnable.canEnable) {
+                        await ref.read(syncFeatureFlagProvider.notifier).setEnabled(true);
+                      } else {
+                        // Show dialog explaining why sync cannot be enabled
+                        if (context.mounted) {
+                          _showCannotEnableDialog(context, canEnable);
+                        }
+                      }
+                    } else {
+                      await ref.read(syncFeatureFlagProvider.notifier).setEnabled(false);
+                    }
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isEnabled 
+                  ? '同步功能已启用，可以跨设备同步数据'
+                  : '同步功能已禁用，数据仅存储在本地',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (!isEnabled) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '启用同步前需要检查系统兼容性',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompatibilitySection(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<SyncEnableCheckResult> canEnableAsync,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.check_circle_outline,
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  '服务器配置',
+                  '兼容性检查',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -89,31 +188,69 @@ class SyncSettingsPage extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 16),
-            
-            if (!isConfigured) ...[
-              Text(
-                '尚未配置同步服务器',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+            canEnableAsync.when(
+              data: (result) {
+                if (result.canEnable) {
+                  return Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '系统兼容，可以启用同步功能',
+                          style: TextStyle(color: Colors.green),
+                        ),
+                      ),
+                    ],
+                  );
+                } else {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.warning,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '存在兼容性问题',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (result.reason != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          result.reason!,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ],
+                  );
+                }
+              },
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
                 ),
               ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () => context.go('/settings/sync/login'),
-                icon: const Icon(Icons.login),
-                label: const Text('登录 / 注册'),
-              ),
-            ] else ...[
-              ListTile(
-                leading: const Icon(Icons.link),
-                title: const Text('服务器地址'),
-                subtitle: const Text('已配置'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () => _showServerUrlDialog(context, ref),
+              error: (error, _) => Text(
+                '检查失败: $error',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
                 ),
               ),
-            ],
+            ),
           ],
         ),
       ),
@@ -299,55 +436,150 @@ class SyncSettingsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildLogoutSection(BuildContext context, WidgetRef ref) {
+  Widget _buildDiagnosticSection(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<SyncDiagnosticReport?> diagnosticAsync,
+  ) {
     return Card(
-      child: ListTile(
-        leading: Icon(
-          Icons.logout,
-          color: Theme.of(context).colorScheme.error,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.analytics_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '诊断信息',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            diagnosticAsync.when(
+              data: (report) {
+                if (report == null) {
+                  return Text(
+                    '同步功能未启用，无法获取诊断信息',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  );
+                }
+                
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildDiagnosticItem(
+                      context,
+                      'PowerSync',
+                      report.powerSyncAvailable,
+                    ),
+                    _buildDiagnosticItem(
+                      context,
+                      'Schema',
+                      report.schemaCompatible,
+                    ),
+                    _buildDiagnosticItem(
+                      context,
+                      'Network',
+                      report.networkConnected,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      report.summary,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                );
+              },
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              error: (error, _) => Text(
+                '获取诊断信息失败: $error',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ),
+          ],
         ),
-        title: Text(
-          '退出登录',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.error,
-          ),
-        ),
-        subtitle: const Text('清除同步配置并退出'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => _showLogoutDialog(context, ref),
       ),
     );
   }
 
-  void _showServerUrlDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
-    
+  Widget _buildDiagnosticItem(
+    BuildContext context,
+    String name,
+    bool success,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            success ? Icons.check_circle : Icons.cancel,
+            size: 20,
+            color: success ? Colors.green : Theme.of(context).colorScheme.error,
+          ),
+          const SizedBox(width: 8),
+          Text(name),
+        ],
+      ),
+    );
+  }
+
+  void _showCannotEnableDialog(
+    BuildContext context,
+    SyncEnableCheckResult result,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('修改服务器地址'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: '服务器 URL',
-            hintText: 'https://sync.example.com',
-            border: OutlineInputBorder(),
-          ),
+        title: const Text('无法启用同步'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(result.reason ?? '存在兼容性问题'),
+            if (result.diagnosticReport != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                '失败的检查项:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              ...result.diagnosticReport!.failedChecks.map(
+                (check) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    children: [
+                      Icon(Icons.close, size: 16, color: Colors.red),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(check.checkName)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
-              // Save new server URL
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('服务器地址已更新')),
-              );
-            },
-            child: const Text('保存'),
+            child: const Text('确定'),
           ),
         ],
       ),
@@ -377,38 +609,4 @@ class SyncSettingsPage extends ConsumerWidget {
       const SnackBar(content: Text('已断开连接')),
     );
   }
-
-  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('退出登录'),
-        content: const Text('确定要退出同步账户吗？这将清除所有同步配置。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              
-              // Logout and clear config
-              await SyncConfig.clearStorage();
-              ref.invalidate(syncConfigProvider);
-              
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('已退出登录')),
-              );
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: const Text('退出'),
-          ),
-        ],
-      ),
-    );
-  }
 }
-*/

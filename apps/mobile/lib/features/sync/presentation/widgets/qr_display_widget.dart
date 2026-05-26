@@ -1,5 +1,3 @@
-// DISABLED: sync package is temporarily disabled due to PowerSync compatibility issues
-/*
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -272,4 +270,3 @@ class QRDisplayWidget extends StatelessWidget {
     return '${minutes.round()} 分钟';
   }
 }
-*/
