@@ -8,3 +8,4 @@ export 'src/connector/backend_connector.dart';
 export 'src/models/sync_models.dart';
 export 'src/websocket/sync_websocket.dart';
 export 'src/websocket/notification_models.dart';
+export 'src/compatibility/sync_compatibility_checker.dart';
