@@ -41,11 +41,12 @@ import '../../features/templates/presentation/pages/template_list_page.dart' hid
 import '../../features/templates/presentation/template_page.dart';
 import '../../features/templates/data/template_provider.dart' show TemplateModel;
 import '../../features/dashboard/presentation/pages/analytics_dashboard_page.dart';
-// Sync temporarily disabled - PowerSync compatibility issues
-// import '../../features/sync/presentation/pages/sync_settings_page.dart';
-// import '../../features/sync/presentation/pages/sync_login_page.dart';
-// import '../../features/sync/presentation/pages/device_pairing_page.dart';
-// import '../../features/sync/presentation/pages/offline_queue_page.dart';
+// Sync with feature flag support
+import '../../features/sync/presentation/pages/sync_settings_page.dart';
+import '../../features/sync/presentation/pages/sync_login_page.dart';
+import '../../features/sync/presentation/pages/device_pairing_page.dart';
+import '../../features/sync/presentation/pages/offline_queue_page.dart';
+import '../../features/sync/data/sync_feature_flag.dart';
 import '../presentation/pages/home_page.dart';
 import '../presentation/pages/main_shell.dart';
 
@@ -314,27 +315,27 @@ GoRouter _createRouter(Ref ref) {
           );
         },
       ),
-      // Sync routes temporarily disabled
-      // GoRoute(
-      //   path: '/settings/sync',
-      //   name: 'sync-settings',
-      //   builder: (context, state) => const SyncSettingsPage(),
-      // ),
-      // GoRoute(
-      //   path: '/settings/sync/login',
-      //   name: 'sync-login',
-      //   builder: (context, state) => const SyncLoginPage(),
-      // ),
-      // GoRoute(
-      //   path: '/settings/sync/pairing',
-      //   name: 'sync-pairing',
-      //   builder: (context, state) => const DevicePairingPage(),
-      // ),
-      // GoRoute(
-      //   path: '/settings/sync/queue',
-      //   name: 'sync-queue',
-      //   builder: (context, state) => const OfflineQueuePage(),
-      // ),
+      // Sync routes - protected by feature flag
+      GoRoute(
+        path: '/settings/sync',
+        name: 'sync-settings',
+        builder: (context, state) => const SyncSettingsPage(),
+      ),
+      GoRoute(
+        path: '/settings/sync/login',
+        name: 'sync-login',
+        builder: (context, state) => const SyncLoginPage(),
+      ),
+      GoRoute(
+        path: '/settings/sync/pairing',
+        name: 'sync-pairing',
+        builder: (context, state) => const DevicePairingPage(),
+      ),
+      GoRoute(
+        path: '/settings/sync/queue',
+        name: 'sync-queue',
+        builder: (context, state) => const OfflineQueuePage(),
+      ),
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(

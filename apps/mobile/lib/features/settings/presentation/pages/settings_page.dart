@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class SettingsPage extends StatelessWidget {
+import '../../../sync/data/sync_providers.dart';
+
+class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isSyncEnabled = ref.watch(syncFeatureFlagProvider);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('设置'),
@@ -29,6 +34,21 @@ class SettingsPage extends StatelessWidget {
             onTap: () => context.push('/settings/language'),
           ),
           const Divider(),
+          // Sync settings (with feature flag toggle)
+          ListTile(
+            leading: Icon(
+              Icons.sync,
+              color: isSyncEnabled 
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.outline,
+            ),
+            title: const Text('同步设置'),
+            subtitle: Text(
+              isSyncEnabled ? '同步功能已启用' : '同步功能已禁用',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/sync'),
+          ),
           // Security settings
           ListTile(
             leading: const Icon(Icons.security),
@@ -108,7 +128,7 @@ class SettingsPage extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('关于'),
-            subtitle: const Text('版本 0.3.119'),
+            subtitle: const Text('版本 0.3.121'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/about'),
           ),
