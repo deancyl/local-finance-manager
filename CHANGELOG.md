@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.141] - 2026-05-27
+
+### Changed
+- **Version Bump**: Updated version from 0.3.121 to 0.3.141
+- **Development Cycle**: Started v0.3.141-v0.3.160 development cycle
+- Focus on Android/Windows platform optimization and core functionality
+
+### Planned
+- Flutter 3.32+ upgrade for 16KB page alignment
+- Android Gradle Plugin 8.5+ and NDK r28+ upgrade
+- Release signing configuration
+- Test suite restoration
+- Windows build optimization
+- AI budget recommendations and anomaly detection
+
 ## [v0.3.140] - 2026-05-27
 
 ### Added
