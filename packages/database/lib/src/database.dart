@@ -18,6 +18,7 @@ import 'tables/transaction_templates.dart';
 import 'tables/investment_holdings.dart';
 import 'tables/investment_transactions.dart';
 import 'tables/draft_transactions.dart';
+import 'tables/journal_entries.dart';
 
 part 'database.g.dart';
 part 'daos/accounts_dao.dart';
@@ -63,6 +64,8 @@ part 'daos/draft_transactions_dao.dart';
     InvestmentHoldings,
     InvestmentTransactions,
     DraftTransactions,
+    JournalEntries,
+    JournalEntryLines,
   ],
 )
 class LocalFinanceDatabase extends _$LocalFinanceDatabase {
@@ -91,7 +94,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final DraftTransactionsDao draftTransactionsDao = DraftTransactionsDao(this);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration {
