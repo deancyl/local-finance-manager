@@ -38,9 +38,9 @@ jobs:
       - name: Run analysis
         run: melos run analyze
       
-      # Tests disabled - pre-existing failures require deeper investigation
-      # - name: Run tests
-      #   run: melos run test
+      # Run tests (excluding sync packages that require PowerSync)
+      - name: Run tests
+        run: melos exec --ignore="sync" --ignore="sync_server" --dir-exists=test -- "flutter test --coverage"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
