@@ -12,6 +12,9 @@ import 'currency_conversion_service.dart';
 /// As-of date for balance sheet (defaults to now)
 final balanceSheetAsOfDateProvider = StateProvider<DateTime>((ref) => DateTime.now());
 
+/// Data source for balance sheet (splits or journal entries)
+final balanceSheetSourceProvider = StateProvider<BalanceSheetSource>((ref) => BalanceSheetSource.splits);
+
 // ============================================================
 // BALANCE SHEET DATA PROVIDER
 // ============================================================
@@ -43,6 +46,7 @@ class BalanceSheetNotifier extends AsyncNotifier<BalanceSheet?> {
   Future<BalanceSheet> _fetch() async {
     final asOfDate = ref.read(balanceSheetAsOfDateProvider);
     final targetCurrency = ref.read(reportCurrencyProvider);
+    final source = ref.read(balanceSheetSourceProvider);
 
     // Get all accounts using accountsDao
     final accountsData = await _db.accountsDao.getAll();
@@ -68,7 +72,35 @@ class BalanceSheetNotifier extends AsyncNotifier<BalanceSheet?> {
       liquidityType: _parseLiquidityType(acc.liquidityType),
     )).toList();
 
-    // Get raw balances from BalanceSheetDao (preferred) or splitsDao as fallback
+    List<AccountBalanceRaw> balances;
+
+    if (source == BalanceSheetSource.journalEntries) {
+      // Use journal entries as data source
+      balances = await _getBalancesFromJournalEntries(accounts, asOfDate, targetCurrency);
+    } else {
+      // Use splits/balance sheet DAO as data source (default)
+      balances = await _getBalancesFromSplits(accounts, asOfDate, targetCurrency);
+    }
+
+    // Calculate balance sheet
+    final balanceSheet = await _calculator.calculate(
+      accounts: accounts,
+      balances: balances,
+      asOfDate: asOfDate,
+    );
+
+    // Update state
+    state = AsyncValue.data(balanceSheet);
+    
+    return balanceSheet;
+  }
+
+  /// Get balances from splits/balance sheet DAO
+  Future<List<AccountBalanceRaw>> _getBalancesFromSplits(
+    List<Account> accounts,
+    DateTime asOfDate,
+    String targetCurrency,
+  ) async {
     List<AccountBalanceRaw> balances;
     
     try {
@@ -92,17 +124,63 @@ class BalanceSheetNotifier extends AsyncNotifier<BalanceSheet?> {
       );
     }
 
-    // Calculate balance sheet
-    final balanceSheet = await _calculator.calculate(
-      accounts: accounts,
-      balances: balances,
-      asOfDate: asOfDate,
+    return balances;
+  }
+
+  /// Get balances from journal entries (double-entry bookkeeping)
+  Future<List<AccountBalanceRaw>> _getBalancesFromJournalEntries(
+    List<Account> accounts,
+    DateTime asOfDate,
+    String targetCurrency,
+  ) async {
+    final journalBalances = await _db.getJournalAccountBalances(
+      endDate: asOfDate,
     );
 
-    // Update state
-    state = AsyncValue.data(balanceSheet);
-    
-    return balanceSheet;
+    final accountMap = <String, Account>{
+      for (final a in accounts) a.id: a,
+    };
+
+    final balances = <AccountBalanceRaw>[];
+
+    for (final jb in journalBalances) {
+      final account = accountMap[jb.accountId];
+      if (account == null) continue;
+
+      var debitNum = jb.debitAmount;
+      var creditNum = jb.creditAmount;
+      var denom = 100; // Journal amounts are in cents
+
+      // Convert to target currency if needed
+      if (account.commodityId != targetCurrency) {
+        final debitAmount = debitNum / denom.toDouble();
+        final creditAmount = creditNum / denom.toDouble();
+        
+        final convertedDebit = await _currencyService.convertOrDefault(
+          debitAmount,
+          account.commodityId,
+          targetCurrency,
+        );
+        final convertedCredit = await _currencyService.convertOrDefault(
+          creditAmount,
+          account.commodityId,
+          targetCurrency,
+        );
+        
+        // Convert back to integer (using 100 as denominator for cents)
+        debitNum = (convertedDebit * 100).round();
+        creditNum = (convertedCredit * 100).round();
+      }
+
+      balances.add(AccountBalanceRaw(
+        accountId: jb.accountId,
+        debitNum: debitNum,
+        creditNum: creditNum,
+        denom: denom,
+      ));
+    }
+
+    return balances;
   }
 
   /// Convert BalanceSheetAccountData to AccountBalanceRaw with currency conversion
@@ -252,4 +330,19 @@ class BalanceSheetNotifier extends AsyncNotifier<BalanceSheet?> {
     ref.read(reportCurrencyProvider.notifier).state = currencyId;
     await refresh();
   }
+
+  /// Set data source and refresh
+  Future<void> setSource(BalanceSheetSource source) async {
+    ref.read(balanceSheetSourceProvider.notifier).state = source;
+    await refresh();
+  }
+}
+
+/// Data source for balance sheet calculation
+enum BalanceSheetSource {
+  /// Traditional splits/transactions approach
+  splits,
+  
+  /// Double-entry journal entries approach
+  journalEntries,
 }

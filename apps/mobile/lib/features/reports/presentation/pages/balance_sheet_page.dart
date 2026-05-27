@@ -5,6 +5,7 @@ import 'package:core/core.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../data/balance_sheet_provider.dart';
+import '../../data/balance_sheet_provider.dart' show BalanceSheetSource;
 import '../../data/currency_conversion_service.dart';
 import '../../../currency/data/currency_provider.dart';
 import '../widgets/balance_sheet_section.dart';
@@ -30,6 +31,7 @@ class BalanceSheetPage extends ConsumerStatefulWidget {
 
 class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
   late DateTime _asOfDate;
+  BalanceSheetSource _dataSource = BalanceSheetSource.splits;
 
   @override
   void initState() {
@@ -45,6 +47,7 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
 
   Future<void> _loadData() async {
     await ref.read(balanceSheetProvider.notifier).setAsOfDate(_asOfDate);
+    await ref.read(balanceSheetProvider.notifier).setSource(_dataSource);
   }
 
   Future<void> _selectAsOfDate() async {
@@ -164,6 +167,54 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Data source selector
+          Row(
+            children: [
+              Icon(
+                Icons.source,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '数据来源',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSourceChip(
+                  context,
+                  label: '交易记录',
+                  isSelected: _dataSource == BalanceSheetSource.splits,
+                  onTap: () {
+                    setState(() => _dataSource = BalanceSheetSource.splits);
+                    _loadData();
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildSourceChip(
+                  context,
+                  label: '记账凭证',
+                  isSelected: _dataSource == BalanceSheetSource.journalEntries,
+                  onTap: () {
+                    setState(() => _dataSource = BalanceSheetSource.journalEntries);
+                    _loadData();
+                  },
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          
           // Date selector row
           Row(
             children: [
@@ -263,6 +314,44 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSourceChip(
+    BuildContext context, {
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? theme.colorScheme.primaryContainer
+              : theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.outline,
+          ),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            color: isSelected
+                ? theme.colorScheme.onPrimaryContainer
+                : theme.colorScheme.onSurface,
+          ),
+        ),
       ),
     );
   }
