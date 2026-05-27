@@ -5,24 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.3.156] - 2026-05-27
+## [v0.3.145] - 2026-05-27
 
 ### Added
-- **PowerSync Re-integration Preparation**: Documentation and code structure preparation
-  - Created `docs/powersync-reintegration-plan.md` with Flutter 3.29+ requirements
-  - Documented API compatibility requirements for PowerSync package
-  - Prepared sync module structure for future Flutter SDK upgrade
-  - Added placeholder configuration for Flutter 3.29+ compatibility check
+- **Android Release Signing Configuration**: Added release signing configuration framework
+  - Created `docs/android-signing.md` with complete signing guide
+  - Added `key.properties.example` template for signing configuration
+  - Updated `build.gradle` with release signing config
+  - Conditional signing: uses release keys if key.properties exists, otherwise debug keys
+  - CI/CD integration documentation for GitHub Actions secrets
 
 ### Changed
-- Updated sync module documentation to reflect Flutter SDK requirements
-- Version bump from 0.3.144 to 0.3.156
+- Version bump from 0.3.144 to 0.3.145
+- Release builds now support proper signing configuration
+- Added minifyEnabled for release builds
 
 ### Technical Details
-- PowerSync requires Dart SDK >=3.10.0 (Flutter 3.29+)
-- Current Flutter 3.32.0 meets PowerSync requirements
-- Sync feature can be re-enabled after Flutter SDK upgrade validation
-- Prepared migration path documentation for PowerSync API changes
+- Keystore properties loaded from `android/key.properties`
+- Signing config checks for file existence before applying
+- ProGuard configuration enabled for release builds
+- Documentation includes Play Store upload workflow
 
 ## [v0.3.144] - 2026-05-27
 

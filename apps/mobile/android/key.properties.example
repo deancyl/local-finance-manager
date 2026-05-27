@@ -1,0 +1,7 @@
+# Add your keystore passwords here
+# DO NOT commit this file to version control!
+
+storePassword=your_keystore_password_here
+keyPassword=your_key_password_here
+keyAlias=finance-app-release
+storeFile=release-keystore.jks
