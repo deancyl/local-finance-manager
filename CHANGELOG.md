@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.144] - 2026-05-27
+
+### Added
+- **16KB Page Alignment Verification**: Added ELF alignment verification script
+  - `scripts/check_elf_alignment.sh` - Verifies all .so files are 16KB aligned
+  - Required for Android 15+ Google Play compliance
+  - Documentation in `docs/android-16kb-alignment.md`
+- Created comprehensive guide for 16KB page alignment troubleshooting
+
+### Changed
+- All build tooling now complies with Android 15+ requirements
+
 ## [v0.3.143] - 2026-05-27
 
 ### Changed
