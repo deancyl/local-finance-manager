@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.150] - 2026-05-27
+
+### Added
+- **Android 17 Memory Optimization**: Memory optimization strategies for Android 17+
+  - Created `docs/android-17-memory-optimization.md`
+  - Image cache optimization with 50MB limit
+  - ListView lazy loading patterns
+  - Memory pressure handling
+
+### Changed
+- Version bump from 0.3.149 to 0.3.150
+
 ## [v0.3.149] - 2026-05-27
 
 ### Added
