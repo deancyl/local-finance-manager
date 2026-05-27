@@ -6,8 +6,23 @@ import 'package:core/core.dart';
 import '../../accounts/data/account_provider.dart';
 
 // ============================================================
+// DATA SOURCE ENUM
+// ============================================================
+
+/// Data source for income statement calculation.
+enum IncomeStatementSource {
+  /// Use transactions table (single-entry).
+  transactions,
+  /// Use journal entries table (double-entry).
+  journalEntries,
+}
+
+// ============================================================
 // DATE RANGE STATE PROVIDERS
 // ============================================================
+
+/// Data source for income statement.
+final incomeStatementSourceProvider = StateProvider<IncomeStatementSource>((ref) => IncomeStatementSource.transactions);
 
 /// Start date for income statement filtering (null = all time)
 final incomeStatementStartDateProvider = StateProvider<DateTime?>((ref) => null);
@@ -54,6 +69,7 @@ class IncomeStatementNotifier extends AsyncNotifier<IncomeStatementWithCompariso
     final startDate = ref.read(incomeStatementStartDateProvider);
     final endDate = ref.read(incomeStatementEndDateProvider);
     final comparisonType = ref.read(incomeStatementComparisonTypeProvider);
+    final source = ref.read(incomeStatementSourceProvider);
 
     // Get all accounts
     final accountsData = await _db.accountsDao.getAll();
@@ -78,20 +94,8 @@ class IncomeStatementNotifier extends AsyncNotifier<IncomeStatementWithCompariso
       version: acc.version,
     )).toList();
 
-    // Get raw balances from the new DAO
-    final rawBalances = await _db.incomeStatementDao.getIncomeStatementBalances(
-      startDate: startDate,
-      endDate: endDate,
-    );
-
-    // Convert to core AccountBalanceRaw
-    final balances = rawBalances.map((raw) {
-      return AccountBalanceRaw(
-        accountId: raw.accountId,
-        debitNum: raw.expenseNum, // expense is debit
-        creditNum: raw.incomeNum, // income is credit
-        denom: raw.denom,
-      );
+    // Get balances based on data source
+    final balances = await _getBalances(source, startDate, endDate);
     }).toList();
 
     // Calculate current period income statement
@@ -112,19 +116,7 @@ class IncomeStatementNotifier extends AsyncNotifier<IncomeStatementWithCompariso
       );
 
       if (comparisonDates != null) {
-        final previousBalances = await _db.incomeStatementDao.getIncomeStatementBalances(
-          startDate: comparisonDates.$1,
-          endDate: comparisonDates.$2,
-        );
-
-        final prevBalances = previousBalances.map((raw) {
-          return AccountBalanceRaw(
-            accountId: raw.accountId,
-            debitNum: raw.expenseNum,
-            creditNum: raw.incomeNum,
-            denom: raw.denom,
-          );
-        }).toList();
+        final prevBalances = await _getBalances(source, comparisonDates.$1, comparisonDates.$2);
 
         previousStatement = await _calculator.calculate(
           accounts: accounts,
@@ -146,6 +138,43 @@ class IncomeStatementNotifier extends AsyncNotifier<IncomeStatementWithCompariso
     state = AsyncValue.data(result);
     
     return result;
+  }
+
+  /// Get balances based on data source.
+  Future<List<AccountBalanceRaw>> _getBalances(
+    IncomeStatementSource source,
+    DateTime? startDate,
+    DateTime? endDate,
+  ) async {
+    switch (source) {
+      case IncomeStatementSource.transactions:
+        final rawBalances = await _db.incomeStatementDao.getIncomeStatementBalances(
+          startDate: startDate,
+          endDate: endDate,
+        );
+        return rawBalances.map((raw) {
+          return AccountBalanceRaw(
+            accountId: raw.accountId,
+            debitNum: raw.expenseNum,
+            creditNum: raw.incomeNum,
+            denom: raw.denom,
+          );
+        }).toList();
+
+      case IncomeStatementSource.journalEntries:
+        final journalBalances = await _db.journalEntriesDao.getJournalAccountBalances(
+          startDate: startDate,
+          endDate: endDate,
+        );
+        return journalBalances.map((jb) {
+          return AccountBalanceRaw(
+            accountId: jb.accountId,
+            debitNum: jb.debitAmount,
+            creditNum: jb.creditAmount,
+            denom: 100,
+          );
+        }).toList();
+    }
   }
 
   /// Get comparison dates based on comparison type
