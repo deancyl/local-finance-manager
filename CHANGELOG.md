@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.149] - 2026-05-27
+
+### Added
+- **SQLCipher Background Isolate**: Background isolate database access configuration
+  - Created `docs/sqlcipher-background-isolate.md` with isolate-safe patterns
+  - IsolateDatabaseService for background database operations
+  - Encryption key management for isolates
+  - WAL mode configuration for concurrent access
+
+### Changed
+- Version bump from 0.3.148 to 0.3.149
+
 ## [v0.3.148] - 2026-05-27
 
 ### Added
