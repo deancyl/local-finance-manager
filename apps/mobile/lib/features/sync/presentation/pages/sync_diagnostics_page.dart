@@ -6,6 +6,7 @@ import '../../data/sync_providers.dart';
 import '../../data/sync_feature_flag.dart';
 import '../../data/websocket_provider.dart';
 import '../../data/offline_queue_service.dart';
+import '../../data/offline_queue_model.dart';
 import '../../data/sync_error_recovery.dart';
 
 final _log = Logger('SyncDiagnostics');

@@ -5,6 +5,7 @@ import 'package:sync/sync.dart';
 import '../../data/sync_providers.dart';
 import '../../data/websocket_provider.dart';
 import '../../data/offline_queue_service.dart';
+import '../../data/offline_queue_model.dart';
 
 /// Sync status indicator for AppBar.
 /// 

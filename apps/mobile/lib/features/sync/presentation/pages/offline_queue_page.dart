@@ -43,10 +43,10 @@ class OfflineQueuePage extends ConsumerWidget {
                   title: Text('清除失败项'),
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'retry_all',
                 enabled: summary.hasFailedItems,
-                child: ListTile(
+                child: const ListTile(
                   leading: Icon(Icons.refresh),
                   title: Text('重试所有失败项'),
                 ),

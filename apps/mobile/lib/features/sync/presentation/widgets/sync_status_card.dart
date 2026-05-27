@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:sync/sync.dart';
 import '../../data/websocket_provider.dart';
 import '../../data/offline_queue_service.dart';
+import '../../data/offline_queue_model.dart';
 
 /// Card widget displaying sync status and progress.
 /// 
