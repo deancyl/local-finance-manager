@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.160] - 2026-05-27
+
+### Added
+- **Release Candidate**: Final version of v0.3.156-160 development cycle
+  - Created `docs/RELEASE_v0.3.160.md` with comprehensive release notes
+  - Documented all features from v0.3.144-160 cumulative releases
+  - Platform support matrix
+  - Known issues documentation
+  - Upgrade instructions
+
+### Changed
+- Version bump from 0.3.159 to 0.3.160 (final release version)
+
+### Technical Details
+- Release notes cover all major features: Android 15+ compliance, double-entry bookkeeping, AI integration, investment tracking, export formats, multi-currency, budgets, tags
+- Platform support documented for Android/iOS/Web/Windows/macOS/Linux
+- Known issues documented for sync, Windows build, and test suite
+- Next steps planned for v0.3.161+ and v0.4.0
+
 ## [v0.3.159] - 2026-05-27
 
 ### Added
