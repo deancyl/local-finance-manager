@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.158] - 2026-05-27
+
+### Added
+- **Documentation Update**: Comprehensive README and documentation updates
+  - Updated README.md with v0.3.144 and v0.3.156-160 roadmap items
+  - Added Flutter 3.32.0 upgrade documentation
+  - Added AGP 8.5.2 and Kotlin 2.0.21 upgrade notes
+  - Updated development progress tracking
+
+### Changed
+- Version bump from 0.3.157 to 0.3.158
+
+### Technical Details
+- README reflects all completed milestones
+- Roadmap updated with Android 15+ compliance achievements
+- Development cycle documentation complete
+
+## [v0.3.157] - 2026-05-27
+
+### Added
+- **Performance Profiling Tools Configuration**: Added profiling configuration and documentation
+  - Created `docs/performance-profiling.md` with profiling best practices
+  - Documented Flutter DevTools profiling workflow
+  - Added performance benchmark configuration
+  - Memory profiling guidelines for mobile platforms
+  - Database query profiling setup
+
+### Changed
+- Version bump from 0.3.156 to 0.3.157
+
+### Technical Details
+- Flutter DevTools integration for CPU and memory profiling
+- Database query timing and optimization tracking
+- Memory leak detection configuration
+- Performance baseline documentation for future optimization
+
+## [v0.3.156] - 2026-05-27
+
+### Added
+- **PowerSync Re-integration Preparation**: Documentation and code structure preparation
+  - Created `docs/powersync-reintegration-plan.md` with Flutter 3.29+ requirements
+  - Documented API compatibility requirements for PowerSync package
+  - Prepared sync module structure for future Flutter SDK upgrade
+  - Added placeholder configuration for Flutter 3.29+ compatibility check
+
+### Changed
+- Updated sync module documentation to reflect Flutter SDK requirements
+- Version bump from 0.3.144 to 0.3.156
+
+### Technical Details
+- PowerSync requires Dart SDK >=3.10.0 (Flutter 3.29+)
+- Current Flutter 3.32.0 meets PowerSync requirements
+- Sync feature can be re-enabled after Flutter SDK upgrade validation
+- Prepared migration path documentation for PowerSync API changes
+
 ## [v0.3.145] - 2026-05-27
 
 ### Added
