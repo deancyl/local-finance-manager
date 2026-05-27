@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:sync/sync.dart';
+import '../../data/websocket_provider.dart';
+import '../../data/offline_queue_service.dart';
 
 /// Card widget displaying sync status and progress.
 /// 
 /// Shows current connection status, last sync time,
-/// and pending upload/download counts.
-class SyncStatusCard extends StatelessWidget {
+/// pending upload/download counts, and WebSocket status.
+class SyncStatusCard extends ConsumerWidget {
   /// Current sync status.
   final AsyncValue<SyncStatus> status;
   
@@ -22,7 +24,11 @@ class SyncStatusCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final websocketConnected = ref.watch(websocketConnectedProvider);
+    final websocketAvailable = ref.watch(isWebsocketAvailableProvider);
+    final queueSummary = ref.watch(queueSummaryProvider);
+    
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -47,7 +53,13 @@ class SyncStatusCard extends StatelessWidget {
             const SizedBox(height: 16),
             
             status.when(
-              data: (syncStatus) => _buildStatusContent(context, syncStatus),
+              data: (syncStatus) => _buildStatusContent(
+                context, 
+                syncStatus, 
+                websocketAvailable,
+                websocketConnected,
+                queueSummary,
+              ),
               loading: () => _buildLoadingContent(context),
               error: (error, _) => _buildErrorContent(context, error),
             ),
@@ -57,7 +69,13 @@ class SyncStatusCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusContent(BuildContext context, SyncStatus syncStatus) {
+  Widget _buildStatusContent(
+    BuildContext context, 
+    SyncStatus syncStatus,
+    bool websocketAvailable,
+    bool websocketConnected,
+    OfflineQueueSummary queueSummary,
+  ) {
     final progressData = progress.when(
       data: (p) => p,
       loading: () => null,
@@ -69,11 +87,74 @@ class SyncStatusCard extends StatelessWidget {
         // Status indicator
         _buildStatusIndicator(context, syncStatus),
         
+        const SizedBox(height: 12),
+        
+        // WebSocket status
+        if (websocketAvailable)
+          _buildWebSocketStatus(context, websocketConnected),
+        
+        // Queue status
+        if (queueSummary.totalCount > 0)
+          _buildQueueStatus(context, queueSummary),
+        
         const SizedBox(height: 16),
         
         // Progress details
         if (progressData != null) _buildProgressDetails(context, progressData),
       ],
+    );
+  }
+  
+  Widget _buildWebSocketStatus(BuildContext context, bool connected) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: (connected ? Colors.green : Colors.grey).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            connected ? Icons.sync : Icons.sync_disabled,
+            size: 16,
+            color: connected ? Colors.green : Colors.grey,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            connected ? '实时同步已连接' : '实时同步未连接',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: connected ? Colors.green : Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildQueueStatus(BuildContext context, OfflineQueueSummary summary) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.only(top: 8),
+      decoration: BoxDecoration(
+        color: (summary.hasFailedItems ? Colors.red : Colors.blue).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            summary.hasFailedItems ? Icons.error_outline : Icons.pending_actions,
+            size: 16,
+            color: summary.hasFailedItems ? Colors.red : Colors.blue,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '离线队列: ${summary.pendingCount} 待处理, ${summary.failedCount} 失败',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: summary.hasFailedItems ? Colors.red : Colors.blue,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
