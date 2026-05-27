@@ -4,6 +4,7 @@ import 'package:sync/sync.dart';
 
 import '../../data/sync_providers.dart';
 import '../../data/websocket_provider.dart';
+import '../../data/offline_queue_service.dart';
 
 /// Sync status indicator for AppBar.
 /// 
@@ -17,6 +18,9 @@ class SyncStatusIndicator extends ConsumerWidget {
     final progress = ref.watch(syncProgressProvider);
     final websocketConnected = ref.watch(websocketConnectedProvider);
     final websocketAvailable = ref.watch(isWebsocketAvailableProvider);
+    final queueSummary = ref.watch(queueSummaryProvider);
+    
+    final pendingCount = queueSummary.pendingCount + queueSummary.failedCount;
     
     return Stack(
       alignment: Alignment.center,
@@ -27,21 +31,23 @@ class SyncStatusIndicator extends ConsumerWidget {
             color: _getColor(status, websocketConnected),
           ),
           onPressed: () => _showStatusSheet(context, ref),
-          tooltip: _getTooltip(status, websocketConnected, websocketAvailable),
+          tooltip: _getTooltip(status, websocketConnected, websocketAvailable, pendingCount),
         ),
-        if (_hasPending(progress))
+        if (pendingCount > 0)
           Positioned(
             right: 8,
             top: 8,
             child: Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.error,
+                color: queueSummary.hasFailedItems 
+                    ? Theme.of(context).colorScheme.error
+                    : Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(10),
               ),
               constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               child: Text(
-                '${_getPendingCount(progress)}',
+                '$pendingCount',
                 style: const TextStyle(fontSize: 10, color: Colors.white),
                 textAlign: TextAlign.center,
               ),
@@ -88,7 +94,7 @@ class SyncStatusIndicator extends ConsumerWidget {
     );
   }
   
-  String _getTooltip(AsyncValue<SyncStatus> status, bool websocketConnected, bool websocketAvailable) {
+  String _getTooltip(AsyncValue<SyncStatus> status, bool websocketConnected, bool websocketAvailable, int pendingCount) {
     final baseTooltip = status.when(
       data: (s) => switch (s) {
         SyncStatus.connected => '已连接',
@@ -101,11 +107,17 @@ class SyncStatusIndicator extends ConsumerWidget {
       error: (_, __) => '同步错误',
     );
     
+    final List<String> parts = [baseTooltip];
+    
     if (websocketAvailable) {
-      return '$baseTooltip\n实时同步: ${websocketConnected ? "已连接" : "未连接"}';
+      parts.add('实时同步: ${websocketConnected ? "已连接" : "未连接"}');
     }
     
-    return baseTooltip;
+    if (pendingCount > 0) {
+      parts.add('待同步: $pendingCount 项');
+    }
+    
+    return parts.join('\n');
   }
   
   bool _hasPending(AsyncValue<SyncProgress> progress) {
@@ -134,7 +146,7 @@ class SyncStatusIndicator extends ConsumerWidget {
 
 /// Sync status bottom sheet.
 /// 
-/// Shows detailed sync status including WebSocket connection state.
+/// Shows detailed sync status including WebSocket connection state and offline queue.
 class SyncStatusSheet extends ConsumerWidget {
   const SyncStatusSheet({super.key});
   
@@ -145,6 +157,7 @@ class SyncStatusSheet extends ConsumerWidget {
     final websocketConnected = ref.watch(websocketConnectedProvider);
     final websocketAvailable = ref.watch(isWebsocketAvailableProvider);
     final websocketStatus = ref.watch(websocketStatusDisplayProvider);
+    final queueSummary = ref.watch(queueSummaryProvider);
     
     return Container(
       padding: const EdgeInsets.all(16),
@@ -158,14 +171,32 @@ class SyncStatusSheet extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           status.when(
-            data: (s) => _buildStatusInfo(context, s, progress, websocketAvailable, websocketConnected, websocketStatus),
+            data: (s) => _buildStatusInfo(context, ref, s, progress, websocketAvailable, websocketConnected, websocketStatus, queueSummary),
             loading: () => const Text('加载中...'),
             error: (e, __) => Text('错误: $e'),
           ),
           const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('关闭'),
+                ),
+              ),
+              if (queueSummary.hasPendingItems || queueSummary.hasFailedItems) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      // Navigate to offline queue page
+                    },
+                    child: Text('查看队列 (${queueSummary.totalCount})'),
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -174,11 +205,13 @@ class SyncStatusSheet extends ConsumerWidget {
   
   Widget _buildStatusInfo(
     BuildContext context, 
+    WidgetRef ref,
     SyncStatus status, 
     AsyncValue<SyncProgress> progress,
     bool websocketAvailable,
     bool websocketConnected,
     String websocketStatus,
+    OfflineQueueSummary queueSummary,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,6 +244,37 @@ class SyncStatusSheet extends ConsumerWidget {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
+          ),
+        ],
+        // Offline queue status
+        if (queueSummary.totalCount > 0) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: queueSummary.hasFailedItems 
+                  ? Theme.of(context).colorScheme.errorContainer.withOpacity(0.3)
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  queueSummary.hasFailedItems ? Icons.error_outline : Icons.pending_actions,
+                  size: 16,
+                  color: queueSummary.hasFailedItems 
+                      ? Theme.of(context).colorScheme.error
+                      : Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '离线队列: ${queueSummary.pendingCount} 待处理, ${queueSummary.failedCount} 失败',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
         if (status == SyncStatus.connected) ...[
