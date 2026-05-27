@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.146] - 2026-05-27
+
+### Added
+- **Test Investigation Documentation**: Comprehensive test failure analysis
+  - Created `docs/test-investigation-v0.3.146.md` with detailed analysis
+  - Identified root cause: PowerSync dependency disabled causes sync tests to fail
+  - Categorized all 26 test files by expected failure/pass status
+  - Documented resolution strategy for re-enabling tests
+
+### Changed
+- Version bump from 0.3.145 to 0.3.146
+
 ## [v0.3.145] - 2026-05-27
 
 ### Added
