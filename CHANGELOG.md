@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.159] - 2026-05-27
+
+### Added
+- **Integration Testing Plan**: Comprehensive testing strategy documentation
+  - Created `docs/integration-testing-plan.md` with full testing strategy
+  - Database integration test categories and coverage targets
+  - Import integration tests for all importers
+  - Sync integration tests for server and client
+  - Mobile app integration tests for workflows
+  - CI integration configuration
+  - Test checklist for release criteria
+
+### Changed
+- Version bump from 0.3.158 to 0.3.159
+
+### Technical Details
+- Test coverage targets: core 80%, database 85%, importers 90%, sync 85%
+- Integration tests for transaction, import, budget, account workflows
+- Database migration tests for schema versions v1-v16
+- Importer tests with sample CSV fixtures
+
 ## [v0.3.151] - 2026-05-27
 
 ### Fixed
