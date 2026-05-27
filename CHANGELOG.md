@@ -5,21 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.3.151] - 2026-05-27
+## [v0.3.156] - 2026-05-27
 
-### Fixed
-- **Transaction Edit Page TODO Fix**: Implemented transaction loading functionality
-  - Added database query to load existing transaction data by transactionId
-  - Implemented split data loading for editing transactions
-  - Added loading indicator and error handling
-  - Updated AppBar title to show "编辑交易" when editing
-  - Graceful error handling with user notifications
+### Added
+- **PowerSync Re-integration Preparation**: Documentation and code structure preparation
+  - Created `docs/powersync-reintegration-plan.md` with Flutter 3.29+ requirements
+  - Documented API compatibility requirements for PowerSync package
+  - Prepared sync module structure for future Flutter SDK upgrade
+  - Added placeholder configuration for Flutter 3.29+ compatibility check
+
+### Changed
+- Updated sync module documentation to reflect Flutter SDK requirements
+- Version bump from 0.3.144 to 0.3.156
 
 ### Technical Details
-- `apps/mobile/lib/features/transactions/presentation/pages/add_transaction_page.dart`
-  - Replaced placeholder TODO with actual implementation
-  - Uses TransactionsDao.getById() and getSplits() for data loading
-  - Maintains state with _transaction, _splits, and _isLoading variables
+- PowerSync requires Dart SDK >=3.10.0 (Flutter 3.29+)
+- Current Flutter 3.32.0 meets PowerSync requirements
+- Sync feature can be re-enabled after Flutter SDK upgrade validation
+- Prepared migration path documentation for PowerSync API changes
 
 ## [v0.3.144] - 2026-05-27
 
