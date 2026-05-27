@@ -12,4 +12,6 @@ library ai;
 export 'src/ai_service.dart';
 export 'src/categorization/categorizer.dart';
 export 'src/providers/llm_provider.dart';
+export 'src/providers/ollama_provider.dart';
 export 'src/providers/mock_llm_provider.dart';
+export 'src/models/spending_insights.dart';
