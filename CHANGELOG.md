@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.142] - 2026-05-27
+
+### Changed
+- **Flutter SDK Upgrade**: Upgraded from 3.27.1 to 3.32.0
+  - Required for Android 15+ 16KB page alignment compliance
+  - Updated CI workflows (build-release.yml, test.yml)
+  - Updated melos.yaml environment to Dart SDK >=3.6.0
+- **Dart SDK**: Updated minimum to 3.6.0 for Flutter 3.32 compatibility
+
 ## [v0.3.141] - 2026-05-27
 
 ### Changed

@@ -16,7 +16,7 @@ on:
           - release
 
 env:
-  FLUTTER_VERSION: '3.27.1'
+  FLUTTER_VERSION: '3.32.0'
 
 jobs:
   # Quality gates - run before all builds
