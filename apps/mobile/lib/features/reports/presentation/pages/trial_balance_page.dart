@@ -10,6 +10,7 @@ import '../widgets/balance_summary_card.dart';
 import '../../../export/data/export_service.dart';
 import '../../../export/data/export_provider.dart';
 import '../../../accounts/data/account_provider.dart';
+import '../../data/trial_balance_provider.dart' show TrialBalanceSource;
 
 /// Trial balance report page with date range filtering.
 ///
@@ -25,6 +26,7 @@ class TrialBalancePage extends ConsumerStatefulWidget {
 class _TrialBalancePageState extends ConsumerState<TrialBalancePage> {
   DateTime? _startDate;
   DateTime? _endDate;
+  TrialBalanceSource _dataSource = TrialBalanceSource.splits;
 
   @override
   void initState() {
@@ -42,6 +44,7 @@ class _TrialBalancePageState extends ConsumerState<TrialBalancePage> {
 
   Future<void> _loadData() async {
     await ref.read(trialBalanceProvider.notifier).setDateRange(_startDate, _endDate);
+    await ref.read(trialBalanceProvider.notifier).setSource(_dataSource);
   }
 
   Future<void> _selectStartDate() async {
@@ -149,6 +152,55 @@ class _TrialBalancePageState extends ConsumerState<TrialBalancePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Data source selector
+          Row(
+            children: [
+              Icon(
+                Icons.source,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '数据来源',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSourceChip(
+                  context,
+                  label: '交易记录',
+                  isSelected: _dataSource == TrialBalanceSource.splits,
+                  onTap: () {
+                    setState(() => _dataSource = TrialBalanceSource.splits);
+                    _loadData();
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildSourceChip(
+                  context,
+                  label: '记账凭证',
+                  isSelected: _dataSource == TrialBalanceSource.journalEntries,
+                  onTap: () {
+                    setState(() => _dataSource = TrialBalanceSource.journalEntries);
+                    _loadData();
+                  },
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Date range selector
           Row(
             children: [
               Icon(
@@ -240,6 +292,44 @@ class _TrialBalancePageState extends ConsumerState<TrialBalancePage> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSourceChip(
+    BuildContext context, {
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? theme.colorScheme.primaryContainer
+              : theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.outline,
+          ),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            color: isSelected
+                ? theme.colorScheme.onPrimaryContainer
+                : theme.colorScheme.onSurface,
+          ),
+        ),
       ),
     );
   }

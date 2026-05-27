@@ -260,6 +260,108 @@ extension JournalEntriesDao on LocalFinanceDatabase {
           ..orderBy([(t) => OrderingTerm.desc(t.date)]))
         .get();
   }
+
+  /// Gets account balances from journal entries for trial balance.
+  ///
+  /// Returns a list of account balances with debit and credit totals,
+  /// filtered by date range if provided.
+  Future<List<JournalAccountBalance>> getJournalAccountBalances({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    // Query journal entry lines grouped by account
+    final query = select(journalEntryLines).join([
+      innerJoin(journalEntries, journalEntries.id.equalsExp(journalEntryLines.entryId)),
+    ]);
+
+    // Apply filters
+    query.where(journalEntryLines.isDeleted.equals(false) &
+        journalEntries.isDeleted.equals(false) &
+        journalEntries.isPosted.equals(true) &
+        journalEntries.isReversed.equals(false));
+
+    if (startDate != null) {
+      query.where(journalEntries.date.isBiggerOrEqualValue(startDate));
+    }
+    if (endDate != null) {
+      query.where(journalEntries.date.isSmallerOrEqualValue(endDate));
+    }
+
+    final results = await query.get();
+
+    // Group by account and sum debits/credits
+    final accountBalances = <String, JournalAccountBalance>{};
+    for (final row in results) {
+      final line = row.readTable(journalEntryLines);
+      final accountId = line.accountId;
+
+      if (!accountBalances.containsKey(accountId)) {
+        accountBalances[accountId] = JournalAccountBalance(
+          accountId: accountId,
+          debitAmount: 0,
+          creditAmount: 0,
+        );
+      }
+
+      accountBalances[accountId]!.debitAmount += line.debitAmount;
+      accountBalances[accountId]!.creditAmount += line.creditAmount;
+    }
+
+    return accountBalances.values.toList();
+  }
+
+  /// Gets posted journal entries for a date range.
+  Future<List<JournalEntry>> getPostedJournalEntries({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) {
+    final query = select(journalEntries)
+          ..where((t) =>
+              t.isPosted.equals(true) &
+              t.isDeleted.equals(false) &
+              t.isReversed.equals(false));
+
+    if (startDate != null) {
+      query.where((t) => t.date.isBiggerOrEqualValue(startDate));
+    }
+    if (endDate != null) {
+      query.where((t) => t.date.isSmallerOrEqualValue(endDate));
+    }
+
+    query.orderBy([(t) => OrderingTerm.desc(t.date)]);
+
+    return query.get();
+  }
+
+  /// Gets journal entries count statistics.
+  Future<JournalStats> getJournalStats() async {
+    final totalEntries = await (select(journalEntries)
+          ..where((t) => t.isDeleted.equals(false)))
+        .get()
+        .then((list) => list.length);
+
+    final postedEntries = await (select(journalEntries)
+          ..where((t) => t.isPosted.equals(true) & t.isDeleted.equals(false)))
+        .get()
+        .then((list) => list.length);
+
+    final unpostedEntries = await (select(journalEntries)
+          ..where((t) => t.isPosted.equals(false) & t.isDeleted.equals(false)))
+        .get()
+        .then((list) => list.length);
+
+    final reversedEntries = await (select(journalEntries)
+          ..where((t) => t.isReversed.equals(true) & t.isDeleted.equals(false)))
+        .get()
+        .then((list) => list.length);
+
+    return JournalStats(
+      totalEntries: totalEntries,
+      postedEntries: postedEntries,
+      unpostedEntries: unpostedEntries,
+      reversedEntries: reversedEntries,
+    );
+  }
 }
 
 /// Combined journal entry with its lines.
@@ -282,4 +384,35 @@ class JournalEntryWithLines {
 
   /// Whether the entry is balanced.
   bool get isBalanced => totalDebits == totalCredits;
+}
+
+/// Account balance from journal entries.
+class JournalAccountBalance {
+  final String accountId;
+  int debitAmount;
+  int creditAmount;
+
+  JournalAccountBalance({
+    required this.accountId,
+    required this.debitAmount,
+    required this.creditAmount,
+  });
+
+  /// Net balance (debit - credit).
+  int get netBalance => debitAmount - creditAmount;
+}
+
+/// Journal entry statistics.
+class JournalStats {
+  final int totalEntries;
+  final int postedEntries;
+  final int unpostedEntries;
+  final int reversedEntries;
+
+  const JournalStats({
+    required this.totalEntries,
+    required this.postedEntries,
+    required this.unpostedEntries,
+    required this.reversedEntries,
+  });
 }

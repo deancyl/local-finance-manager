@@ -14,6 +14,9 @@ final trialBalanceStartDateProvider = StateProvider<DateTime?>((ref) => null);
 /// End date for trial balance filtering (null = up to now)
 final trialBalanceEndDateProvider = StateProvider<DateTime?>((ref) => null);
 
+/// Data source for trial balance (splits or journal entries)
+final trialBalanceSourceProvider = StateProvider<TrialBalanceSource>((ref) => TrialBalanceSource.splits);
+
 // ============================================================
 // TRIAL BALANCE DATA PROVIDER
 // ============================================================
@@ -43,6 +46,7 @@ class TrialBalanceNotifier extends AsyncNotifier<TrialBalance?> {
   Future<TrialBalance> _fetch() async {
     final startDate = ref.read(trialBalanceStartDateProvider);
     final endDate = ref.read(trialBalanceEndDateProvider);
+    final source = ref.read(trialBalanceSourceProvider);
 
     // Get all accounts
     final accountsData = await _db.accountsDao.getAll();
@@ -67,27 +71,15 @@ class TrialBalanceNotifier extends AsyncNotifier<TrialBalance?> {
       version: acc.version,
     )).toList();
 
-    // Get raw balances from splits
-    final rawBalances = await _db.splitsDao.getAccountBalances(
-      startDate: startDate,
-      endDate: endDate,
-    );
+    List<AccountBalanceRaw> balances;
 
-    // Convert database AccountBalanceRaw to core AccountBalanceRaw
-    final balances = rawBalances.map((raw) {
-      // Calculate debit and credit from totalNum
-      // In double-entry: positive = credit, negative = debit
-      final totalNum = raw.totalNum;
-      final debitNum = totalNum < 0 ? totalNum.abs() : 0;
-      final creditNum = totalNum > 0 ? totalNum : 0;
-      
-      return AccountBalanceRaw(
-        accountId: raw.accountId,
-        debitNum: debitNum,
-        creditNum: creditNum,
-        denom: raw.valueDenom,
-      );
-    }).toList();
+    if (source == TrialBalanceSource.journalEntries) {
+      // Use journal entries as data source
+      balances = await _getBalancesFromJournalEntries(accounts, startDate, endDate);
+    } else {
+      // Use splits as data source (default)
+      balances = await _getBalancesFromSplits(startDate, endDate);
+    }
 
     // Calculate trial balance
     final trialBalance = await _calculator.calculate(
@@ -101,6 +93,51 @@ class TrialBalanceNotifier extends AsyncNotifier<TrialBalance?> {
     state = AsyncValue.data(trialBalance);
     
     return trialBalance;
+  }
+
+  /// Get balances from splits (traditional single-entry approach)
+  Future<List<AccountBalanceRaw>> _getBalancesFromSplits(
+    DateTime? startDate,
+    DateTime? endDate,
+  ) async {
+    final rawBalances = await _db.splitsDao.getAccountBalances(
+      startDate: startDate,
+      endDate: endDate,
+    );
+
+    return rawBalances.map((raw) {
+      final totalNum = raw.totalNum;
+      final debitNum = totalNum < 0 ? totalNum.abs() : 0;
+      final creditNum = totalNum > 0 ? totalNum : 0;
+      
+      return AccountBalanceRaw(
+        accountId: raw.accountId,
+        debitNum: debitNum,
+        creditNum: creditNum,
+        denom: raw.valueDenom,
+      );
+    }).toList();
+  }
+
+  /// Get balances from journal entries (double-entry bookkeeping)
+  Future<List<AccountBalanceRaw>> _getBalancesFromJournalEntries(
+    List<Account> accounts,
+    DateTime? startDate,
+    DateTime? endDate,
+  ) async {
+    final journalBalances = await _db.getJournalAccountBalances(
+      startDate: startDate,
+      endDate: endDate,
+    );
+
+    // Convert to AccountBalanceRaw format
+    // Journal entries store amounts in cents (100 = 1 yuan)
+    return journalBalances.map((jb) => AccountBalanceRaw(
+      accountId: jb.accountId,
+      debitNum: jb.debitAmount,
+      creditNum: jb.creditAmount,
+      denom: 100, // Amounts are in cents
+    )).toList();
   }
 
   /// Refresh trial balance data
@@ -118,5 +155,33 @@ class TrialBalanceNotifier extends AsyncNotifier<TrialBalance?> {
     ref.read(trialBalanceStartDateProvider.notifier).state = start;
     ref.read(trialBalanceEndDateProvider.notifier).state = end;
     await refresh();
+  }
+
+  /// Set data source and refresh
+  Future<void> setSource(TrialBalanceSource source) async {
+    ref.read(trialBalanceSourceProvider.notifier).state = source;
+    await refresh();
+  }
+}
+
+/// Data source for trial balance calculation
+enum TrialBalanceSource {
+  /// Traditional splits/transactions approach
+  splits,
+  
+  /// Double-entry journal entries approach
+  journalEntries,
+}
+
+/// Extension to get JournalAccountBalances from database
+extension JournalEntriesDaoExtension on LocalFinanceDatabase {
+  Future<List<JournalAccountBalance>> getJournalAccountBalances({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) {
+    return JournalEntriesDao(this).getJournalAccountBalances(
+      startDate: startDate,
+      endDate: endDate,
+    );
   }
 }
