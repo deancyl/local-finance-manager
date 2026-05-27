@@ -5,6 +5,105 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.140] - 2026-05-27
+
+### Added
+- **Performance Optimization Tools**: Complete performance management system
+  - Database statistics monitoring (transactions, accounts, categories, splits)
+  - Query performance metrics with average query time tracking
+  - Cache status monitoring with invalidation tracking
+  - Database VACUUM operation for optimization
+  - Cleanup deleted records functionality
+  - Performance tips and best practices
+- **Final Testing and Release Preparation**
+  - Updated documentation
+  - Version numbering finalized
+
+## [v0.3.139] - 2026-05-27
+
+### Added
+- **Performance Monitoring**: Performance metrics and optimization tools
+  - DbPerformanceMetrics for tracking database statistics
+  - DbPerformanceNotifier for real-time performance monitoring
+  - CacheStats for cache management
+  - Performance settings page with optimization actions
+
+## [v0.3.138] - 2026-05-27
+
+### Added
+- **AI Intelligent Analysis**: AI-powered spending analysis
+  - Spending insights with date range support
+  - Summary card for analysis overview
+  - Insight sections for categories, anomalies, recommendations
+  - Confidence indicator for analysis quality
+  - Graceful degradation when AI unavailable
+
+## [v0.3.137] - 2026-05-27
+
+### Added
+- **AI Category Suggestions**: Smart transaction categorization
+  - AI category suggestions page with batch processing
+  - Confidence badges for suggestion quality
+  - Batch selection and apply functionality
+  - Real-time availability status monitoring
+
+## [v0.3.136] - 2026-05-27
+
+### Added
+- **AI Integration Foundation**: Local AI integration with Ollama
+  - OllamaProvider for local LLM integration
+  - SpendingInsights model for AI analysis results
+  - BudgetRecommendation and TransactionAnomaly models
+  - Factory constructor for easy Ollama setup
+  - Support for qwen2.5:3b and other models
+
+## [v0.3.135] - 2026-05-27
+
+### Added
+- **Balance Sheet Enhancement**: Journal entries support for balance sheet
+  - BalanceSheetSource enum for data source switching
+  - Data source selector UI (transactions vs journal entries)
+  - _getBalancesFromJournalEntries method for double-entry calculation
+  - Consistent UI with Trial Balance page
+
+## [v0.3.134] - 2026-05-27
+
+### Added
+- **Trial Balance Enhancement**: Journal entries support for trial balance
+  - getJournalAccountBalances() method in JournalEntriesDao
+  - getPostedJournalEntries() and getJournalStats() methods
+  - TrialBalanceSource enum for data source switching
+  - Data source selector UI (transactions vs journal entries)
+  - JournalAccountBalance and JournalStats data models
+
+## [v0.3.133] - 2026-05-26
+
+### Added
+- **Journal Entry Editor**: Complete journal entry editing UI
+  - Journal entry editor page with form validation
+  - Line item management (add/remove debit/credit lines)
+  - Balance verification indicator
+  - Save as draft or post functionality
+
+## [v0.3.132] - 2026-05-26
+
+### Added
+- **Journal Entry DAO**: Data access layer for journal entries
+  - CRUD operations for journal entries and lines
+  - Balance validation methods
+  - Entry number generation
+  - Reversal functionality
+
+## [v0.3.131] - 2026-05-26
+
+### Added
+- **Double-Entry Bookkeeping Tables**: Foundation for double-entry accounting
+  - JournalEntries table with entry number, date, description
+  - JournalEntryLines table with debit/credit amounts
+  - AccountType and AccountCategory enums
+  - NormalBalance enum for account balance direction
+  - Database schema v16 with journal entry tables
+
 ## [v0.3.107] - 2026-05-25
 
 ### Added
