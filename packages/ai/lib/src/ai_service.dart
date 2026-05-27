@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:logging/logging.dart';
 import 'package:core/core.dart';
 import 'categorization/categorizer.dart';
@@ -209,6 +210,102 @@ class AiService {
       summary: '分析了 ${transactions.length} 笔交易',
       confidence: 0.7,
     );
+  }
+
+  /// Generate budget recommendations based on spending history.
+  Future<List<BudgetRecommendation>> generateBudgetRecommendations({
+    required List<Transaction> transactions,
+    required List<Category> categories,
+    required Map<String, double> currentBudgets,
+  }) async {
+    if (transactions.isEmpty) return [];
+    try {
+      if (_provider is OllamaProvider) {
+        return await (_provider as OllamaProvider).generateBudgetRecommendations(
+          transactions: transactions,
+          categories: categories,
+          currentBudgets: currentBudgets,
+        );
+      }
+      return _generateBasicBudgetRecommendations(transactions, categories, currentBudgets);
+    } catch (e, st) {
+      _log.warning('Error generating budget recommendations', e, st);
+      return _generateBasicBudgetRecommendations(transactions, categories, currentBudgets);
+    }
+  }
+
+  /// Detect anomalies in transactions.
+  Future<List<TransactionAnomaly>> detectAnomalies({
+    required List<Transaction> transactions,
+    required List<Category> categories,
+  }) async {
+    if (transactions.isEmpty) return [];
+    try {
+      if (_provider is OllamaProvider) {
+        return await (_provider as OllamaProvider).detectAnomalies(
+          transactions: transactions,
+          categories: categories,
+        );
+      }
+      return _detectBasicAnomalies(transactions);
+    } catch (e, st) {
+      _log.warning('Error detecting anomalies', e, st);
+      return _detectBasicAnomalies(transactions);
+    }
+  }
+
+  /// Generate basic budget recommendations without LLM.
+  List<BudgetRecommendation> _generateBasicBudgetRecommendations(
+    List<Transaction> transactions,
+    List<Category> categories,
+    Map<String, double> currentBudgets,
+  ) {
+    final spendingByCategory = <String, double>{};
+    for (final t in transactions) {
+      if (t.categoryId != null) {
+        final amount = double.tryParse(t.notes ?? '0') ?? 0;
+        spendingByCategory[t.categoryId!] = (spendingByCategory[t.categoryId!] ?? 0) + amount.abs();
+      }
+    }
+    return spendingByCategory.entries.map((entry) {
+      final category = categories.firstWhere((c) => c.id == entry.key, orElse: () => Category(id: entry.key, name: '未知', createdAt: DateTime.now(), updatedAt: DateTime.now()));
+      return BudgetRecommendation(
+        categoryId: entry.key,
+        categoryName: category.name,
+        recommendedAmount: currentBudgets[entry.key] ?? entry.value * 1.2,
+        currentSpending: entry.value,
+        reasoning: '基于历史消费数据分析',
+        priority: 3,
+      );
+    }).toList();
+  }
+
+  /// Detect basic anomalies without LLM.
+  List<TransactionAnomaly> _detectBasicAnomalies(List<Transaction> transactions) {
+    final anomalies = <TransactionAnomaly>[];
+    final amounts = transactions.map((t) => double.tryParse(t.notes ?? '0') ?? 0).where((a) => a > 0).toList();
+    if (amounts.isEmpty) return [];
+    
+    final mean = amounts.reduce((a, b) => a + b) / amounts.length;
+    final variance = amounts.map((a) => (a - mean) * (a - mean)).reduce((a, b) => a + b) / amounts.length;
+    final stdDev = variance > 0 ? sqrt(variance) : 0;
+
+    for (final t in transactions) {
+      final amount = double.tryParse(t.notes ?? '0') ?? 0;
+      if (amount > 0 && stdDev > 0) {
+        final zScore = (amount - mean).abs() / stdDev;
+        if (zScore > 2) {
+          anomalies.add(TransactionAnomaly(
+            transactionId: t.id,
+            type: AnomalyType.unusualAmount,
+            severity: zScore > 3 ? 5 : 3,
+            description: '交易金额偏离平均值',
+            suggestedAction: '请核实此交易',
+          ));
+        }
+      }
+    }
+    return anomalies;
   }
 
   /// Dispose of resources.

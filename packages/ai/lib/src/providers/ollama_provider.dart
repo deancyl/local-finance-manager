@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import 'package:core/core.dart';
 import 'llm_provider.dart';
+import '../models/spending_insights.dart';
 
 /// Ollama LLM provider for local AI inference.
 ///
@@ -271,30 +273,68 @@ class OllamaProvider implements LlmProvider {
     }
   }
 
+  /// Generate budget recommendations based on spending history.
+  Future<List<BudgetRecommendation>> generateBudgetRecommendations({
+    required List<Transaction> transactions,
+    required List<Category> categories,
+    required Map<String, double> currentBudgets,
+  }) async {
+    if (transactions.isEmpty || categories.isEmpty) return [];
+    // Basic statistical recommendation
+    final spendingByCategory = <String, double>{};
+    for (final t in transactions) {
+      if (t.categoryId != null) {
+        final amount = double.tryParse(t.notes ?? '0') ?? 0;
+        spendingByCategory[t.categoryId!] = (spendingByCategory[t.categoryId!] ?? 0) + amount.abs();
+      }
+    }
+    return spendingByCategory.entries.map((entry) {
+      final category = categories.firstWhere((c) => c.id == entry.key, orElse: () => Category(id: entry.key, name: '未知', createdAt: DateTime.now(), updatedAt: DateTime.now()));
+      return BudgetRecommendation(
+        categoryId: entry.key,
+        categoryName: category.name,
+        recommendedAmount: currentBudgets[entry.key] ?? entry.value * 1.2,
+        currentSpending: entry.value,
+        reasoning: '基于历史消费数据分析',
+        priority: entry.value > (currentBudgets[entry.key] ?? 0) ? 5 : 3,
+      );
+    }).toList();
+  }
+
+  /// Detect anomalies in transactions.
+  Future<List<TransactionAnomaly>> detectAnomalies({
+    required List<Transaction> transactions,
+    required List<Category> categories,
+  }) async {
+    if (transactions.isEmpty) return [];
+    final anomalies = <TransactionAnomaly>[];
+    final amounts = transactions.map((t) => double.tryParse(t.notes ?? '0') ?? 0).where((a) => a > 0).toList();
+    if (amounts.isEmpty) return [];
+    
+    final mean = amounts.reduce((a, b) => a + b) / amounts.length;
+    final variance = amounts.map((a) => (a - mean) * (a - mean)).reduce((a, b) => a + b) / amounts.length;
+    final stdDev = variance > 0 ? sqrt(variance) : 0;
+
+    for (final t in transactions) {
+      final amount = double.tryParse(t.notes ?? '0') ?? 0;
+      if (amount > 0 && stdDev > 0) {
+        final zScore = (amount - mean).abs() / stdDev;
+        if (zScore > 2) {
+          anomalies.add(TransactionAnomaly(
+            transactionId: t.id,
+            type: AnomalyType.unusualAmount,
+            severity: zScore > 3 ? 5 : (zScore > 2.5 ? 4 : 3),
+            description: '交易金额偏离平均值',
+            suggestedAction: '请核实此交易',
+          ));
+        }
+      }
+    }
+    return anomalies;
+  }
+
   @override
   Future<void> dispose() async {
     _client.close();
   }
-}
-
-/// Spending insights from AI analysis.
-class SpendingInsights {
-  /// Top spending categories by amount.
-  final List<String> topSpendingCategories;
-
-  /// Detected anomalies or unusual patterns.
-  final List<String> anomalies;
-
-  /// AI-generated recommendations.
-  final List<String> recommendations;
-
-  /// Summary of the analysis.
-  final String? summary;
-
-  const SpendingInsights({
-    this.topSpendingCategories = const [],
-    this.anomalies = const [],
-    this.recommendations = const [],
-    this.summary,
-  });
 }
