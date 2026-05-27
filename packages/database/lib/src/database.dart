@@ -40,6 +40,7 @@ part 'daos/balance_sheet_dao.dart';
 part 'daos/investment_holdings_dao.dart';
 part 'daos/investment_transactions_dao.dart';
 part 'daos/draft_transactions_dao.dart';
+part 'daos/journal_entries_dao.dart';
 
 /// Local finance database with all tables.
 @DriftDatabase(
