@@ -56,15 +56,7 @@ endif()
 
 ## Distribution
 
-### Installer Creation
-
 Use Inno Setup or NSIS to create Windows installer.
-
-### Code Signing
-
-```powershell
-signtool sign /f certificate.pfx /p password finance_app.exe
-```
 
 ## Troubleshooting
 

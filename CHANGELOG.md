@@ -5,42 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.3.155] - 2026-05-27
-
-### Added
-- **Income Statement Enhancement**: Support for calculation from Journal Entries
-  - IncomeStatementSource enum for data source switching (transactions vs journal entries)
-  - incomeStatementSourceProvider for user selection
-  - _getBalances method supports both single-entry and double-entry modes
-  - Uses JournalEntriesDao.getJournalAccountBalances for double-entry calculation
-
-## [v0.3.154] - 2026-05-27
-
-### Added
-- **AI Anomaly Detection**: Transaction anomaly detection feature
-  - detectAnomalies() method in AiService and OllamaProvider
-  - Z-score statistical analysis for unusual amounts
-  - 6 anomaly types: unusualAmount, duplicate, unusualCategory, unusualTime, unusualFrequency, potentialFraud
-  - Severity rating 1-5 with suggested actions
-
-## [v0.3.153] - 2026-05-27
-
-### Added
-- **AI Budget Recommendations**: Budget recommendation based on spending history
-  - generateBudgetRecommendations() method in AiService and OllamaProvider
-  - Priority rating 1-5 for budget categories
-  - Graceful degradation with statistical fallback
-
-## [v0.3.152] - 2026-05-27
-
-### Added
-- **Cost Center Filter**: Filter by cost center type (department, project, activity, location)
-
-## [v0.3.151] - 2026-05-27
-
-### Fixed
-- **Transaction Edit Page**: Implemented _loadTransaction() to load existing transaction data
-
 ## [v0.3.160] - 2026-05-27
 
 ### Added
