@@ -12,20 +12,90 @@ import '../widgets/add_cost_center_dialog.dart';
 /// - Create/edit/delete cost centers
 /// - Set active/inactive status
 /// - Filter by type
-class CostCentersPage extends ConsumerWidget {
+class CostCentersPage extends ConsumerStatefulWidget {
   const CostCentersPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final costCentersAsync = ref.watch(costCentersProvider);
+  ConsumerState<CostCentersPage> createState() => _CostCentersPageState();
+}
+
+class _CostCentersPageState extends ConsumerState<CostCentersPage> {
+  CostCenterType? _selectedTypeFilter;
+
+  @override
+  Widget build(BuildContext context) {
+    // Apply filter if selected
+    final costCentersAsync = _selectedTypeFilter != null
+        ? ref.watch(costCentersByTypeProvider(_selectedTypeFilter!.code))
+        : ref.watch(costCentersProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('成本中心'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list),
+            icon: Icon(
+              _selectedTypeFilter != null ? Icons.filter_list : Icons.filter_list_outlined,
+              color: _selectedTypeFilter != null 
+                  ? Theme.of(context).colorScheme.primary
+                  : null,
+            ),
             onPressed: () => _showFilterDialog(context, ref),
+            tooltip: '筛选',
+          ),
+        ],
+      ),
+      body: costCentersAsync.when(
+        data: (costCenters) {
+          if (costCenters.isEmpty) {
+            return _buildEmptyState(context);
+          }
+          return _buildCostCenterList(context, ref, costCenters);
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('加载失败: $error'),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddDialog(context, ref),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+class _CostCentersPageState extends ConsumerState<CostCentersPage> {
+  /// Selected filter type (null means no filter / show all)
+  CostCenterType? _selectedFilterType;
+
+  @override
+  Widget build(BuildContext context) {
+    // Use filtered provider if filter is active
+    final costCentersAsync = _selectedFilterType != null
+        ? ref.watch(costCentersByTypeProvider(_selectedFilterType!.code))
+        : ref.watch(costCentersProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_selectedFilterType != null 
+            ? '成本中心 - ${_selectedFilterType!.label}' 
+            : '成本中心'),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _selectedFilterType != null ? Icons.filter_list : Icons.filter_list_outlined,
+              color: _selectedFilterType != null 
+                  ? Theme.of(context).colorScheme.primary 
+                  : null,
+            ),
+            onPressed: () => _showFilterDialog(context),
             tooltip: '筛选',
           ),
         ],
@@ -237,24 +307,53 @@ class CostCentersPage extends ConsumerWidget {
     );
   }
 
-  void _showFilterDialog(BuildContext context, WidgetRef ref) {
+  void _showFilterDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('筛选'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: CostCenterType.values.map((type) {
-            return ListTile(
-              leading: Icon(_getTypeIcon(type)),
-              title: Text(type.label),
+          children: [
+            // "All" option
+            ListTile(
+              leading: const Icon(Icons.select_all),
+              title: const Text('全部'),
+              selected: _selectedFilterType == null,
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Implement filter
+                setState(() => _selectedFilterType = null);
               },
-            );
-          }).toList(),
+            ),
+            const Divider(),
+            // Individual type options
+            ...CostCenterType.values.map((type) {
+              return ListTile(
+                leading: Icon(_getTypeIcon(type)),
+                title: Text(type.label),
+                selected: _selectedFilterType == type,
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() => _selectedFilterType = type);
+                },
+              );
+            }),
+          ],
         ),
+        actions: [
+          if (_selectedFilterType != null)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                setState(() => _selectedFilterType = null);
+              },
+              child: const Text('清除筛选'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+        ],
       ),
     );
   }
