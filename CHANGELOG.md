@@ -5,17 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.3.167] - 2026-05-29
+## [v0.3.168] - 2026-05-29
 
-### Performance
-- **Windows Build Optimization**: Added MSVC release optimizations
-  - /O2: Maximum optimization (speed)
-  - /GL: Whole program optimization
-  - /Gy: Function-level linking
-  - /LTCG: Link-time code generation
-  - /OPT:REF: Eliminate unreferenced functions
-  - /OPT:ICF: Enable COMDAT folding
-  - Expected 15-30% performance improvement for Windows builds
+### Added
+- **Platform Smoke Tests**: Integration tests for app launch verification
+  - Created `apps/mobile/integration_test/smoke_test.dart`
+  - Tests verify app initializes without errors
+  - Tests verify MaterialApp renders correctly
+  - Added integration_test package dependency
 
 ## [v0.3.164] - 2026-05-29
 

@@ -20,6 +20,10 @@ import 'features/platform/data/platform_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Android memory optimization: Configure image cache limits
+  PaintingBinding.instance.imageCache.maximumSize = 100;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 50 * 1024 * 1024;
+  
   // Initialize SharedPreferences synchronously (required for Provider override)
   final sharedPreferences = await SharedPreferences.getInstance();
   
