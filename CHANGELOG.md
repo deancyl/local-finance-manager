@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.174] - 2026-05-29
+
+### Added
+- **Comprehensive Error Handling**: Centralized error management system
+  - Created `apps/mobile/lib/core/errors/error_handler.dart`
+  - Global error handler for uncaught Flutter and platform errors
+  - Error wrapping utilities for async and sync operations
+  - Retry mechanism with exponential backoff
+  - ErrorHandlerMixin for widgets
+  - Extension methods for Future and Stream error handling
+  - Riverpod provider for dependency injection
+
 ## [v0.3.171] - 2026-05-29
 
 ### Testing
