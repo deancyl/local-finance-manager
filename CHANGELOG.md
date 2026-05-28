@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.180] - 2026-05-29 [STABLE]
+
+### Stable Release
+- **v0.3.180 Stable Release**: Production-ready version
+  - All features from v0.3.163-179 tested and validated
+  - Performance benchmarks meet targets
+  - CI/CD pipeline fully operational
+  - Android release signing configured
+  - Error handling comprehensive
+  - Database operations optimized
+  - Ready for production deployment
+
+### Completed Roadmap (v0.3.163-180)
+- v0.3.163-165: Performance optimizations (Impeller, image cache)
+- v0.3.166-168: Testing infrastructure (smoke tests, database tests)
+- v0.3.169-171: Test enablement (database, importers, core)
+- v0.3.172: Income Statement (reference to v0.3.155)
+- v0.3.173-174: UI improvements and error handling
+- v0.3.175-176: CI/CD enhancements (tests, release config)
+- v0.3.177-178: Documentation and benchmarks
+- v0.3.179: Release Candidate
+- v0.3.180: Stable Release
+
 ## [v0.3.179] - 2026-05-29 [RC]
 
 ### Release Candidate
