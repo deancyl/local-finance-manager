@@ -10,6 +10,7 @@ import '../../../../core/presentation/widgets/gesture_config_provider.dart';
 
 class TransactionCard extends ConsumerWidget {
   final Transaction transaction;
+  final List<Split>? splits;
   final VoidCallback onTap;
   final VoidCallback onDelete;
   final VoidCallback? onEdit;
@@ -21,6 +22,7 @@ class TransactionCard extends ConsumerWidget {
   const TransactionCard({
     super.key,
     required this.transaction,
+    this.splits,
     required this.onTap,
     required this.onDelete,
     this.onEdit,
@@ -32,7 +34,9 @@ class TransactionCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final splitsAsync = ref.watch(splitsForTransactionProvider(transaction.id));
+    final splitsAsync = splits != null 
+        ? AsyncValue.data(splits!) 
+        : ref.watch(splitsForTransactionProvider(transaction.id));
     final attachmentCountAsync = ref.watch(attachmentCountProvider(transaction.id));
     final gestureConfig = ref.watch(gestureConfigProvider);
 

@@ -20,13 +20,11 @@ import 'features/platform/data/platform_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize SharedPreferences
+  // Initialize SharedPreferences synchronously (required for Provider override)
   final sharedPreferences = await SharedPreferences.getInstance();
   
-  // Initialize budget notification service
+  // Initialize budget notification service in background (deferred)
   final notificationService = BudgetNotificationService();
-  await notificationService.initialize();
-  await notificationService.requestPermissions();
   
   runApp(ProviderScope(
     overrides: [
@@ -35,12 +33,14 @@ void main() async {
         return GestureConfigNotifier(sharedPreferences);
       }),
     ],
-    child: const FinanceApp(),
+    child: FinanceApp(notificationService: notificationService),
   ));
 }
 
 class FinanceApp extends ConsumerStatefulWidget {
-  const FinanceApp({super.key});
+  final BudgetNotificationService notificationService;
+  
+  const FinanceApp({super.key, required this.notificationService});
 
   @override
   ConsumerState<FinanceApp> createState() => _FinanceAppState();
@@ -53,9 +53,13 @@ class _FinanceAppState extends ConsumerState<FinanceApp> {
   void initState() {
     super.initState();
     _setupNotificationHandler();
-    _processRecurringTransactions();
     _logPlatformInfo();
     _checkSecurityOnStartup();
+    // Defer notification initialization and recurring transaction processing
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeNotifications();
+      Future.delayed(const Duration(seconds: 2), _processRecurringTransactions);
+    });
   }
 
   void _setupNotificationHandler() {
@@ -65,8 +69,18 @@ class _FinanceAppState extends ConsumerState<FinanceApp> {
     // Here we would handle navigation when a notification is tapped
   }
   
+  void _initializeNotifications() async {
+    // Initialize budget notification service (deferred to avoid blocking startup)
+    try {
+      await widget.notificationService.initialize();
+      await widget.notificationService.requestPermissions();
+    } catch (e) {
+      print('Failed to initialize notifications: $e');
+    }
+  }
+  
   void _processRecurringTransactions() {
-    // Process due recurring transactions on app startup
+    // Process due recurring transactions on app startup (delayed by 2 seconds)
     Future.microtask(() async {
       try {
         final generationNotifier = ref.read(recurringGenerationNotifierProvider.notifier);

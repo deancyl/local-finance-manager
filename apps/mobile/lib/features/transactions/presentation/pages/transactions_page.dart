@@ -295,6 +295,9 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
 
   Widget _buildTransactionList(BuildContext context, PaginationState paginationState) {
     final transactions = paginationState.items.map((t) => t.$1).toList();
+    final splitsMap = Map<String, List<Split>.fromEntries(
+      paginationState.items.map((t) => MapEntry(t.$1.id, t.$2)),
+    );
     final grouped = _groupByDate(transactions);
     final itemCount = grouped.length + (paginationState.hasMore || paginationState.isLoading ? 1 : 0);
 
@@ -324,6 +327,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
             ),
             ...entry.value.map((transaction) => TransactionCard(
                   transaction: transaction,
+                  splits: splitsMap[transaction.id],
                   onTap: () => _showEditDialog(context, transaction),
                   onDelete: () => _deleteTransaction(context, transaction),
                   onEdit: () => _showEditDialog(context, transaction),

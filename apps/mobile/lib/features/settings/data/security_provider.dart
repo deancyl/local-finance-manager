@@ -4,8 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:crypto/crypto.dart';
+import 'package:pointycastle/export.dart';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
 
 import '../../security/data/biometric_service.dart';
 
@@ -127,9 +129,8 @@ class SecurityNotifier extends StateNotifier<SecuritySettings> {
       return false;
     }
     
-    // In production, use proper password hashing (e.g., PBKDF2)
-    // For now, we'll use a simple hash for demonstration
-    final hash = _hashPassword(password);
+    // Use PBKDF2 with secure salt
+    final hash = _hashPasswordPBKDF2(password);
     await _secureStorage.write(key: _keyPasswordHash, value: hash);
     
     state = state.copyWith(hasPassword: true);
@@ -141,8 +142,14 @@ class SecurityNotifier extends StateNotifier<SecuritySettings> {
     final storedHash = await _secureStorage.read(key: _keyPasswordHash);
     if (storedHash == null) return false;
     
-    final inputHash = _hashPassword(password);
-    return storedHash == inputHash;
+    // Check if it's new PBKDF2 format or old simple hash
+    if (storedHash.startsWith('pbkdf2:')) {
+      return _verifyPBKDF2(password, storedHash);
+    } else {
+      // Legacy simple hash verification
+      final inputHash = _hashPasswordLegacy(password);
+      return storedHash == inputHash;
+    }
   }
 
   /// Set a new PIN
@@ -156,7 +163,7 @@ class SecurityNotifier extends StateNotifier<SecuritySettings> {
       return false;
     }
     
-    final hash = _hashPassword(pin);
+    final hash = _hashPasswordPBKDF2(pin);
     await _secureStorage.write(key: _keyPinHash, value: hash);
     
     state = state.copyWith(hasPin: true);
@@ -168,8 +175,14 @@ class SecurityNotifier extends StateNotifier<SecuritySettings> {
     final storedHash = await _secureStorage.read(key: _keyPinHash);
     if (storedHash == null) return false;
     
-    final inputHash = _hashPassword(pin);
-    return storedHash == inputHash;
+    // Check if it's new PBKDF2 format or old simple hash
+    if (storedHash.startsWith('pbkdf2:')) {
+      return _verifyPBKDF2(pin, storedHash);
+    } else {
+      // Legacy simple hash verification
+      final inputHash = _hashPasswordLegacy(pin);
+      return storedHash == inputHash;
+    }
   }
 
   /// Clear password
@@ -212,13 +225,79 @@ class SecurityNotifier extends StateNotifier<SecuritySettings> {
     }
   }
 
-  /// Simple hash function (use proper hashing in production)
-  String _hashPassword(String input) {
-    // Use SHA-256 for better security
-    // In production, use PBKDF2 with salt and iterations
+  /// Legacy simple hash function (for backward compatibility)
+  String _hashPasswordLegacy(String input) {
     final bytes = utf8.encode(input);
     final hash = sha256.convert(bytes);
     return hash.toString();
+  }
+
+  /// PBKDF2 hash function with secure salt
+  /// Format: pbkdf2:salt:iterations:hash
+  String _hashPasswordPBKDF2(String password) {
+    const iterations = 100000;
+    const keyLength = 32; // 32 bytes = 256 bits
+    
+    // Generate secure random salt
+    final salt = _generateSalt();
+    final saltBase64 = base64Url.encode(salt);
+    
+    // Derive key using PBKDF2
+    final hash = _deriveKey(password, salt, iterations, keyLength);
+    final hashBase64 = base64Url.encode(hash);
+    
+    return 'pbkdf2:$saltBase64:$iterations:$hashBase64';
+  }
+
+  /// Verify PBKDF2 hash
+  bool _verifyPBKDF2(String password, String storedHash) {
+    try {
+      final parts = storedHash.split(':');
+      if (parts.length != 4 || parts[0] != 'pbkdf2') {
+        return false;
+      }
+      
+      final saltBase64 = parts[1];
+      final iterations = int.parse(parts[2]);
+      final hashBase64 = parts[3];
+      
+      final salt = base64Url.decode(saltBase64);
+      final storedHashBytes = base64Url.decode(hashBase64);
+      
+      // Derive key with same parameters
+      final derivedHash = _deriveKey(password, salt, iterations, storedHashBytes.length);
+      
+      // Constant-time comparison
+      return _constantTimeEquals(derivedHash, storedHashBytes);
+    } catch (e) {
+      debugPrint('PBKDF2 verification error: $e');
+      return false;
+    }
+  }
+
+  /// Generate a random 32-byte salt using secure random
+  Uint8List _generateSalt() {
+    final random = Random.secure();
+    return Uint8List.fromList(
+      List<int>.generate(32, (_) => random.nextInt(256)),
+    );
+  }
+
+  /// Derive key using PBKDF2 with SHA-256
+  Uint8List _deriveKey(String password, Uint8List salt, int iterations, int keyLength) {
+    final pbkdf2 = PBKDF2KeyDerivator(HMac(SHA256Digest(), 64))
+      ..init(Pbkdf2Parameters(salt, iterations, keyLength));
+    return pbkdf2.process(Uint8List.fromList(utf8.encode(password)));
+  }
+
+  /// Constant-time comparison to prevent timing attacks
+  bool _constantTimeEquals(Uint8List a, Uint8List b) {
+    if (a.length != b.length) return false;
+    int result = 0;
+    for (int i = 0; i < a.length; i++) {
+      result |= a[i] ^ b[i];
+    }
+    return result == 0;
   }
 }
 
