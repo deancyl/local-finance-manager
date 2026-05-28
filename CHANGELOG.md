@@ -17,6 +17,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Database encryption overhead benchmark (target: < 200ms for 100 operations)
   - Sync conflict resolution benchmark (target: < 150ms for 50 conflicts)
 
+## [v0.3.176] - 2026-05-29
+
+### CI/CD
+- **Android Release Signing Configuration**: Configured release build signing for Google Play distribution
+  - Added signing configuration in `android/app/build.gradle`
+  - Created `key.properties` file support for secure keystore credentials
+  - Release builds automatically use signing config when key.properties exists
+  - Fallback to debug keys for development builds
+  - Enabled ProGuard minification for release builds
+  - Split APK per ABI for optimized download sizes
+
 ## [v0.3.174] - 2026-05-29
 
 ### Added
@@ -28,16 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - ErrorHandlerMixin for widgets
   - Extension methods for Future and Stream error handling
   - Riverpod provider for dependency injection
-
-## [v0.3.176] - 2026-05-29
-
-### CI/CD
-- **Android Release Signing Configuration**: Configured release build signing for Google Play distribution
-  - Added signing configuration in `android/app/build.gradle`
-  - Created `key.properties` file support for secure keystore credentials
-  - Release builds automatically use signing config when key.properties exists
-  - Fallback to debug keys for development builds
-  - Enabled ProGuard minification for release builds
   - Documentation: `docs/android-release-signing.md`
 
 ### Security
