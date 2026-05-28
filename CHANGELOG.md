@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.181] - 2026-05-29
+
+### Fixed
+- **Critical CI Build Fix**: Resolved intl dependency conflict
+  - Changed intl: ^0.19.0 to intl: ^0.20.2 to match Flutter 3.32.0 SDK
+  - This fixes blocking CI build failures that prevented all v0.3.163-180 builds
+  - CI should now be able to generate Android APK, Windows EXE, and Web builds
+
 ## [v0.3.180] - 2026-05-29 [STABLE]
 
 ### Stable Release

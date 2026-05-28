@@ -1,7 +1,7 @@
 name: finance_app
 description: "本地金融管家 - Local-first personal finance manager"
 publish_to: 'none'
-version: 0.3.180+1
+version: 0.3.181+1
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -36,7 +36,7 @@ dependencies:
 
   # Utils
   uuid: ^4.5.1
-  intl: ^0.19.0
+  intl: ^0.20.2
   collection: ^1.18.0
   file_picker: ^8.1.4
   image_picker: ^1.1.2
