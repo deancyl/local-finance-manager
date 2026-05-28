@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.173] - 2026-05-29
+
+### Added
+- **Sync Status Indicator UI**: Widget showing sync status in AppBar
+  - Real-time sync status icon with color coding
+  - WebSocket connection status indicator
+  - Offline queue badge showing pending/failed items
+  - Bottom sheet with detailed sync information
+  - Created: sync_status_indicator.dart
+
 ## [v0.3.166] - 2026-05-29
 
 ### Performance
