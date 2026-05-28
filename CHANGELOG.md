@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Bank importers tests (ABC, CMB)
   - Modified: packages/importers/test/*
 
+## [v0.3.169] - 2026-05-29
+
+### Testing
+- **Database Tests Enabled**: Enabled database test suite for data integrity verification
+  - audit_logging_test.dart: Audit logging functionality tests
+  - transactions_dao_test.dart: Transaction DAO operations tests
+  - Tests ensure database operations correctness and atomicity
+  - Modified: packages/database/test/*
+
 ## [v0.3.168] - 2026-05-29
 
 ### Performance
