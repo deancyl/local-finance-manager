@@ -1,7 +1,39 @@
-# Add your keystore passwords here
-# DO NOT commit this file to version control!
+# Android Release Signing Configuration
+# Copy this file to 'key.properties' and fill in your values
+# This file should NOT be committed to version control!
 
 storePassword=your_keystore_password_here
 keyPassword=your_key_password_here
 keyAlias=finance-app-release
 storeFile=release-keystore.jks
+
+# Instructions:
+# 1. Generate a keystore file:
+#    keytool -genkey -v -keystore finance-app-release.jks -alias finance-app-release -keyalg RSA -keysize 2048 -validity 10000
+#
+# 2. Fill in the values above:
+#    - storePassword: Password for the keystore file
+#    - keyPassword: Password for the key (can be same as storePassword)
+#    - keyAlias: Alias name for the key (e.g., finance-app-release)
+#    - storeFile: Path to the keystore file (relative to android/app/ or absolute path)
+#
+# 3. Store the keystore file securely:
+#    - Never commit the keystore file or key.properties to version control
+#    - Keep backups of the keystore file in a secure location
+#    - Losing the keystore means you cannot update your app on Google Play
+#
+# 4. CI/CD Integration:
+#    For GitHub Actions, add these secrets:
+#    - ANDROID_KEYSTORE_BASE64: Base64-encoded keystore file
+#    - ANDROID_KEYSTORE_PASSWORD: Keystore password
+#    - ANDROID_KEY_PASSWORD: Key password
+#    - ANDROID_KEY_ALIAS: Key alias
+#
+#    Then add this step to your workflow before building:
+#    - name: Decode keystore
+#      run: |
+#        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > apps/mobile/android/app/release-keystore.jks
+#        echo "storeFile=release-keystore.jks" > apps/mobile/android/key.properties
+#        echo "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> apps/mobile/android/key.properties
+#        echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> apps/mobile/android/key.properties
+#        echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> apps/mobile/android/key.properties
