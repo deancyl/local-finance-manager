@@ -43,6 +43,18 @@ function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_options(${TARGET} PRIVATE /EHsc)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
   target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
+  
+  # Release optimizations
+  target_compile_options(${TARGET} PRIVATE 
+    $<$<CONFIG:Release>:/O2>      # Maximum optimization
+    $<$<CONFIG:Release>:/GL>      # Whole program optimization
+    $<$<CONFIG:Release>:/Gy>      # Enable function-level linking
+  )
+  target_link_options(${TARGET} PRIVATE 
+    $<$<CONFIG:Release>:/LTCG>    # Link-time code generation
+    $<$<CONFIG:Release>:/OPT:REF> # Eliminate unreferenced functions
+    $<$<CONFIG:Release>:/OPT:ICF> # Enable COMDAT folding
+  )
 endfunction()
 
 # Flutter library and tool build rules.
