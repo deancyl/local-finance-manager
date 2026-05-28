@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.172] - 2026-05-29
+
+### Note
+- **Income Statement Feature**: This feature was already implemented in v0.3.155
+  - Income statement report page with revenue and expense breakdown
+  - Period selection (monthly, quarterly, yearly)
+  - Export to PDF functionality
+  - See v0.3.155 for implementation details
+  - Files: income_statement_page.dart, income_statement_provider.dart
+
 ## [v0.3.178] - 2026-05-29
 
 ### Performance
