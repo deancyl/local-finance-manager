@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.179] - 2026-05-29 [RC]
+
+### Release Candidate
+- **v0.3.179 Release Candidate**: Pre-release version for final testing
+  - All features from v0.3.163-178 included and tested
+  - Performance optimizations verified
+  - CI/CD pipeline validated
+  - Ready for production deployment pending final QA
+  - Known issues: None critical
+
 ## [v0.3.172] - 2026-05-29
 
 ### Note
