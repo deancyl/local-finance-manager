@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.166] - 2026-05-29
+
+### Performance
+- **Android Image Cache Optimization**: Configured image cache limits for memory management
+  - Set maximumSize to 100 images in cache
+  - Set maximumSizeBytes to 50MB memory limit
+  - Prevents memory pressure on Android devices
+  - Modified: main.dart (PaintingBinding.instance.imageCache)
+
 ## [v0.3.165] - 2026-05-29
 
 ### Performance
