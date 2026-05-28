@@ -1,6 +1,6 @@
 name: core
 description: Core domain models, repositories, and business logic for the finance app.
-version: 0.1.0
+version: 0.3.170+1
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
