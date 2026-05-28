@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.161] - 2026-05-28
+
+### Security (P0 - Critical)
+- **Hardcoded Secrets Fix**: Server-side fail-fast validation for JWT_SECRET and ENCRYPTION_KEY
+- **Transaction Atomicity**: Fixed batch() → transaction() for atomic operations
+  - `transactions_dao.dart`: createTransaction, updateTransaction, deleteTransaction
+  - `journal_entries_dao.dart`: reverseJournalEntry
+- **Secure Key Generation**: Replaced timestamp-based key generation with Random.secure()
+  - `mobile_keychain_service.dart`: generateAndStoreKey() now uses cryptographically secure random
+
+### Performance (P1 - High Priority)
+- **N+1 Query Fix**: TransactionCard receives pre-loaded splits from parent
+  - ~95% reduction in database queries for transaction list
+  - Modified: transaction_card.dart, transactions_page.dart
+- **Startup Optimization**: Deferred blocking operations to improve perceived startup time
+  - Notification initialization via addPostFrameCallback
+  - Recurring transaction processing delayed 2 seconds
+  - Modified: main.dart
+
+### Security (P2 - Medium Priority)
+- **Password Hashing Upgrade**: PBKDF2 with 100,000 iterations
+  - 32-byte key length using HMAC-SHA256
+  - Backward compatible with legacy SHA-256 hashes
+  - Added pointycastle: ^3.9.0 dependency
+  - Modified: security_provider.dart
+
+### User Experience (P2 - Medium Priority)
+- **Centralized Error Display**: Created error handling infrastructure
+  - `error_display.dart`: ErrorDisplay widget with retry support
+  - `error_message_mapper.dart`: Error taxonomy with Chinese messages
+  - `error_snack_bar_extension.dart`: BuildContext extensions for snack bars
+
+### Technical Evaluations
+- **SQLCipher Integration**: Evaluated as MODERATE complexity
+  - Key infrastructure ready (MobileKeychainService)
+  - Blocker: Background isolates need encryption key passing
+  - Documentation exists: sqlcipher-background-isolate.md
+- **Internationalization (i18n)**: 70-140 hours estimated effort
+  - 168 files (75%) have hardcoded Chinese strings
+  - Infrastructure partially ready (packages exist, no arb files)
+- **Sync Feature Restoration**: Blocked by Dart SDK version
+  - PowerSync requires Dart >=3.10.0, current is 3.6.0
+  - Solution: Upgrade Flutter to 3.29+ or downgrade PowerSync
+  - Server ready: docker-compose, tests pass
+
 ## [v0.3.160] - 2026-05-27
 
 ### Added

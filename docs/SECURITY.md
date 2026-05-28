@@ -4,8 +4,8 @@
 
 | Property | Value |
 |----------|-------|
-| **Version** | 1.0.0 |
-| **Last Updated** | 2026-05-19 |
+| **Version** | 1.1.0 |
+| **Last Updated** | 2026-05-28 |
 | **Status** | Active |
 | **Applies To** | All Phases |
 | **Owner** | Development Team |
@@ -653,4 +653,5 @@ Scheduled: YYYY-MM-DD
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2026-05-28 | v0.3.161 security fixes documented: PBKDF2 upgrade, secure key generation, fail-fast validation |
 | 1.0.0 | 2026-05-19 | Initial security guidelines |

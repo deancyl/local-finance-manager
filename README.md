@@ -170,13 +170,16 @@ docker-compose up -d
 ## 安全特性
 
 ### 本地加密
-- SQLCipher 数据库加密
+- SQLCipher 数据库加密 (规划中)
 - AES-256-GCM 数据加密
-- PBKDF2 密钥派生 (100,000 次迭代)
-- iOS Keychain / Android Keystore 密钥存储
+- PBKDF2 密钥派生 (100,000 次迭代) ✅ v0.3.161
+- iOS Keychain / Android Keystore 密钥存储 ✅ v0.3.161
+- 安全密钥生成 (Random.secure()) ✅ v0.3.161
 
 ### 同步安全
 - JWT 令牌认证 (7天有效期)
+- 服务器密钥验证 (fail-fast) ✅ v0.3.161
+- 环境变量安全配置 (${VAR:?error}) ✅ v0.3.161
 - 端到端加密 (E2E)
 - 服务器无法解密同步数据
 - 设备公钥验证
