@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.165] - 2026-05-29
+
+### Performance
+- **Android Impeller Rendering**: Enabled Impeller rendering engine for Android
+  - Added `io.flutter.embedding.android.EnableImpeller` meta-data in AndroidManifest.xml
+  - Impeller provides better performance and reduced jank compared to Skia
+  - Required for Flutter 3.32+ compatibility
+
 ## [v0.3.168] - 2026-05-29
 
 ### Added
