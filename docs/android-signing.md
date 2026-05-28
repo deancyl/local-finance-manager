@@ -47,27 +47,39 @@ storeFile=release-keystore.jks
 The `android/app/build.gradle` has been updated with signing configuration:
 
 ```gradle
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     // ... existing config ...
     
     signingConfigs {
         release {
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-            storePassword keystoreProperties['storePassword']
+            if (keystorePropertiesFile.exists()) {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+                storePassword keystoreProperties['storePassword']
+            }
         }
     }
     
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            // Signing with release config if key.properties exists, otherwise debug keys
+            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
+            // Enable minification for release builds
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
 ```
+
+**Note**: The configuration automatically falls back to debug signing if `key.properties` doesn't exist, allowing developers to build without setting up release keys locally.
 
 ## Build Release APK
 

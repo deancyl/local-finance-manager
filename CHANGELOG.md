@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.178] - 2026-05-29
+
+### Performance
+- **Database Benchmark Suite**: Added performance benchmark tests for critical database operations
+  - Created `apps/mobile/test/performance/database_benchmark.dart`
+  - Insert single transaction benchmark (target: < 10ms for 100 inserts)
+  - Query transactions with pagination benchmark (target: < 50ms for 50 queries)
+  - Batch insert benchmark (target: < 500ms for 1000 records)
+  - Complex query with joins benchmark (target: < 100ms for 20 queries)
+  - Database encryption overhead benchmark (target: < 200ms for 100 operations)
+  - Sync conflict resolution benchmark (target: < 150ms for 50 conflicts)
+
 ## [v0.3.174] - 2026-05-29
 
 ### Added
@@ -16,6 +28,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - ErrorHandlerMixin for widgets
   - Extension methods for Future and Stream error handling
   - Riverpod provider for dependency injection
+
+## [v0.3.176] - 2026-05-29
+
+### CI/CD
+- **Android Release Signing Configuration**: Configured release build signing for Google Play distribution
+  - Added signing configuration in `android/app/build.gradle`
+  - Created `key.properties` file support for secure keystore credentials
+  - Release builds automatically use signing config when key.properties exists
+  - Fallback to debug keys for development builds
+  - Enabled ProGuard minification for release builds
+  - Documentation: `docs/android-release-signing.md`
+
+### Security
+- **Keystore Protection**: Signing credentials managed via environment-specific properties file
+  - key.properties excluded from version control (.gitignore)
+  - Keystore file path, alias, and passwords loaded from properties
+  - CI/CD integration ready for secure credential injection
 
 ## [v0.3.171] - 2026-05-29
 
