@@ -106,37 +106,39 @@ extension JournalEntriesDao on LocalFinanceDatabase {
       throw Exception('Original journal entry not found');
     }
 
-    // Create reversal entry
-    await createJournalEntry(
-      id: reversalId,
-      date: reversalDate,
-      description: reason ?? 'Reversal of entry ${original.entry.entryNumber}',
-      source: 'reversal',
-    );
-
-    // Mark original as reversed
-    await (update(journalEntries)..where((t) => t.id.equals(originalId)))
-        .write(
-      JournalEntriesCompanion(
-        isReversed: const Value(true),
-        updatedAt: Value(DateTime.now()),
-      ),
-    );
-
-    // Create reversal lines (swap debit/credit)
-    for (final line in original.lines) {
-      await createJournalEntryLine(
-        id: '${reversalId}-${line.lineOrder}',
-        entryId: reversalId,
-        accountId: line.accountId,
-        description: line.description,
-        debitAmount: line.creditAmount,
-        creditAmount: line.debitAmount,
-        lineOrder: line.lineOrder,
+    return await transaction(() async {
+      // Create reversal entry
+      await createJournalEntry(
+        id: reversalId,
+        date: reversalDate,
+        description: reason ?? 'Reversal of entry ${original.entry.entryNumber}',
+        source: 'reversal',
       );
-    }
 
-    return reversalId;
+      // Mark original as reversed
+      await (update(journalEntries)..where((t) => t.id.equals(originalId)))
+          .write(
+        JournalEntriesCompanion(
+          isReversed: const Value(true),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+
+      // Create reversal lines (swap debit/credit)
+      for (final line in original.lines) {
+        await createJournalEntryLine(
+          id: '${reversalId}-${line.lineOrder}',
+          entryId: reversalId,
+          accountId: line.accountId,
+          description: line.description,
+          debitAmount: line.creditAmount,
+          creditAmount: line.debitAmount,
+          lineOrder: line.lineOrder,
+        );
+      }
+
+      return reversalId;
+    });
   }
 
   /// Deletes a journal entry (soft delete).

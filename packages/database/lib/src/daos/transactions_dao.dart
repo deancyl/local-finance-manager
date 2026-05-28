@@ -46,10 +46,10 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
     TransactionsCompanion transaction,
     List<SplitsCompanion> splitList,
   ) async {
-    await batch((b) async {
-      b.insert(transactions, transaction);
+    await transaction(() async {
+      await into(transactions).insert(transaction);
       for (final split in splitList) {
-        b.insert(splits, split);
+        await into(splits).insert(split);
       }
     });
     return transaction.id.value;
@@ -60,13 +60,13 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
     TransactionsCompanion transaction,
     List<SplitsCompanion> splitList,
   ) async {
-    await batch((b) async {
-      b.replace(transactions, transaction);
+    await transaction(() async {
+      await into(transactions).insert(transaction, mode: InsertMode.replace);
       // Delete existing splits
       await (delete(splits)..where((s) => s.transactionId.equals(transaction.id.value))).go();
       // Insert new splits
       for (final split in splitList) {
-        b.insert(splits, split);
+        await into(splits).insert(split);
       }
     });
   }

@@ -17,16 +17,27 @@ late AuthService _authService;
 late SyncService _syncService;
 late DeviceService _deviceService;
 
+void _validateSecret(String name, String? value, int minLength) {
+  if (value == null || value.isEmpty) {
+    throw StateError('CRITICAL: $name environment variable is not set. Server cannot start.');
+  }
+  if (value.contains('default') || value.contains('change')) {
+    throw StateError('CRITICAL: $name contains placeholder value. Set a secure secret.');
+  }
+  if (value.length < minLength) {
+    throw StateError('CRITICAL: $name must be at least $minLength characters. Got ${value.length}.');
+  }
+}
+
 Future<HttpServer> run(InternetAddress ip, int port) async {
   final env = DotEnv(includePlatformEnvironment: true)..load();
   
-  // Initialize services
-  final jwtSecret = env.containsKey('JWT_SECRET')
-      ? env['JWT_SECRET']!
-      : 'default-secret-change-in-production';
-  final encryptionKey = env.containsKey('ENCRYPTION_KEY')
-      ? env['ENCRYPTION_KEY']!
-      : 'default-encryption-key-32-chars';
+  // Initialize services with fail-fast validation
+  final jwtSecret = env['JWT_SECRET'];
+  _validateSecret('JWT_SECRET', jwtSecret, 32);
+
+  final encryptionKey = env['ENCRYPTION_KEY'];
+  _validateSecret('ENCRYPTION_KEY', encryptionKey, 32);
   
   final encryption = EncryptionService(encryptionKey);
   _authService = AuthService(encryption, jwtSecret);
@@ -409,12 +420,11 @@ String? _getUserIdFromRequest(Request request) {
   
   final token = authHeader.substring(7);
   final env = DotEnv(includePlatformEnvironment: true)..load();
-  final jwtSecret = env.containsKey('JWT_SECRET')
-      ? env['JWT_SECRET']!
-      : 'default-secret-change-in-production';
+  final jwtSecret = env['JWT_SECRET'];
+  _validateSecret('JWT_SECRET', jwtSecret, 32);
   
   try {
-    final jwt = JWT.verify(token, SecretKey(jwtSecret));
+    final jwt = JWT.verify(token, SecretKey(jwtSecret!));
     return jwt.payload['sub'] as String?;
   } catch (e) {
     return null;

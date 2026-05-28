@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:math';
+import 'dart:typed_data';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'keychain_service.dart';
 
@@ -49,7 +53,8 @@ class MobileKeychainService implements KeychainService {
   }
 
   String _generateRandomKey(int length) {
-    final random = DateTime.now().microsecondsSinceEpoch.toString();
-    return random.padRight(length, '0').substring(0, length);
+    final random = Random.secure();
+    final values = List<int>.generate(length, (_) => random.nextInt(256));
+    return base64Url.encode(Uint8List.fromList(values)).substring(0, length);
   }
 }
