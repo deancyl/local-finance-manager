@@ -3,7 +3,7 @@ part of '../database.dart';
 /// DAO for managing draft transactions (auto-saved incomplete entries)
 @DriftAccessor(tables: [DraftTransactions])
 class DraftTransactionsDao extends DatabaseAccessor<LocalFinanceDatabase>
-    with _$DraftTransactionsDaoMixin {
+    with _$DraftTransactionsDaoMixin, AuditableMixin {
   DraftTransactionsDao(super.db);
 
   /// Create a new draft transaction
@@ -24,24 +24,32 @@ class DraftTransactionsDao extends DatabaseAccessor<LocalFinanceDatabase>
     final now = DateTime.now().millisecondsSinceEpoch;
     final id = Uuid().v4();
     
-    await into(draftTransactions).insert(
-      DraftTransactionsCompanion.insert(
-        id: id,
-        mode: mode,
-        date: date.toIso8601String(),
-        currencyId: Value(currencyId),
-        createdAt: now,
-        updatedAt: now,
-        fromAccountId: Value(fromAccountId),
-        toAccountId: Value(toAccountId),
-        amount: Value(amount),
-        categoryId: Value(categoryId),
-        description: Value(description),
-        notes: Value(notes),
-        templateId: Value(templateId),
-        splitData: Value(splitData),
-        name: Value(name),
-      ),
+    final draft = DraftTransactionsCompanion.insert(
+      id: id,
+      mode: mode,
+      date: date.toIso8601String(),
+      currencyId: Value(currencyId),
+      createdAt: now,
+      updatedAt: now,
+      fromAccountId: Value(fromAccountId),
+      toAccountId: Value(toAccountId),
+      amount: Value(amount),
+      categoryId: Value(categoryId),
+      description: Value(description),
+      notes: Value(notes),
+      templateId: Value(templateId),
+      splitData: Value(splitData),
+      name: Value(name),
+    );
+    
+    await into(draftTransactions).insert(draft);
+    
+    // Audit log for CREATE operation
+    await logMutation(
+      operation: 'CREATE',
+      entityType: 'draft_transaction',
+      entityId: id,
+      newValue: draft.toJson(),
     );
     
     return (await getDraftById(id))!;
@@ -67,22 +75,34 @@ class DraftTransactionsDao extends DatabaseAccessor<LocalFinanceDatabase>
   ) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     
-    await (update(draftTransactions)..where((d) => d.id.equals(id))).write(
-      DraftTransactionsCompanion(
-        mode: Value(mode!),
-        fromAccountId: Value(fromAccountId),
-        toAccountId: Value(toAccountId),
-        amount: Value(amount),
-        categoryId: Value(categoryId),
-        description: Value(description),
-        notes: Value(notes),
-        date: Value(date!.toIso8601String()),
-        currencyId: Value(currencyId!),
-        templateId: Value(templateId),
-        splitData: Value(splitData),
-        name: Value(name),
-        updatedAt: Value(now),
-      ),
+    // Get old value before update for audit log
+    final oldDraft = await getDraftById(id);
+    
+    final updateData = DraftTransactionsCompanion(
+      mode: Value(mode!),
+      fromAccountId: Value(fromAccountId),
+      toAccountId: Value(toAccountId),
+      amount: Value(amount),
+      categoryId: Value(categoryId),
+      description: Value(description),
+      notes: Value(notes),
+      date: Value(date!.toIso8601String()),
+      currencyId: Value(currencyId!),
+      templateId: Value(templateId),
+      splitData: Value(splitData),
+      name: Value(name),
+      updatedAt: Value(now),
+    );
+    
+    await (update(draftTransactions)..where((d) => d.id.equals(id))).write(updateData);
+    
+    // Audit log for UPDATE operation
+    await logMutation(
+      operation: 'UPDATE',
+      entityType: 'draft_transaction',
+      entityId: id,
+      oldValue: oldDraft?.toJson(),
+      newValue: updateData.toJson(),
     );
   }
 
@@ -110,7 +130,18 @@ class DraftTransactionsDao extends DatabaseAccessor<LocalFinanceDatabase>
 
   /// Delete a draft by ID
   Future<void> deleteDraft(String id) async {
+    // Get old value before delete for audit log
+    final oldDraft = await getDraftById(id);
+    
     await (delete(draftTransactions)..where((d) => d.id.equals(id))).go();
+    
+    // Audit log for DELETE operation
+    await logMutation(
+      operation: 'DELETE',
+      entityType: 'draft_transaction',
+      entityId: id,
+      oldValue: oldDraft?.toJson(),
+    );
   }
 
   /// Delete all drafts

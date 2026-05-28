@@ -3,7 +3,7 @@ part of '../database.dart';
 /// Data Access Object for budgets.
 @DriftAccessor(tables: [Budgets, Splits, Transactions, Accounts])
 class BudgetsDao extends DatabaseAccessor<LocalFinanceDatabase> 
-    with _$BudgetsDaoMixin, _$TransactionsDaoMixin, _$AccountsDaoMixin {
+    with _$BudgetsDaoMixin, _$TransactionsDaoMixin, _$AccountsDaoMixin, AuditableMixin {
   BudgetsDao(super.db);
 
   /// Gets all budgets (not deleted).
@@ -29,18 +29,45 @@ class BudgetsDao extends DatabaseAccessor<LocalFinanceDatabase>
   /// Creates a new budget.
   Future<String> create(BudgetsCompanion budget) async {
     await into(budgets).insert(budget);
+    // Audit log for CREATE operation
+    await logMutation(
+      operation: 'CREATE',
+      entityType: 'budget',
+      entityId: budget.id.value,
+      newValue: budget.toJson(),
+    );
     return budget.id.value;
   }
 
   /// Updates an existing budget.
   Future<void> updateBudget(BudgetsCompanion budget) async {
+    // Get old value before update for audit log
+    final oldBudget = await getById(budget.id.value);
     await (update(budgets)..where((b) => b.id.equals(budget.id.value))).write(budget);
+    // Audit log for UPDATE operation
+    await logMutation(
+      operation: 'UPDATE',
+      entityType: 'budget',
+      entityId: budget.id.value,
+      oldValue: oldBudget?.toJson(),
+      newValue: budget.toJson(),
+    );
   }
 
   /// Soft deletes a budget.
   Future<void> deleteBudget(String id) async {
+    // Get old value before soft delete for audit log
+    final oldBudget = await getById(id);
     await (update(budgets)..where((b) => b.id.equals(id)))
         .write(BudgetsCompanion(deletedAt: Value(DateTime.now())));
+    // Audit log for DELETE operation (soft delete)
+    await logMutation(
+      operation: 'DELETE',
+      entityType: 'budget',
+      entityId: id,
+      oldValue: oldBudget?.toJson(),
+      description: 'Soft delete',
+    );
   }
 
   /// Watches active budgets.

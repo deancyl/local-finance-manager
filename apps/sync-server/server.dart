@@ -11,6 +11,7 @@ import 'src/services/sync_service.dart';
 import 'src/services/device_service.dart';
 import 'src/services/encryption_service.dart';
 import 'src/middleware/auth_middleware.dart';
+import 'src/middleware/rate_limit_middleware.dart';
 
 // Global services
 late AuthService _authService;
@@ -76,8 +77,20 @@ Response _healthHandler(Request request) {
   });
 }
 
-// Auth: Register
+// Auth: Register (with rate limiting: 3 requests/min per IP)
 Future<Response> _authRegisterHandler(Request request) async {
+  // Apply rate limiting
+  final rateLimiter = rateLimitMiddleware(
+    endpoint: 'register',
+    maxRequests: 3,
+    window: Duration(minutes: 1),
+  );
+  
+  final rateLimitResponse = await rateLimiter((req) async => null)(request);
+  if (rateLimitResponse != null) {
+    return rateLimitResponse;
+  }
+  
   try {
     final body = await request.body();
     final data = jsonDecode(body) as Map<String, dynamic>;
@@ -101,8 +114,20 @@ Future<Response> _authRegisterHandler(Request request) async {
   }
 }
 
-// Auth: Login
+// Auth: Login (with rate limiting: 5 requests/min per IP)
 Future<Response> _authLoginHandler(Request request) async {
+  // Apply rate limiting
+  final rateLimiter = rateLimitMiddleware(
+    endpoint: 'login',
+    maxRequests: 5,
+    window: Duration(minutes: 1),
+  );
+  
+  final rateLimitResponse = await rateLimiter((req) async => null)(request);
+  if (rateLimitResponse != null) {
+    return rateLimitResponse;
+  }
+  
   try {
     final body = await request.body();
     final data = jsonDecode(body) as Map<String, dynamic>;

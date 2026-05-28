@@ -117,11 +117,9 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
   }
 
   Color _parseColor(String colorHex) {
-    try {
-      return Color(int.parse(colorHex.replaceFirst('#', '0xFF')));
-    } catch (e) {
-      return Colors.grey;
-    }
+    final colorValue = int.tryParse(colorHex.replaceFirst('#', '0xFF'));
+    return colorValue != null ? Color(colorValue) : Colors.grey;
+  }
   }
 
   void _showAddTagDialog(BuildContext context) {
@@ -211,10 +209,7 @@ class _QuickAddTagDialogState extends State<_QuickAddTagDialog> {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: Color(int.parse(color.replaceFirst('#', '0xFF'))),
-                    borderRadius: BorderRadius.circular(6),
-                    border: isSelected
-                        ? Border.all(color: Colors.black, width: 2)
+                color: Color(int.tryParse(color.replaceFirst('#', '0xFF')) ?? 0xFF607D8B),
                         : null,
                   ),
                 ),

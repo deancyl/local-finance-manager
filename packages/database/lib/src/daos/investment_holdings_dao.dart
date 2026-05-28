@@ -3,7 +3,7 @@ part of '../database.dart';
 /// Data Access Object for investment holdings.
 @DriftAccessor(tables: [InvestmentHoldings])
 class InvestmentHoldingsDao extends DatabaseAccessor<LocalFinanceDatabase>
-    with _$InvestmentHoldingsDaoMixin {
+    with _$InvestmentHoldingsDaoMixin, AuditableMixin {
   InvestmentHoldingsDao(super.db);
 
   /// Get all holdings for an account.
@@ -38,20 +38,50 @@ class InvestmentHoldingsDao extends DatabaseAccessor<LocalFinanceDatabase>
   }
 
   /// Insert a new holding.
-  Future<void> insertHolding(InvestmentHoldingsCompanion holding) {
-    return into(investmentHoldings).insert(holding);
+  Future<void> insertHolding(InvestmentHoldingsCompanion holding) async {
+    await into(investmentHoldings).insert(holding);
+    // Audit log for CREATE operation
+    await logMutation(
+      operation: 'CREATE',
+      entityType: 'investment_holding',
+      entityId: holding.id.value,
+      newValue: holding.toJson(),
+    );
   }
 
   /// Update an existing holding.
-  Future<void> updateHolding(InvestmentHoldingsCompanion holding) {
-    return (update(investmentHoldings)
+  Future<void> updateHolding(InvestmentHoldingsCompanion holding) async {
+    // Get old value before update for audit log
+    final oldHolding = await getHoldingById(holding.id.value);
+    
+    await (update(investmentHoldings)
           ..where((h) => h.id.equals(holding.id.value)))
         .write(holding);
+    
+    // Audit log for UPDATE operation
+    await logMutation(
+      operation: 'UPDATE',
+      entityType: 'investment_holding',
+      entityId: holding.id.value,
+      oldValue: oldHolding?.toJson(),
+      newValue: holding.toJson(),
+    );
   }
 
   /// Delete a holding.
-  Future<void> deleteHolding(String id) {
-    return (delete(investmentHoldings)..where((h) => h.id.equals(id))).go();
+  Future<void> deleteHolding(String id) async {
+    // Get old value before delete for audit log
+    final oldHolding = await getHoldingById(id);
+    
+    await (delete(investmentHoldings)..where((h) => h.id.equals(id))).go();
+    
+    // Audit log for DELETE operation
+    await logMutation(
+      operation: 'DELETE',
+      entityType: 'investment_holding',
+      entityId: id,
+      oldValue: oldHolding?.toJson(),
+    );
   }
 
   /// Update current price for a holding.
@@ -71,48 +101,50 @@ class InvestmentHoldingsDao extends DatabaseAccessor<LocalFinanceDatabase>
         ));
   }
 
-  /// Get total market value for an account.
+  /// Get total market value for an account using fixed-point arithmetic.
+  /// Returns the value as a FixedPoint to preserve precision.
   Future<double> getTotalMarketValue(String accountId) async {
     final holdings = await getHoldingsForAccount(accountId);
-    double total = 0;
+    FixedPoint total = FixedPoint.zero;
     for (final h in holdings) {
       if (h.currentPriceNum != null && h.currentPriceDenom != null) {
-        final quantity = h.quantityNum / h.quantityDenom;
-        final price = h.currentPriceNum! / h.currentPriceDenom!;
+        final quantity = FixedPoint(h.quantityNum, h.quantityDenom);
+        final price = FixedPoint(h.currentPriceNum!, h.currentPriceDenom!);
         total += quantity * price;
       }
     }
-    return total;
+    return total.toDouble();
   }
 
-  /// Get all holdings with their unrealized gains/losses.
+  /// Get all holdings with their unrealized gains/losses using fixed-point arithmetic.
+  /// All calculations use FixedPoint to preserve precision.
   Future<List<HoldingWithPerformance>> getHoldingsWithPerformance(
     String accountId,
   ) async {
     final holdings = await getHoldingsForAccount(accountId);
     return holdings.map((h) {
-      final quantity = h.quantityNum / h.quantityDenom;
-      final avgCost = h.averageCostNum / h.averageCostDenom;
+      final quantity = FixedPoint(h.quantityNum, h.quantityDenom);
+      final avgCost = FixedPoint(h.averageCostNum, h.averageCostDenom);
       final currentPrice = h.currentPriceNum != null && h.currentPriceDenom != null
-          ? h.currentPriceNum! / h.currentPriceDenom!
+          ? FixedPoint(h.currentPriceNum!, h.currentPriceDenom!)
           : avgCost;
       
       final costBasis = quantity * avgCost;
       final marketValue = quantity * currentPrice;
       final unrealizedGain = marketValue - costBasis;
-      final unrealizedGainPercent = costBasis > 0 
-          ? (unrealizedGain / costBasis) * 100 
-          : 0.0;
+      final unrealizedGainPercent = costBasis.isZero 
+          ? FixedPoint.zero
+          : (unrealizedGain / costBasis) * FixedPoint.fromInt(100);
       
       return HoldingWithPerformance(
         holding: h,
-        quantity: quantity,
-        averageCost: avgCost,
-        currentPrice: currentPrice,
-        costBasis: costBasis,
-        marketValue: marketValue,
-        unrealizedGain: unrealizedGain,
-        unrealizedGainPercent: unrealizedGainPercent,
+        quantity: quantity.toDouble(),
+        averageCost: avgCost.toDouble(),
+        currentPrice: currentPrice.toDouble(),
+        costBasis: costBasis.toDouble(),
+        marketValue: marketValue.toDouble(),
+        unrealizedGain: unrealizedGain.toDouble(),
+        unrealizedGainPercent: unrealizedGainPercent.toDouble(),
       );
     }).toList();
   }

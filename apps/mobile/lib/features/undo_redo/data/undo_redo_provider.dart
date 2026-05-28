@@ -131,7 +131,7 @@ class CreateAccountCommand extends UndoableCommand {
       accountDescription: json['accountDescription'],
       isPlaceholder: json['isPlaceholder'] ?? false,
       sortOrder: json['sortOrder'] ?? 0,
-      timestamp: DateTime.parse(json['timestamp']),
+      timestamp: DateTime.tryParse(json['timestamp']) ?? DateTime.now(),
     );
   }
 }
@@ -233,7 +233,7 @@ class UpdateAccountCommand extends UndoableCommand {
   factory UpdateAccountCommand.fromJson(Map<String, dynamic> json) {
     return UpdateAccountCommand(
       id: json['id'],
-      timestamp: DateTime.parse(json['timestamp']),
+      timestamp: DateTime.tryParse(json['timestamp']) ?? DateTime.now(),
       before: Account(
         id: json['before']['id'],
         name: json['before']['name'],
@@ -339,7 +339,7 @@ class DeleteAccountCommand extends UndoableCommand {
     final acc = json['account'];
     return DeleteAccountCommand(
       id: json['id'],
-      timestamp: DateTime.parse(json['timestamp']),
+      timestamp: DateTime.tryParse(json['timestamp']) ?? DateTime.now(),
       account: Account(
         id: acc['id'],
         name: acc['name'],
@@ -452,7 +452,7 @@ class CreateTransactionCommand extends UndoableCommand {
   factory CreateTransactionCommand.fromJson(Map<String, dynamic> json) {
     return CreateTransactionCommand(
       id: json['id'],
-      timestamp: DateTime.parse(json['timestamp']),
+      timestamp: DateTime.tryParse(json['timestamp']) ?? DateTime.now(),
       transactionId: json['transactionId'],
       postDate: json['postDate'],
       currencyId: json['currencyId'],

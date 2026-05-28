@@ -2,7 +2,8 @@ part of '../database.dart';
 
 /// Data Access Object for tags.
 @DriftAccessor(tables: [Tags, TransactionTags, Transactions])
-class TagsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TagsDaoMixin {
+class TagsDao extends DatabaseAccessor<LocalFinanceDatabase> 
+    with _$TagsDaoMixin, AuditableMixin {
   TagsDao(super.db);
 
   /// Watches all non-deleted tags.
@@ -25,17 +26,26 @@ class TagsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TagsDaoMixin
     final id = DateTime.now().microsecondsSinceEpoch.toString();
     final now = DateTime.now().millisecondsSinceEpoch;
     
-    await into(tags).insert(
-      TagsCompanion.insert(
-        id: id,
-        name: name,
-        color: Value(color),
-        description: Value(description),
-        icon: Value(icon),
-        createdAt: now,
-        updatedAt: now,
-      ),
+    final tag = TagsCompanion.insert(
+      id: id,
+      name: name,
+      color: Value(color),
+      description: Value(description),
+      icon: Value(icon),
+      createdAt: now,
+      updatedAt: now,
     );
+    
+    await into(tags).insert(tag);
+    
+    // Audit log for CREATE operation
+    await logMutation(
+      operation: 'CREATE',
+      entityType: 'tag',
+      entityId: id,
+      newValue: tag.toJson(),
+    );
+    
     return id;
   }
 
@@ -49,24 +59,49 @@ class TagsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TagsDaoMixin
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     
-    await (update(tags)..where((t) => t.id.equals(id))).write(
-      TagsCompanion(
-        updatedAt: Value(now),
-        name: name != null ? Value(name) : const Value.absent(),
-        color: color != null ? Value(color) : const Value.absent(),
-        description: description != null ? Value(description) : const Value.absent(),
-        icon: icon != null ? Value(icon) : const Value.absent(),
-      ),
+    // Get old value before update for audit log
+    final oldTag = await getTagById(id);
+    
+    final updateData = TagsCompanion(
+      updatedAt: Value(now),
+      name: name != null ? Value(name) : const Value.absent(),
+      color: color != null ? Value(color) : const Value.absent(),
+      description: description != null ? Value(description) : const Value.absent(),
+      icon: icon != null ? Value(icon) : const Value.absent(),
+    );
+    
+    await (update(tags)..where((t) => t.id.equals(id))).write(updateData);
+    
+    // Audit log for UPDATE operation
+    await logMutation(
+      operation: 'UPDATE',
+      entityType: 'tag',
+      entityId: id,
+      oldValue: oldTag?.toJson(),
+      newValue: updateData.toJson(),
     );
   }
 
   /// Soft deletes a tag (sets deletedAt).
   Future<void> deleteTag(String id) async {
+    // Get old value before soft delete for audit log
+    final oldTag = await getTagById(id);
+    
+    final now = DateTime.now().millisecondsSinceEpoch;
     await (update(tags)..where((t) => t.id.equals(id))).write(
       TagsCompanion(
-        deletedAt: Value(DateTime.now().millisecondsSinceEpoch),
-        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+        deletedAt: Value(now),
+        updatedAt: Value(now),
       ),
+    );
+    
+    // Audit log for DELETE operation (soft delete)
+    await logMutation(
+      operation: 'DELETE',
+      entityType: 'tag',
+      entityId: id,
+      oldValue: oldTag?.toJson(),
+      description: 'Soft delete',
     );
   }
 

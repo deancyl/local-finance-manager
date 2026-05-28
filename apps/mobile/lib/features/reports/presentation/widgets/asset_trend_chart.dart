@@ -715,7 +715,8 @@ class _AssetTrendChartState extends ConsumerState<AssetTrendChart>
     } else if (label.contains('-')) {
       // Monthly: "2026-05" -> "5月"
       final parts = label.split('-');
-      displayLabel = '${int.parse(parts[1])}月';
+      final monthNum = int.tryParse(parts[1]);
+        displayLabel = monthNum != null ? '${monthNum}月' : label;
     } else {
       // Yearly: "2026"
       displayLabel = label;

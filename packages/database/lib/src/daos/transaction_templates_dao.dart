@@ -1,12 +1,20 @@
 part of '../database.dart';
 
 /// DAO for transaction template operations
-class TransactionTemplatesDao extends DatabaseAccessor<LocalFinanceDatabase> {
+class TransactionTemplatesDao extends DatabaseAccessor<LocalFinanceDatabase> 
+    with AuditableMixin {
   TransactionTemplatesDao(super.db);
 
   /// Insert a new template
   Future<void> insert(TransactionTemplatesCompanion template) async {
     await into(db.transactionTemplates).insert(template);
+    // Audit log for CREATE operation
+    await logMutation(
+      operation: 'CREATE',
+      entityType: 'transaction_template',
+      entityId: template.id.value,
+      newValue: template.toJson(),
+    );
   }
 
   /// Get all templates, sorted by use count (most used first)
@@ -57,9 +65,23 @@ class TransactionTemplatesDao extends DatabaseAccessor<LocalFinanceDatabase> {
 
   /// Update a template
   Future<int> updateTemplate(TransactionTemplatesCompanion template) async {
-    return (db.update(db.transactionTemplates)
+    // Get old value before update for audit log
+    final oldTemplate = await getById(template.id.value);
+    
+    final result = await (db.update(db.transactionTemplates)
       ..where((t) => t.id.equals(template.id.value)))
       .write(template);
+    
+    // Audit log for UPDATE operation
+    await logMutation(
+      operation: 'UPDATE',
+      entityType: 'transaction_template',
+      entityId: template.id.value,
+      oldValue: oldTemplate?.toJson(),
+      newValue: template.toJson(),
+    );
+    
+    return result;
   }
 
   /// Increment use count and update last used time
@@ -110,9 +132,22 @@ class TransactionTemplatesDao extends DatabaseAccessor<LocalFinanceDatabase> {
 
   /// Delete a template
   Future<int> deleteTemplate(String id) async {
-    return (db.delete(db.transactionTemplates)
+    // Get old value before delete for audit log
+    final oldTemplate = await getById(id);
+    
+    final result = await (db.delete(db.transactionTemplates)
       ..where((t) => t.id.equals(id)))
       .go();
+    
+    // Audit log for DELETE operation
+    await logMutation(
+      operation: 'DELETE',
+      entityType: 'transaction_template',
+      entityId: id,
+      oldValue: oldTemplate?.toJson(),
+    );
+    
+    return result;
   }
 
   /// Search templates by name or description

@@ -13,6 +13,7 @@ class AddExchangeRateDialog extends ConsumerStatefulWidget {
 }
 
 class _AddExchangeRateDialogState extends ConsumerState<AddExchangeRateDialog> {
+  final _formKey = GlobalKey<FormState>();
   String? _fromCurrency;
   String? _toCurrency;
   final _rateController = TextEditingController();
@@ -32,10 +33,12 @@ class _AddExchangeRateDialogState extends ConsumerState<AddExchangeRateDialog> {
     return AlertDialog(
       title: const Text('Add Exchange Rate'),
       content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // From currency
             DropdownButtonFormField<String>(
               decoration: const InputDecoration(
@@ -79,14 +82,29 @@ class _AddExchangeRateDialogState extends ConsumerState<AddExchangeRateDialog> {
             const SizedBox(height: 16),
 
             // Rate
-            TextField(
+            TextFormField(
               controller: _rateController,
               decoration: const InputDecoration(
                 labelText: 'Exchange Rate',
                 hintText: 'e.g., 7.25',
                 border: OutlineInputBorder(),
+                helperText: 'Must be a positive number',
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter an exchange rate';
+                }
+                final rate = double.tryParse(value);
+                if (rate == null) {
+                  return 'Please enter a valid number';
+                }
+                if (rate <= 0) {
+                  return 'Exchange rate must be positive';
+                }
+                return null;
+              },
+              autovalidateMode: AutovalidateMode.onUserInteraction,
             ),
             const SizedBox(height: 16),
 
@@ -130,7 +148,8 @@ class _AddExchangeRateDialogState extends ConsumerState<AddExchangeRateDialog> {
                 });
               },
             ),
-          ],
+            ],
+          ),
         ),
       ),
       actions: [
@@ -139,24 +158,27 @@ class _AddExchangeRateDialogState extends ConsumerState<AddExchangeRateDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: _canSave() ? _save : null,
+          onPressed: _save,
           child: const Text('Save'),
         ),
       ],
     );
   }
 
-  bool _canSave() {
-    return _fromCurrency != null &&
-        _toCurrency != null &&
-        _fromCurrency != _toCurrency &&
-        _rateController.text.isNotEmpty &&
-        double.tryParse(_rateController.text) != null &&
-        double.parse(_rateController.text) > 0;
-  }
-
   void _save() {
-    final rate = double.parse(_rateController.text);
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    if (_fromCurrency == null || _toCurrency == null || _fromCurrency == _toCurrency) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select different currencies')),
+      );
+      return;
+    }
+    final rate = double.tryParse(_rateController.text);
+    if (rate == null || rate <= 0) {
+      return; // Should not happen due to validation
+    }
     ref.read(exchangeRateNotifierProvider.notifier).addRate(
       fromCurrency: _fromCurrency!,
       toCurrency: _toCurrency!,

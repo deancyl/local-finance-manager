@@ -100,7 +100,7 @@ class SyncAuthProviderImpl implements AuthProvider {
           token: data['token'] as String,
           refreshToken: data['refreshToken'] as String?,
           expiresAt: data['expiresAt'] != null
-              ? DateTime.parse(data['expiresAt'] as String)
+              ? DateTime.tryParse(data['expiresAt'] as String)
               : null,
         );
 
@@ -144,7 +144,7 @@ class SyncAuthProviderImpl implements AuthProvider {
           token: data['token'] as String,
           refreshToken: data['refreshToken'] as String?,
           expiresAt: data['expiresAt'] != null
-              ? DateTime.parse(data['expiresAt'] as String)
+              ? DateTime.tryParse(data['expiresAt'] as String)
               : null,
         );
 
@@ -211,7 +211,8 @@ class SyncAuthProviderImpl implements AuthProvider {
     // Check if token is expired
     final expiryStr = await _storage.read(key: _keyTokenExpiry);
     if (expiryStr != null) {
-      final expiry = DateTime.parse(expiryStr);
+      final expiry = DateTime.tryParse(expiryStr);
+      if (expiry == null) return false;
       if (DateTime.now().isAfter(expiry)) {
         // Try to refresh
         try {
@@ -251,7 +252,7 @@ class SyncAuthProviderImpl implements AuthProvider {
           token: data['token'] as String,
           refreshToken: data['refreshToken'] as String?,
           expiresAt: data['expiresAt'] != null
-              ? DateTime.parse(data['expiresAt'] as String)
+              ? DateTime.tryParse(data['expiresAt'] as String)
               : null,
         );
         

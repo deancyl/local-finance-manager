@@ -53,15 +53,18 @@ class InvestmentService {
     for (final tx in transactions) {
       if (tx.transactionType == InvestmentTransactionType.buy && 
           tx.quantity != null && tx.price != null) {
-        totalCost += tx.quantity! * tx.price! + tx.fee;
-        totalShares += tx.quantity!;
+        final quantity = tx.quantity!;
+        final price = tx.price!;
+        totalCost += quantity * price + tx.fee;
+        totalShares += quantity;
       } else if (tx.transactionType == InvestmentTransactionType.sell &&
           tx.quantity != null && tx.price != null) {
         // For average cost, we reduce both numerator and denominator proportionally
         if (totalShares > 0) {
           final avgCostPerShare = totalCost / totalShares;
-          totalCost -= tx.quantity! * avgCostPerShare;
-          totalShares -= tx.quantity!;
+          final quantity = tx.quantity!;
+          totalCost -= quantity * avgCostPerShare;
+          totalShares -= quantity;
         }
       }
     }
@@ -82,14 +85,18 @@ class InvestmentService {
       if (tx.transactionType == InvestmentTransactionType.buy && 
           tx.quantity != null && tx.price != null) {
         // Add to lots
+        final quantity = tx.quantity!;
+        final price = tx.price!;
         lots.add(_Lot(
-          quantity: tx.quantity!,
-          costPerShare: tx.price! + (tx.fee / tx.quantity!),
+          quantity: quantity,
+          costPerShare: price + (tx.fee / quantity),
         ));
       } else if (tx.transactionType == InvestmentTransactionType.sell &&
           tx.quantity != null && tx.price != null) {
-        var remainingToSell = tx.quantity!;
-        final salePricePerShare = tx.price! - (tx.fee / tx.quantity!);
+        final quantity = tx.quantity!;
+        final price = tx.price!;
+        var remainingToSell = quantity;
+        final salePricePerShare = price - (tx.fee / quantity);
         
         // Sell from oldest lots first (FIFO)
         while (remainingToSell > 0 && lots.isNotEmpty) {

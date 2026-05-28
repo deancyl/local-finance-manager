@@ -2,7 +2,8 @@ part of '../database.dart';
 
 /// Data Access Object for closing entries.
 @DriftAccessor(tables: [ClosingEntries, Accounts])
-class ClosingEntriesDao extends DatabaseAccessor<LocalFinanceDatabase> with _$ClosingEntriesDaoMixin {
+class ClosingEntriesDao extends DatabaseAccessor<LocalFinanceDatabase> 
+    with _$ClosingEntriesDaoMixin, AuditableMixin {
   ClosingEntriesDao(super.db);
 
   /// Gets all closing entries.
@@ -50,6 +51,13 @@ class ClosingEntriesDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Cl
   /// Creates a new closing entry.
   Future<String> create(ClosingEntriesCompanion entry) async {
     await into(closingEntries).insert(entry);
+    // Audit log for CREATE operation
+    await logMutation(
+      operation: 'CREATE',
+      entityType: 'closing_entry',
+      entityId: entry.id.value,
+      newValue: entry.toJson(),
+    );
     return entry.id.value;
   }
 
@@ -62,7 +70,17 @@ class ClosingEntriesDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Cl
 
   /// Updates an existing closing entry.
   Future<void> updateEntry(ClosingEntriesCompanion entry) async {
+    // Get old value before update for audit log
+    final oldEntry = await getById(entry.id.value);
     await (update(closingEntries)..where((e) => e.id.equals(entry.id.value))).write(entry);
+    // Audit log for UPDATE operation
+    await logMutation(
+      operation: 'UPDATE',
+      entityType: 'closing_entry',
+      entityId: entry.id.value,
+      oldValue: oldEntry?.toJson(),
+      newValue: entry.toJson(),
+    );
   }
 
   /// Updates the status of a closing entry.
@@ -84,7 +102,16 @@ class ClosingEntriesDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Cl
 
   /// Deletes a closing entry.
   Future<void> deleteEntry(String id) async {
+    // Get old value before delete for audit log
+    final oldEntry = await getById(id);
     await (delete(closingEntries)..where((e) => e.id.equals(id))).go();
+    // Audit log for DELETE operation
+    await logMutation(
+      operation: 'DELETE',
+      entityType: 'closing_entry',
+      entityId: id,
+      oldValue: oldEntry?.toJson(),
+    );
   }
 
   /// Deletes all closing entries for a fiscal period.

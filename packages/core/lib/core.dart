@@ -25,4 +25,5 @@ export 'src/usecases/reconciliation_service.dart';
 export 'src/usecases/closing_entry_service.dart';
 export 'src/usecases/recurring_processor.dart';
 export 'src/utils/budget_period_calculator.dart';
+export 'src/utils/fixed_point.dart';
 export 'src/validation/validation_service.dart';

@@ -3,7 +3,7 @@ part of '../database.dart';
 /// Data Access Object for recurring transactions.
 @DriftAccessor(tables: [RecurringTransactions, Transactions, Splits])
 class RecurringTransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> 
-    with _$RecurringTransactionsDaoMixin, _$TransactionsDaoMixin {
+    with _$RecurringTransactionsDaoMixin, _$TransactionsDaoMixin, AuditableMixin {
   RecurringTransactionsDao(super.db);
 
   /// Watches all non-deleted recurring transactions.
@@ -32,24 +32,55 @@ class RecurringTransactionsDao extends DatabaseAccessor<LocalFinanceDatabase>
   /// Creates a new recurring transaction.
   Future<String> create(RecurringTransactionsCompanion recurring) async {
     await into(recurringTransactions).insert(recurring);
+    // Audit log for CREATE operation
+    await logMutation(
+      operation: 'CREATE',
+      entityType: 'recurring_transaction',
+      entityId: recurring.id.value,
+      newValue: recurring.toJson(),
+    );
     return recurring.id.value;
   }
 
   /// Updates an existing recurring transaction.
   Future<void> updateRecurring(RecurringTransactionsCompanion recurring) async {
+    // Get old value before update for audit log
+    final oldRecurring = await getById(recurring.id.value);
+    
     await (update(recurringTransactions)
           ..where((r) => r.id.equals(recurring.id.value)))
         .write(recurring);
+    
+    // Audit log for UPDATE operation
+    await logMutation(
+      operation: 'UPDATE',
+      entityType: 'recurring_transaction',
+      entityId: recurring.id.value,
+      oldValue: oldRecurring?.toJson(),
+      newValue: recurring.toJson(),
+    );
   }
 
   /// Soft deletes a recurring transaction.
   Future<void> deleteRecurring(String id) async {
+    // Get old value before soft delete for audit log
+    final oldRecurring = await getById(id);
+    
     final now = DateTime.now().millisecondsSinceEpoch;
     await (update(recurringTransactions)..where((r) => r.id.equals(id)))
         .write(RecurringTransactionsCompanion(
       deletedAt: Value(now),
       updatedAt: Value(now),
     ));
+    
+    // Audit log for DELETE operation (soft delete)
+    await logMutation(
+      operation: 'DELETE',
+      entityType: 'recurring_transaction',
+      entityId: id,
+      oldValue: oldRecurring?.toJson(),
+      description: 'Soft delete',
+    );
   }
 
   /// Gets recurring transactions that are due for generation.

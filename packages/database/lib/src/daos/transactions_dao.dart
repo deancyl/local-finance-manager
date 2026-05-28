@@ -2,7 +2,8 @@ part of '../database.dart';
 
 /// Data Access Object for transactions.
 @DriftAccessor(tables: [Transactions, Splits, TransactionTags])
-class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TransactionsDaoMixin {
+class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> 
+    with _$TransactionsDaoMixin, AuditableMixin {
   TransactionsDao(super.db);
 
   /// Gets all transactions (not deleted).
@@ -52,6 +53,16 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
         await into(splits).insert(split);
       }
     });
+    // Audit log for CREATE operation
+    await logMutation(
+      operation: 'CREATE',
+      entityType: 'transaction',
+      entityId: transaction.id.value,
+      newValue: {
+        'transaction': transaction.toJson(),
+        'splits': splitList.map((s) => s.toJson()).toList(),
+      },
+    );
     return transaction.id.value;
   }
 
@@ -60,6 +71,10 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
     TransactionsCompanion transaction,
     List<SplitsCompanion> splitList,
   ) async {
+    // Get old values before update for audit log
+    final oldTransaction = await getById(transaction.id.value);
+    final oldSplits = oldTransaction != null ? await getSplits(transaction.id.value) : [];
+    
     await transaction(() async {
       await into(transactions).insert(transaction, mode: InsertMode.replace);
       // Delete existing splits
@@ -69,12 +84,37 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
         await into(splits).insert(split);
       }
     });
+    
+    // Audit log for UPDATE operation
+    await logMutation(
+      operation: 'UPDATE',
+      entityType: 'transaction',
+      entityId: transaction.id.value,
+      oldValue: {
+        'transaction': oldTransaction?.toJson(),
+        'splits': oldSplits.map((s) => s.toJson()).toList(),
+      },
+      newValue: {
+        'transaction': transaction.toJson(),
+        'splits': splitList.map((s) => s.toJson()).toList(),
+      },
+    );
   }
 
   /// Soft deletes a transaction.
   Future<void> softDelete(String id) async {
+    // Get old value before soft delete for audit log
+    final oldTransaction = await getById(id);
     await (update(transactions)..where((t) => t.id.equals(id)))
         .write(TransactionsCompanion(deletedAt: Value(DateTime.now().millisecondsSinceEpoch)));
+    // Audit log for DELETE operation (soft delete)
+    await logMutation(
+      operation: 'DELETE',
+      entityType: 'transaction',
+      entityId: id,
+      oldValue: oldTransaction?.toJson(),
+      description: 'Soft delete',
+    );
   }
 
   /// Checks if a transaction exists by external ID.
@@ -338,7 +378,7 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
       // Apply amount range filter (absolute value of total)
       if (minAmount != null || maxAmount != null) {
         final totalAmount = splits.fold<int>(0, (sum, s) => sum + s.valueNum.abs());
-        final amount = totalAmount / 100.0;
+        final amount = FixedPoint(totalAmount, 100).toDouble();
         
         if (minAmount != null && amount < minAmount) continue;
         if (maxAmount != null && amount > maxAmount) continue;
@@ -540,7 +580,7 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
       filteredTransactions = filteredTransactions.where((t) {
         final splits = splitsByTransaction[t.id] ?? [];
         final totalAmount = splits.fold<int>(0, (sum, s) => sum + s.valueNum.abs());
-        final amount = totalAmount / 100.0;
+        final amount = FixedPoint(totalAmount, 100).toDouble();
         if (minAmount != null && amount < minAmount) return false;
         if (maxAmount != null && amount > maxAmount) return false;
         return true;

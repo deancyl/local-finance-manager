@@ -318,15 +318,15 @@ class _SuggestionCard extends ConsumerWidget {
                       ),
                     ),
                     const Spacer(),
-                    _ConfidenceBadge(confidence: suggestion!.confidence),
+                    _ConfidenceBadge(confidence: suggestion.confidence),
                   ],
                 ),
                 const SizedBox(height: 8),
-                _CategoryName(categoryId: suggestion!.categoryId),
-                if (suggestion!.reasoning != null) ...[
+                _CategoryName(categoryId: suggestion.categoryId),
+                if (suggestion.reasoning != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    suggestion!.reasoning!,
+                    suggestion.reasoning!,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

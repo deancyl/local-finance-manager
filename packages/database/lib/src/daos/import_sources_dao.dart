@@ -2,7 +2,8 @@ part of '../database.dart';
 
 /// Data Access Object for import sources.
 @DriftAccessor(tables: [ImportSources, ImportBatches])
-class ImportSourcesDao extends DatabaseAccessor<LocalFinanceDatabase> with _$ImportSourcesDaoMixin {
+class ImportSourcesDao extends DatabaseAccessor<LocalFinanceDatabase> 
+    with _$ImportSourcesDaoMixin, AuditableMixin {
   ImportSourcesDao(super.db);
 
   /// Gets all import sources.
@@ -21,12 +22,29 @@ class ImportSourcesDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Imp
   /// Creates a new import source.
   Future<String> createSource(ImportSourcesCompanion source) async {
     await into(importSources).insert(source);
+    // Audit log for CREATE operation
+    await logMutation(
+      operation: 'CREATE',
+      entityType: 'import_source',
+      entityId: source.id.value,
+      newValue: source.toJson(),
+    );
     return source.id.value;
   }
 
   /// Updates an existing import source.
   Future<void> updateSource(ImportSourcesCompanion source) async {
+    // Get old value before update for audit log
+    final oldSource = await getSourceById(source.id.value);
     await (update(importSources)..where((s) => s.id.equals(source.id.value))).write(source);
+    // Audit log for UPDATE operation
+    await logMutation(
+      operation: 'UPDATE',
+      entityType: 'import_source',
+      entityId: source.id.value,
+      oldValue: oldSource?.toJson(),
+      newValue: source.toJson(),
+    );
   }
 
   /// Gets import batches for a source.
@@ -37,11 +55,25 @@ class ImportSourcesDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Imp
   /// Creates a new import batch.
   Future<String> createBatch(ImportBatchesCompanion batch) async {
     await into(importBatches).insert(batch);
+    // Audit log for CREATE operation
+    await logMutation(
+      operation: 'CREATE',
+      entityType: 'import_batch',
+      entityId: batch.id.value,
+      newValue: batch.toJson(),
+    );
     return batch.id.value;
   }
 
   /// Updates an import batch.
   Future<void> updateBatch(ImportBatchesCompanion batch) async {
     await (update(importBatches)..where((b) => b.id.equals(batch.id.value))).write(batch);
+    // Audit log for UPDATE operation
+    await logMutation(
+      operation: 'UPDATE',
+      entityType: 'import_batch',
+      entityId: batch.id.value,
+      newValue: batch.toJson(),
+    );
   }
 }

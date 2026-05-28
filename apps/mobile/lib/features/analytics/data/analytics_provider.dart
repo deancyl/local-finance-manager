@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
+import 'optimized_analytics_queries.dart';
 
 // ============================================================
 // ANALYTICS MODELS
@@ -61,132 +62,57 @@ class FinancialInsight {
 // ANALYTICS PROVIDERS
 // ============================================================
 
-/// Provider for spending by category
+/// Provider for spending by category (OPTIMIZED with JOIN + background isolate)
+/// Performance improvement: O(n) single query instead of O(n*m*k) nested loops
 final spendingByCategoryProvider =
     FutureProvider.family<List<CategorySpending>, DateTimeRange>((ref, range) async {
   final db = ref.watch(databaseProvider);
 
-  // Get all expense splits in range
-  final transactions = await (db.select(db.transactions)
-    ..where((t) =>
-        t.postDate.isBiggerOrEqualValue(range.start.millisecondsSinceEpoch) &
-        t.postDate.isSmallerOrEqualValue(range.end.millisecondsSinceEpoch)))
-      .get();
+  // Optimized: Single JOIN query + background compute
+  // Replaces: transaction query → loop → splits query → loop → account query (50+ queries)
+  final results = await getSpendingByCategoryOptimized(
+    db,
+    range.start.millisecondsSinceEpoch,
+    range.end.millisecondsSinceEpoch,
+  );
 
-  final categoryTotals = <String?, double>{};
-  final categoryCounts = <String?, int>{};
-  double totalSpending = 0;
-
-  for (final txn in transactions) {
-    final splits = await (db.select(db.splits)
-      ..where((s) => s.transactionId.equals(txn.id)))
-      .get();
-
-    for (final split in splits) {
-      final account = await (db.select(db.accounts)
-        ..where((a) => a.id.equals(split.accountId)))
-        .getSingleOrNull();
-
-      if (account?.accountType == 'EXPENSE') {
-        final amount = split.valueNum.abs() / 100.0;
-        categoryTotals[split.categoryId] = (categoryTotals[split.categoryId] ?? 0) + amount;
-        categoryCounts[split.categoryId] = (categoryCounts[split.categoryId] ?? 0) + 1;
-        totalSpending += amount;
-      }
-    }
-  }
-
-  final result = <CategorySpending>[];
-
-  for (final entry in categoryTotals.entries) {
-    final categoryId = entry.key;
-    final amount = entry.value;
-
-    String categoryName = '未分类';
-    if (categoryId != null) {
-      final category = await (db.select(db.categories)
-        ..where((c) => c.id.equals(categoryId)))
-        .getSingleOrNull();
-      categoryName = category?.name ?? '未分类';
-    }
-
-    result.add(CategorySpending(
-      categoryId: categoryId ?? 'uncategorized',
-      categoryName: categoryName,
-      amount: amount,
-      percentage: totalSpending > 0 ? (amount / totalSpending) * 100 : 0,
-      transactionCount: categoryCounts[categoryId] ?? 0,
-    ));
-  }
-
-  result.sort((a, b) => b.amount.compareTo(a.amount));
-  return result;
+  return results.map((item) => CategorySpending(
+    categoryId: item['categoryId'] as String,
+    categoryName: item['categoryName'] as String,
+    amount: item['amount'] as double,
+    percentage: item['percentage'] as double,
+    transactionCount: item['transactionCount'] as int,
+  )).toList();
 });
 
-/// Provider for spending trends (by week)
+/// Provider for spending trends (by week) - OPTIMIZED with parallel queries + background isolate
+/// Performance improvement: 12 parallel queries + background compute instead of 12 sequential nested loops
 final spendingTrendsProvider = FutureProvider<List<SpendingTrend>>((ref) async {
   final db = ref.watch(databaseProvider);
   final now = DateTime.now();
-  final trends = <SpendingTrend>[];
 
-  for (var i = 0; i < 12; i++) {
-    final weekEnd = now.subtract(Duration(days: i * 7));
-    final weekStart = weekEnd.subtract(const Duration(days: 7));
+  // Optimized: 12 parallel queries + background compute
+  // Replaces: 12 sequential loops with nested queries (36+ queries)
+  final results = await getSpendingTrendsOptimized(db, now);
 
-    // Calculate spending for this week
-    final transactions = await (db.select(db.transactions)
-      ..where((t) =>
-          t.postDate.isBiggerOrEqualValue(weekStart.millisecondsSinceEpoch) &
-          t.postDate.isSmallerOrEqualValue(weekEnd.millisecondsSinceEpoch)))
-        .get();
-
-    double weekSpending = 0;
-
-    for (final txn in transactions) {
-      final splits = await (db.select(db.splits)
-        ..where((s) => s.transactionId.equals(txn.id)))
-        .get();
-
-      for (final split in splits) {
-        final account = await (db.select(db.accounts)
-          ..where((a) => a.id.equals(split.accountId)))
-          .getSingleOrNull();
-
-        if (account?.accountType == 'EXPENSE') {
-          weekSpending += split.valueNum.abs() / 100.0;
-        }
-      }
-    }
-
-    trends.add(SpendingTrend(
-      period: weekStart,
-      amount: weekSpending,
-      change: 0,
-      changePercent: 0,
-    ));
-  }
-
-  // Calculate changes
-  for (var i = 0; i < trends.length - 1; i++) {
-    final current = trends[i];
-    final previous = trends[i + 1];
-    final change = current.amount - previous.amount;
-    final changePercent = previous.amount > 0
-        ? (change / previous.amount) * 100
-        : 0;
-
-    trends[i] = SpendingTrend(
-      period: current.period,
-      amount: current.amount,
-      change: change,
-      changePercent: changePercent.toDouble(),
+  // Convert results to SpendingTrend objects
+  final trends = results.reversed.map((item) {
+    final index = item['index'] as int;
+    final period = now.subtract(Duration(days: index * 7)).subtract(const Duration(days: 7));
+    
+    return SpendingTrend(
+      period: period,
+      amount: item['amount'] as double,
+      change: item['change'] as double,
+      changePercent: item['changePercent'] as double,
     );
-  }
+  }).toList();
 
-  return trends.reversed.toList();
+  return trends;
 });
 
-/// Provider for financial insights
+/// Provider for financial insights - OPTIMIZED with single JOIN query + background isolate
+/// Performance improvement: 1 query instead of nested transaction→split→account loops
 final financialInsightsProvider = FutureProvider<List<FinancialInsight>>((ref) async {
   final db = ref.watch(databaseProvider);
   final insights = <FinancialInsight>[];
@@ -195,31 +121,15 @@ final financialInsightsProvider = FutureProvider<List<FinancialInsight>>((ref) a
   final now = DateTime.now();
   final monthStart = DateTime(now.year, now.month, 1);
 
-  final transactions = await (db.select(db.transactions)
-    ..where((t) =>
-        t.postDate.isBiggerOrEqualValue(monthStart.millisecondsSinceEpoch)))
-      .get();
+  // Optimized: Single JOIN query + background compute
+  final results = await getIncomeExpenseOptimized(
+    db,
+    monthStart.millisecondsSinceEpoch,
+    now.millisecondsSinceEpoch,
+  );
 
-  // Analyze spending patterns
-  int expenseCount = 0;
-  double totalExpense = 0;
-
-  for (final txn in transactions) {
-    final splits = await (db.select(db.splits)
-      ..where((s) => s.transactionId.equals(txn.id)))
-      .get();
-
-    for (final split in splits) {
-      final account = await (db.select(db.accounts)
-        ..where((a) => a.id.equals(split.accountId)))
-        .getSingleOrNull();
-
-      if (account?.accountType == 'EXPENSE') {
-        expenseCount++;
-        totalExpense += split.valueNum.abs() / 100.0;
-      }
-    }
-  }
+  final expenseCount = results['expenseCount']?.toInt() ?? 0;
+  final totalExpense = results['expense'] ?? 0.0;
 
   // Add insights based on patterns
   if (expenseCount > 0) {
@@ -367,49 +277,32 @@ class IncomeSource {
 // ADDITIONAL ANALYTICS PROVIDERS FOR v0.3.110
 // ============================================================
 
-/// Provider for monthly savings rate
+/// Provider for monthly savings rate - OPTIMIZED with single JOIN query + background isolate
+/// Performance improvement: 1 query instead of nested transaction→split→account loops
 final monthlySavingsRateProvider = FutureProvider<MonthlySavingsRate>((ref) async {
   final db = ref.watch(databaseProvider);
   final now = DateTime.now();
   final monthStart = DateTime(now.year, now.month, 1);
   final monthEnd = DateTime(now.year, now.month + 1, 0);
 
-  final transactions = await (db.select(db.transactions)
-    ..where((t) =>
-        t.postDate.isBiggerOrEqualValue(monthStart.millisecondsSinceEpoch) &
-        t.postDate.isSmallerOrEqualValue(monthEnd.millisecondsSinceEpoch)))
-      .get();
+  // Optimized: Single JOIN query + background compute
+  final results = await getIncomeExpenseOptimized(
+    db,
+    monthStart.millisecondsSinceEpoch,
+    monthEnd.millisecondsSinceEpoch,
+  );
 
-  double income = 0;
-  double expense = 0;
-
-  for (final txn in transactions) {
-    final splits = await (db.select(db.splits)
-      ..where((s) => s.transactionId.equals(txn.id)))
-      .get();
-
-    for (final split in splits) {
-      final account = await (db.select(db.accounts)
-        ..where((a) => a.id.equals(split.accountId)))
-        .getSingleOrNull();
-
-      if (account?.accountType == 'INCOME') {
-        income += split.valueNum.abs() / 100.0;
-      } else if (account?.accountType == 'EXPENSE') {
-        expense += split.valueNum.abs() / 100.0;
-      }
-    }
-  }
-
+  final income = results['income'] ?? 0.0;
+  final expense = results['expense'] ?? 0.0;
   final savings = income - expense;
-  final savingsRate = income > 0 ? (savings / income) * 100 : 0;
+  final savingsRate = income > 0 ? (savings / income) * 100 : 0.0;
 
   return MonthlySavingsRate(
     month: monthStart,
     income: income,
     expense: expense,
     savings: savings,
-    savingsRate: savingsRate.toDouble(),
+    savingsRate: savingsRate,
   );
 });
 
@@ -444,7 +337,8 @@ final expenseRatioProvider = FutureProvider<List<ExpenseRatio>>((ref) async {
   }).toList();
 });
 
-/// Provider for period comparison (this month vs last month)
+/// Provider for period comparison (this month vs last month) - OPTIMIZED with parallel JOIN queries
+/// Performance improvement: 2 parallel queries instead of nested loops
 final monthComparisonProvider = FutureProvider<PeriodComparison>((ref) async {
   final db = ref.watch(databaseProvider);
   final now = DateTime.now();
@@ -457,68 +351,36 @@ final monthComparisonProvider = FutureProvider<PeriodComparison>((ref) async {
   final lastMonthStart = DateTime(now.year, now.month - 1, 1);
   final lastMonthEnd = DateTime(now.year, now.month, 0);
 
-  double thisMonthExpense = 0;
-  double lastMonthExpense = 0;
+  // Optimized: 2 parallel queries instead of nested loops
+  final results = await Future.wait([
+    getIncomeExpenseOptimized(
+      db,
+      thisMonthStart.millisecondsSinceEpoch,
+      thisMonthEnd.millisecondsSinceEpoch,
+    ),
+    getIncomeExpenseOptimized(
+      db,
+      lastMonthStart.millisecondsSinceEpoch,
+      lastMonthEnd.millisecondsSinceEpoch,
+    ),
+  ]);
 
-  // Calculate this month expense
-  final thisMonthTxns = await (db.select(db.transactions)
-    ..where((t) =>
-        t.postDate.isBiggerOrEqualValue(thisMonthStart.millisecondsSinceEpoch) &
-        t.postDate.isSmallerOrEqualValue(thisMonthEnd.millisecondsSinceEpoch)))
-      .get();
-
-  for (final txn in thisMonthTxns) {
-    final splits = await (db.select(db.splits)
-      ..where((s) => s.transactionId.equals(txn.id)))
-      .get();
-
-    for (final split in splits) {
-      final account = await (db.select(db.accounts)
-        ..where((a) => a.id.equals(split.accountId)))
-        .getSingleOrNull();
-
-      if (account?.accountType == 'EXPENSE') {
-        thisMonthExpense += split.valueNum.abs() / 100.0;
-      }
-    }
-  }
-
-  // Calculate last month expense
-  final lastMonthTxns = await (db.select(db.transactions)
-    ..where((t) =>
-        t.postDate.isBiggerOrEqualValue(lastMonthStart.millisecondsSinceEpoch) &
-        t.postDate.isSmallerOrEqualValue(lastMonthEnd.millisecondsSinceEpoch)))
-      .get();
-
-  for (final txn in lastMonthTxns) {
-    final splits = await (db.select(db.splits)
-      ..where((s) => s.transactionId.equals(txn.id)))
-      .get();
-
-    for (final split in splits) {
-      final account = await (db.select(db.accounts)
-        ..where((a) => a.id.equals(split.accountId)))
-        .getSingleOrNull();
-
-      if (account?.accountType == 'EXPENSE') {
-        lastMonthExpense += split.valueNum.abs() / 100.0;
-      }
-    }
-  }
-
+  final thisMonthExpense = results[0]['expense'] ?? 0.0;
+  final lastMonthExpense = results[1]['expense'] ?? 0.0;
   final change = thisMonthExpense - lastMonthExpense;
-  final changePercent = lastMonthExpense > 0 ? (change / lastMonthExpense) * 100 : 0;
+  final changePercent = lastMonthExpense > 0 ? (change / lastMonthExpense) * 100 : 0.0;
 
   return PeriodComparison(
     currentAmount: thisMonthExpense,
     previousAmount: lastMonthExpense,
     change: change,
-    changePercent: changePercent.toDouble(),
+    changePercent: changePercent,
     periodLabel: '本月 vs 上月',
   );
 });
 
-/// Provider for year comparison (this year vs last year)
+/// Provider for year comparison (this year vs last year) - OPTIMIZED with parallel JOIN queries
+/// Performance improvement: 2 parallel queries instead of nested loops
 final yearComparisonProvider = FutureProvider<PeriodComparison>((ref) async {
   final db = ref.watch(databaseProvider);
   final now = DateTime.now();
@@ -531,148 +393,78 @@ final yearComparisonProvider = FutureProvider<PeriodComparison>((ref) async {
   final lastYearStart = DateTime(now.year - 1, 1, 1);
   final lastYearEnd = DateTime(now.year - 1, 12, 31);
 
-  double thisYearExpense = 0;
-  double lastYearExpense = 0;
+  // Optimized: 2 parallel queries instead of nested loops
+  final results = await Future.wait([
+    getIncomeExpenseOptimized(
+      db,
+      thisYearStart.millisecondsSinceEpoch,
+      thisYearEnd.millisecondsSinceEpoch,
+    ),
+    getIncomeExpenseOptimized(
+      db,
+      lastYearStart.millisecondsSinceEpoch,
+      lastYearEnd.millisecondsSinceEpoch,
+    ),
+  ]);
 
-  // Calculate this year expense
-  final thisYearTxns = await (db.select(db.transactions)
-    ..where((t) =>
-        t.postDate.isBiggerOrEqualValue(thisYearStart.millisecondsSinceEpoch) &
-        t.postDate.isSmallerOrEqualValue(thisYearEnd.millisecondsSinceEpoch)))
-      .get();
-
-  for (final txn in thisYearTxns) {
-    final splits = await (db.select(db.splits)
-      ..where((s) => s.transactionId.equals(txn.id)))
-      .get();
-
-    for (final split in splits) {
-      final account = await (db.select(db.accounts)
-        ..where((a) => a.id.equals(split.accountId)))
-        .getSingleOrNull();
-
-      if (account?.accountType == 'EXPENSE') {
-        thisYearExpense += split.valueNum.abs() / 100.0;
-      }
-    }
-  }
-
-  // Calculate last year expense
-  final lastYearTxns = await (db.select(db.transactions)
-    ..where((t) =>
-        t.postDate.isBiggerOrEqualValue(lastYearStart.millisecondsSinceEpoch) &
-        t.postDate.isSmallerOrEqualValue(lastYearEnd.millisecondsSinceEpoch)))
-      .get();
-
-  for (final txn in lastYearTxns) {
-    final splits = await (db.select(db.splits)
-      ..where((s) => s.transactionId.equals(txn.id)))
-      .get();
-
-    for (final split in splits) {
-      final account = await (db.select(db.accounts)
-        ..where((a) => a.id.equals(split.accountId)))
-        .getSingleOrNull();
-
-      if (account?.accountType == 'EXPENSE') {
-        lastYearExpense += split.valueNum.abs() / 100.0;
-      }
-    }
-  }
-
+  final thisYearExpense = results[0]['expense'] ?? 0.0;
+  final lastYearExpense = results[1]['expense'] ?? 0.0;
   final change = thisYearExpense - lastYearExpense;
-  final changePercent = lastYearExpense > 0 ? (change / lastYearExpense) * 100 : 0;
+  final changePercent = lastYearExpense > 0 ? (change / lastYearExpense) * 100 : 0.0;
 
   return PeriodComparison(
     currentAmount: thisYearExpense,
     previousAmount: lastYearExpense,
     change: change,
-    changePercent: changePercent.toDouble(),
+    changePercent: changePercent,
     periodLabel: '今年 vs 去年',
   );
 });
 
-/// Provider for spending anomalies
+/// Provider for spending anomalies - OPTIMIZED with single JOIN query for all categories/months
+/// Performance improvement: 1 query instead of categories→months→transactions→splits→accounts loops (100+ queries)
 final spendingAnomaliesProvider = FutureProvider<List<SpendingAnomaly>>((ref) async {
   final db = ref.watch(databaseProvider);
   final anomalies = <SpendingAnomaly>[];
   final now = DateTime.now();
 
-  // Get this month and last 3 months data for comparison
+  // Build month ranges: this month + last 3 months
   final thisMonthStart = DateTime(now.year, now.month, 1);
-  final threeMonthsAgo = DateTime(now.year, now.month - 3, 1);
+  final monthRanges = <DateTime>[];
+  final monthEnds = <DateTime>[];
+  
+  for (var i = 0; i <= 3; i++) {
+    final monthStart = DateTime(now.year, now.month - i, 1);
+    final monthEnd = DateTime(now.year, now.month - i + 1, 0);
+    monthRanges.add(monthStart);
+    monthEnds.add(monthEnd);
+  }
 
-  // Get all categories
-  final categories = await (db.select(db.categories)).get();
+  // Optimized: Single query gets all category spending across all months
+  // Replaces: nested loops through categories → months → transactions → splits → accounts
+  final categoryData = await getCategorySpendingForMonths(db, monthRanges, monthEnds);
 
-  for (final category in categories) {
-    // Calculate average monthly spending for this category (last 3 months)
+  for (final categoryEntry in categoryData) {
+    final categoryId = categoryEntry['categoryId'] as String;
+    final categoryName = categoryEntry['categoryName'] as String;
+    final monthlySpending = categoryEntry['monthlySpending'] as Map<String, dynamic>;
+
+    // Calculate average monthly spending (last 3 months, index 1-3)
     double totalSpending = 0;
     int monthCount = 0;
-
+    
     for (var i = 1; i <= 3; i++) {
-      final monthStart = DateTime(now.year, now.month - i, 1);
-      final monthEnd = DateTime(now.year, now.month - i + 1, 0);
-
-      final transactions = await (db.select(db.transactions)
-        ..where((t) =>
-            t.postDate.isBiggerOrEqualValue(monthStart.millisecondsSinceEpoch) &
-            t.postDate.isSmallerOrEqualValue(monthEnd.millisecondsSinceEpoch)))
-          .get();
-
-      double monthSpending = 0;
-
-      for (final txn in transactions) {
-        final splits = await (db.select(db.splits)
-          ..where((s) =>
-              s.transactionId.equals(txn.id) &
-              s.categoryId.equals(category.id)))
-          .get();
-
-        for (final split in splits) {
-          final account = await (db.select(db.accounts)
-            ..where((a) => a.id.equals(split.accountId)))
-            .getSingleOrNull();
-
-          if (account?.accountType == 'EXPENSE') {
-            monthSpending += split.valueNum.abs() / 100.0;
-          }
-        }
-      }
-
-      if (monthSpending > 0) {
-        totalSpending += monthSpending;
+      final spending = monthlySpending[i.toString()] as double?;
+      if (spending != null && spending > 0) {
+        totalSpending += spending;
         monthCount++;
       }
     }
 
-    final avgMonthlySpending = monthCount > 0 ? totalSpending / monthCount : 0;
-
-    // Get this month's spending for this category
-    final thisMonthTxns = await (db.select(db.transactions)
-      ..where((t) =>
-          t.postDate.isBiggerOrEqualValue(thisMonthStart.millisecondsSinceEpoch)))
-        .get();
-
-    double thisMonthSpending = 0;
-
-    for (final txn in thisMonthTxns) {
-      final splits = await (db.select(db.splits)
-        ..where((s) =>
-            s.transactionId.equals(txn.id) &
-            s.categoryId.equals(category.id)))
-        .get();
-
-      for (final split in splits) {
-        final account = await (db.select(db.accounts)
-          ..where((a) => a.id.equals(split.accountId)))
-          .getSingleOrNull();
-
-        if (account?.accountType == 'EXPENSE') {
-          thisMonthSpending += split.valueNum.abs() / 100.0;
-        }
-      }
-    }
+    final avgMonthlySpending = monthCount > 0 ? totalSpending / monthCount : 0.0;
+    
+    // Get this month's spending (index 0)
+    final thisMonthSpending = monthlySpending['0'] as double? ?? 0.0;
 
     // Detect anomaly: spending is 50% higher than average
     if (avgMonthlySpending > 0 && thisMonthSpending > avgMonthlySpending * 1.5) {
@@ -680,11 +472,11 @@ final spendingAnomaliesProvider = FutureProvider<List<SpendingAnomaly>>((ref) as
 
       anomalies.add(SpendingAnomaly(
         type: 'high_spending',
-        category: category.name,
-        expectedAmount: avgMonthlySpending.toDouble(),
-        actualAmount: thisMonthSpending.toDouble(),
-        deviationPercent: deviation.toDouble(),
-        description: '${category.name}支出比月均高出${deviation.toStringAsFixed(0)}%',
+        category: categoryName,
+        expectedAmount: avgMonthlySpending,
+        actualAmount: thisMonthSpending,
+        deviationPercent: deviation,
+        description: '$categoryName支出比月均高出${deviation.toStringAsFixed(0)}%',
         detectedAt: now,
       ));
     }
@@ -694,52 +486,26 @@ final spendingAnomaliesProvider = FutureProvider<List<SpendingAnomaly>>((ref) as
   return anomalies;
 });
 
-/// Provider for income sources
+/// Provider for income sources - OPTIMIZED with single JOIN query + background isolate
+/// Performance improvement: 1 query instead of nested transaction→split→account loops
 final incomeSourcesProvider = FutureProvider<List<IncomeSource>>((ref) async {
   final db = ref.watch(databaseProvider);
   final now = DateTime.now();
   final monthStart = DateTime(now.year, now.month, 1);
 
-  final transactions = await (db.select(db.transactions)
-    ..where((t) =>
-        t.postDate.isBiggerOrEqualValue(monthStart.millisecondsSinceEpoch)))
-      .get();
+  // Optimized: Single JOIN query + background compute
+  final results = await getIncomeSourcesOptimized(
+    db,
+    monthStart.millisecondsSinceEpoch,
+    now.millisecondsSinceEpoch,
+  );
 
-  final sourceTotals = <String, double>{};
-  final sourceCounts = <String, int>{};
-  double totalIncome = 0;
-
-  for (final txn in transactions) {
-    final splits = await (db.select(db.splits)
-      ..where((s) => s.transactionId.equals(txn.id)))
-      .get();
-
-    for (final split in splits) {
-      final account = await (db.select(db.accounts)
-        ..where((a) => a.id.equals(split.accountId)))
-        .getSingleOrNull();
-
-      if (account?.accountType == 'INCOME') {
-        final source = account!.name;
-        final amount = split.valueNum.abs() / 100.0;
-        sourceTotals[source] = (sourceTotals[source] ?? 0) + amount;
-        sourceCounts[source] = (sourceCounts[source] ?? 0) + 1;
-        totalIncome += amount;
-      }
-    }
-  }
-
-  final result = sourceTotals.entries.map((entry) {
-    return IncomeSource(
-      source: entry.key,
-      amount: entry.value,
-      percentage: totalIncome > 0 ? (entry.value / totalIncome) * 100 : 0,
-      transactionCount: sourceCounts[entry.key] ?? 0,
-    );
-  }).toList();
-
-  result.sort((a, b) => b.amount.compareTo(a.amount));
-  return result;
+  return results.map((item) => IncomeSource(
+    source: item['source'] as String,
+    amount: item['amount'] as double,
+    percentage: item['percentage'] as double,
+    transactionCount: item['transactionCount'] as int,
+  )).toList();
 });
 
 /// Provider for financial goals progress (placeholder - would need goals table)

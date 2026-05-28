@@ -258,7 +258,7 @@ class SecurityNotifier extends StateNotifier<SecuritySettings> {
       }
       
       final saltBase64 = parts[1];
-      final iterations = int.parse(parts[2]);
+      final iterations = int.tryParse(parts[2]) ?? 100000;
       final hashBase64 = parts[3];
       
       final salt = base64Url.decode(saltBase64);

@@ -102,9 +102,10 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
   }
   
   void _acceptAISuggestion() {
-    if (_currentSuggestion != null) {
+    final suggestion = _currentSuggestion;
+    if (suggestion != null) {
       setState(() {
-        _selectedCategoryId = _currentSuggestion!.categoryId;
+        _selectedCategoryId = suggestion.categoryId;
         _showSuggestion = false;
       });
     }
@@ -267,8 +268,14 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
                     return '请输入金额';
                   }
                   final amount = double.tryParse(value);
-                  if (amount == null || amount <= 0) {
-                    return '请输入有效金额';
+                  if (amount == null) {
+                    return '请输入有效数字';
+                  }
+                  if (amount < 0) {
+                    return '金额不能为负数';
+                  }
+                  if (amount >= 1000000000) {
+                    return '金额不能超过10亿';
                   }
                   return null;
                 },
@@ -499,11 +506,16 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
   
   Widget _buildAISuggestionChip() {
     final categoriesAsync = ref.watch(categoriesProvider);
+    final suggestion = _currentSuggestion;
+    
+    if (suggestion == null) {
+      return const SizedBox.shrink();
+    }
     
     return categoriesAsync.when(
       data: (categories) {
         final suggestedCategory = categories.where(
-          (c) => c.id == _currentSuggestion!.categoryId
+          (c) => c.id == suggestion.categoryId
         ).firstOrNull;
         
         if (suggestedCategory == null) {
@@ -515,7 +527,7 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
           return const SizedBox.shrink();
         }
         
-        final confidence = _currentSuggestion!.confidence;
+        final confidence = suggestion.confidence;
         final confidencePercent = (confidence * 100).round();
         final confidenceColor = confidence >= 0.8
             ? Colors.green
@@ -632,21 +644,41 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
     setState(() => _isLoading = true);
 
     try {
-      final amount = double.parse(_amountController.text);
+      final amount = double.tryParse(_amountController.text);
+      if (amount == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('无效的金额格式')),
+          );
+        }
+        return;
+      }
       final finalAmount = _isIncome ? amount : -amount;
 
       final notifier = ref.read(transactionNotifierProvider.notifier);
 
       if (widget.transaction != null && _existingSplit != null) {
         // Update existing transaction
-        final updatedTransaction = widget.transaction!.copyWith(
+        final existingTransaction = widget.transaction;
+        final existingSplit = _existingSplit;
+        
+        if (existingTransaction == null || existingSplit == null) {
+          throw StateError('Transaction or split should not be null');
+        }
+        
+        final updatedTransaction = existingTransaction.copyWith(
           description: Value(_descriptionController.text.isEmpty ? null : _descriptionController.text),
           notes: Value(_notesController.text.isEmpty ? null : _notesController.text),
           postDate: _selectedDate.millisecondsSinceEpoch,
         );
         
-        final updatedSplit = _existingSplit!.copyWith(
-          accountId: _selectedAccountId!,
+        final selectedAccountId = _selectedAccountId;
+        if (selectedAccountId == null) {
+          throw StateError('Account ID should not be null');
+        }
+        
+        final updatedSplit = existingSplit.copyWith(
+          accountId: selectedAccountId,
           categoryId: Value(_selectedCategoryId),
           valueNum: (finalAmount * 100).round(),
           quantityNum: (finalAmount * 100).round(),
@@ -655,16 +687,19 @@ class _AddTransactionDialogState extends ConsumerState<AddTransactionDialog> {
         await notifier.updateTransaction(updatedTransaction, updatedSplit);
         
         // Update tags
-        if (widget.transaction != null) {
-          await ref.read(databaseProvider).tagsDao.updateTransactionTags(
-            widget.transaction!.id,
-            _selectedTagIds,
-          );
-        }
+        await ref.read(databaseProvider).tagsDao.updateTransactionTags(
+          existingTransaction.id,
+          _selectedTagIds,
+        );
       } else {
         // Create new transaction
+        final selectedAccountId = _selectedAccountId;
+        if (selectedAccountId == null) {
+          throw StateError('Account ID should not be null');
+        }
+        
         final transactionId = await notifier.createTransaction(
-          accountId: _selectedAccountId!,
+          accountId: selectedAccountId,
           amount: finalAmount,
           date: _selectedDate,
           currencyId: _selectedCurrency,

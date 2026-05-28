@@ -120,11 +120,9 @@ class TagsPage extends ConsumerWidget {
   }
 
   Color _parseColor(String colorHex) {
-    try {
-      return Color(int.parse(colorHex.replaceFirst('#', '0xFF')));
-    } catch (e) {
-      return Colors.grey;
-    }
+    final colorValue = int.tryParse(colorHex.replaceFirst('#', '0xFF'));
+    return colorValue != null ? Color(colorValue) : Colors.grey;
+  }
   }
 
   Color _getContrastColor(Color color) {
@@ -282,10 +280,7 @@ class _TagFormDialogState extends State<_TagFormDialog> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: Color(int.parse(color.replaceFirst('#', '0xFF'))),
-                        borderRadius: BorderRadius.circular(8),
-                        border: isSelected
-                            ? Border.all(color: Colors.black, width: 3)
+                  color: Color(int.tryParse(color.replaceFirst('#', '0xFF')) ?? 0xFF607D8B),
                             : null,
                       ),
                       child: isSelected

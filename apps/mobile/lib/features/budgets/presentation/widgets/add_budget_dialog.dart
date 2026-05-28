@@ -194,7 +194,16 @@ class _AddBudgetDialogState extends ConsumerState<AddBudgetDialog> {
 
     try {
       final notifier = ref.read(budgetNotifierProvider.notifier);
-      final amount = double.parse(_amountController.text);
+      final amount = double.tryParse(_amountController.text);
+      if (amount == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('请输入有效的金额')),
+          );
+        }
+        setState(() => _isLoading = false);
+        return;
+      }
       final amountNum = (amount * 100).round(); // Convert to cents
       final now = DateTime.now().millisecondsSinceEpoch;
 

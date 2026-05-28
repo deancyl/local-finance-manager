@@ -226,7 +226,16 @@ class _TransferDialogState extends ConsumerState<TransferDialog> {
     setState(() => _isLoading = true);
 
     try {
-      final amount = double.parse(_amountController.text);
+      final amount = double.tryParse(_amountController.text);
+      if (amount == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('请输入有效的金额')),
+          );
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
 
       final notifier = ref.read(transactionNotifierProvider.notifier);
 

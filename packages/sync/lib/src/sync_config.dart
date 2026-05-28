@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:uuid/uuid.dart';
 
 import 'models/sync_models.dart';
+import 'security/certificate_pinning.dart';
 
 /// PowerSync Schema placeholder.
 /// 
@@ -121,6 +124,10 @@ class SyncConfig {
   
   /// Whether to auto-sync on startup.
   final bool autoSync;
+  
+  /// SSL certificate pinning configuration for secure connections.
+  /// If null, certificate pinning is disabled.
+  final CertificatePinningConfig? certificatePinning;
 
   SyncConfig({
     required this.serverUrl,
@@ -130,6 +137,7 @@ class SyncConfig {
     this.deviceId,
     this.syncIntervalSeconds = 30,
     this.autoSync = true,
+    this.certificatePinning,
   });
 
   // Storage keys for secure storage
@@ -139,6 +147,7 @@ class SyncConfig {
   static const _keyUserId = 'sync_user_id';
   static const _keyToken = 'sync_token';
   static const _keyTokenExpiry = 'sync_token_expiry';
+  static const _keyPinnedCerts = 'sync_pinned_certs';
 
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -152,6 +161,7 @@ class SyncConfig {
   static Future<SyncConfig?> fromStorage({
     required Schema schema,
     required AuthProvider authProvider,
+    CertificatePinningConfig? certificatePinning,
   }) async {
     try {
       final serverUrl = await _storage.read(key: _keyServerUrl);
@@ -162,12 +172,31 @@ class SyncConfig {
         return null;
       }
 
+      // Load pinned certificates if available
+      CertificatePinningConfig? loadedPinning = certificatePinning;
+      if (loadedPinning == null) {
+        final pinnedCertsJson = await _storage.read(key: _keyPinnedCerts);
+        if (pinnedCertsJson != null) {
+          try {
+            final List<dynamic> hashes = jsonDecode(pinnedCertsJson);
+            if (hashes.isNotEmpty) {
+              loadedPinning = CertificatePinningConfig(
+                pinnedSha256Hashes: hashes.cast<String>(),
+              );
+            }
+          } catch (e) {
+            // Ignore parsing errors
+          }
+        }
+      }
+
       return SyncConfig(
         serverUrl: serverUrl,
         databaseName: databaseName,
         schema: schema,
         authProvider: authProvider,
         deviceId: deviceId,
+        certificatePinning: loadedPinning,
       );
     } catch (e) {
       // If there's any error reading from storage, return null
@@ -177,13 +206,22 @@ class SyncConfig {
 
   /// Saves this configuration to secure storage.
   /// 
-  /// Stores server URL, database name, and device ID securely.
+  /// Stores server URL, database name, device ID, and pinned certificates securely.
   Future<void> save() async {
     final id = deviceId ?? const Uuid().v4();
     
     await _storage.write(key: _keyServerUrl, value: serverUrl);
     await _storage.write(key: _keyDatabaseName, value: databaseName);
     await _storage.write(key: _keyDeviceId, value: id);
+    
+    // Save pinned certificates if configured
+    if (certificatePinning != null) {
+      final hashes = certificatePinning!.pinnedSha256Hashes;
+      await _storage.write(
+        key: _keyPinnedCerts,
+        value: jsonEncode(hashes),
+      );
+    }
   }
 
   /// Clears all sync-related data from secure storage.
@@ -196,6 +234,7 @@ class SyncConfig {
     await _storage.delete(key: _keyUserId);
     await _storage.delete(key: _keyToken);
     await _storage.delete(key: _keyTokenExpiry);
+    await _storage.delete(key: _keyPinnedCerts);
   }
 
   /// Gets the stored device ID, generating a new one if needed.
@@ -228,6 +267,7 @@ class SyncConfig {
     String? deviceId,
     int? syncIntervalSeconds,
     bool? autoSync,
+    CertificatePinningConfig? certificatePinning,
   }) {
     return SyncConfig(
       serverUrl: serverUrl ?? this.serverUrl,
@@ -237,6 +277,7 @@ class SyncConfig {
       deviceId: deviceId ?? this.deviceId,
       syncIntervalSeconds: syncIntervalSeconds ?? this.syncIntervalSeconds,
       autoSync: autoSync ?? this.autoSync,
+      certificatePinning: certificatePinning ?? this.certificatePinning,
     );
   }
 

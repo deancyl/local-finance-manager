@@ -587,7 +587,7 @@ class ImportService {
           sortOrder: drift.Value(data['sortOrder'] as int? ?? 0),
           createdAt: data['createdAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
           updatedAt: data['updatedAt'] != null
-              ? DateTime.parse(data['updatedAt'] as String)
+              ? DateTime.tryParse(data['updatedAt'] as String)
               : DateTime.now(),
         ),
         mode: merge ? drift.InsertMode.insertOrReplace : drift.InsertMode.insert,
@@ -694,7 +694,7 @@ class ImportService {
           startDate: data['startDate'] as int,
           createdAt: data['createdAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
           updatedAt: data['updatedAt'] != null
-              ? DateTime.parse(data['updatedAt'] as String)
+              ? DateTime.tryParse(data['updatedAt'] as String)
               : DateTime.now(),
         ),
       );

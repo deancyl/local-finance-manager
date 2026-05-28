@@ -180,7 +180,11 @@ class _ReconciliationDialogState extends ConsumerState<ReconciliationDialog> {
       
       // Parse balance - convert to integer (cents)
       final balanceStr = _balanceController.text;
-      final balanceDecimal = double.parse(balanceStr);
+      final balanceDecimal = double.tryParse(balanceStr);
+      if (balanceDecimal == null) {
+        throw FormatException('无效的金额格式');
+      }
+      
       final balanceNum = (balanceDecimal * 100).round(); // Convert to cents
 
       // Start reconciliation session

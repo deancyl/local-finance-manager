@@ -22,7 +22,8 @@ class SmartCategorizationService {
     double? amount,
   }) async {
     // First, try AI-based suggestion
-    if (_aiService != null && _aiService!.isAvailable) {
+    final aiService = _aiService;
+    if (aiService != null && aiService.isAvailable) {
       // AI suggestion would go here
       // For now, fall back to history-based
     }
@@ -44,8 +45,9 @@ class SmartCategorizationService {
 
     // Simple text matching (could be enhanced with fuzzy matching)
     final similar = allTxns.where((t) {
-      if (t.description == null) return false;
-      return _calculateSimilarity(description, t.description!) > 0.5;
+      final desc = t.description;
+      if (desc == null) return false;
+      return _calculateSimilarity(description, desc) > 0.5;
     }).toList();
 
     if (similar.isEmpty) return null;
@@ -75,12 +77,15 @@ class SmartCategorizationService {
     }
 
     if (bestCategoryId == null) return null;
+    
+    final recentDescription = mostRecent.description;
+    if (recentDescription == null) return null;
 
     // Calculate confidence based on frequency and similarity
-    final confidence = (bestCount / splits.length) * _calculateSimilarity(description, mostRecent.description!);
+    final confidence = (bestCount / splits.length) * _calculateSimilarity(description, recentDescription);
 
     return CategorySuggestion(
-      categoryId: bestCategoryId!,
+      categoryId: bestCategoryId,
       confidence: confidence,
       reason: '基于历史记录',
     );

@@ -112,7 +112,8 @@ class CategoryColors {
     }
     try {
       final hexColor = hex.replaceFirst('#', '');
-      return Color(int.parse('0xFF$hexColor'));
+      final colorValue = int.tryParse('0xFF$hexColor');
+        return colorValue != null ? Color(colorValue) : const Color(0xFF2196F3);
     } catch (e) {
       return const Color(0xFF2196F3);
     }

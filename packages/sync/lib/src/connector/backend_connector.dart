@@ -5,6 +5,7 @@ import 'package:logging/logging.dart';
 
 import '../sync_config.dart' show AuthProvider;
 import '../models/sync_models.dart';
+import '../security/certificate_pinning.dart';
 
 /// Stub backend connector for PowerSync authentication and data upload.
 /// 
@@ -17,6 +18,9 @@ class FinanceAppConnector {
   final http.Client _httpClient;
   final Logger _log = Logger('FinanceAppConnector');
   
+  /// Certificate pinning configuration for secure connections.
+  final CertificatePinningConfig? certificatePinningConfig;
+  
   String? _currentToken;
   DateTime? _tokenExpiry;
   String? _deviceId;
@@ -26,7 +30,28 @@ class FinanceAppConnector {
     this.authProvider,
     this.powerSyncDb,
     http.Client? httpClient,
-  }) : _httpClient = httpClient ?? http.Client();
+    this.certificatePinningConfig,
+    String? deviceId,
+  }) : _httpClient = httpClient ?? _createDefaultHttpClient(certificatePinningConfig),
+       _deviceId = deviceId;
+
+  /// Creates an HTTP client with optional certificate pinning.
+  static http.Client _createDefaultHttpClient(
+    CertificatePinningConfig? pinningConfig,
+  ) {
+    final baseClient = http.Client();
+    
+    if (pinningConfig != null && 
+        pinningConfig.pinnedSha256Hashes.isNotEmpty &&
+        pinningConfig.pinnedSha256Hashes.first.isNotEmpty) {
+      return CertificatePinningClient(
+        inner: baseClient,
+        config: pinningConfig,
+      );
+    }
+    
+    return baseClient;
+  }
 
   /// Gets the current authentication token.
   String? get currentToken => _currentToken;

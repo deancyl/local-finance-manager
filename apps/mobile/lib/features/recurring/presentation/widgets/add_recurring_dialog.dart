@@ -292,7 +292,13 @@ class _AddRecurringDialogState extends ConsumerState<AddRecurringDialog> {
   void _save() {
     if (!_formKey.currentState!.validate()) return;
 
-    final amount = double.parse(_amountController.text);
+    final amount = double.tryParse(_amountController.text);
+    if (amount == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请输入有效的金额')),
+      );
+      return;
+    }
     final valueNum = (amount * 100).round();
     final interval = int.tryParse(_intervalController.text) ?? 1;
     final maxOccurrences = _maxOccurrencesController.text.isNotEmpty 

@@ -8,6 +8,7 @@ import 'package:database/database.dart';
 import 'package:finance_app/features/voice/presentation/widgets/voice_input_button.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import '../../../../core/presentation/widgets/gesture_controls.dart';
+import '../../../../core/presentation/widgets/undo_snackbar.dart';
 import '../../data/transaction_provider.dart';
 import '../../data/transaction_filter.dart';
 import '../widgets/transaction_card.dart';
@@ -445,12 +446,32 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () {
-              ref.read(transactionNotifierProvider.notifier).deleteTransaction(transaction.id);
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('交易已删除')),
-              );
+              
+              // Delete with undo capability
+              final undoAction = await ref
+                  .read(transactionNotifierProvider.notifier)
+                  .deleteTransactionWithUndo(transaction.id);
+              
+              if (undoAction != null && context.mounted) {
+                // Show undo snackbar with 5-second timeout
+                showUndoSnackBar(
+                  context: context,
+                  message: '交易已删除',
+                  onUndo: () async {
+                    final success = await ref
+                        .read(transactionNotifierProvider.notifier)
+                        .undoDelete();
+                    
+                    if (success && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('交易已恢复')),
+                      );
+                    }
+                  },
+                );
+              }
             },
             child: const Text('删除'),
           ),

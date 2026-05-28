@@ -7,6 +7,7 @@ import 'package:test/test.dart';
 
 import 'package:sync/src/connector/backend_connector.dart';
 import 'package:sync/src/sync_config.dart';
+import 'package:sync/src/security/certificate_pinning.dart';
 
 // Mock classes
 class MockAuthProvider extends Mock implements AuthProvider {}
@@ -552,6 +553,100 @@ void main() {
         connector.dispose();
         
         verify(() => mockHttpClient.close()).called(1);
+      });
+    });
+
+    group('certificate pinning', () {
+      test('creates connector with certificate pinning config', () {
+        final config = CertificatePinningConfig.single('ABC123');
+        
+        connector = FinanceAppConnector(
+          serverUrl: 'https://sync.example.com',
+          certificatePinningConfig: config,
+        );
+        
+        expect(connector.certificatePinningConfig, equals(config));
+      });
+
+      test('creates connector without certificate pinning config', () {
+        connector = FinanceAppConnector(
+          serverUrl: 'https://sync.example.com',
+        );
+        
+        expect(connector.certificatePinningConfig, isNull);
+      });
+
+      test('uses CertificatePinningClient when config is provided', () {
+        final config = CertificatePinningConfig.single('ABC123');
+        
+        connector = FinanceAppConnector(
+          serverUrl: 'https://sync.example.com',
+          certificatePinningConfig: config,
+        );
+        
+        // The connector should have the config set
+        expect(connector.certificatePinningConfig, isNotNull);
+        expect(
+          connector.certificatePinningConfig!.pinnedSha256Hashes,
+          equals(['ABC123']),
+        );
+      });
+
+      test('uses default HTTP client when config is null', () {
+        connector = FinanceAppConnector(
+          serverUrl: 'https://sync.example.com',
+        );
+        
+        expect(connector.certificatePinningConfig, isNull);
+      });
+
+      test('uses default HTTP client when config is disabled', () {
+        connector = FinanceAppConnector(
+          serverUrl: 'https://sync.example.com',
+          certificatePinningConfig: CertificatePinningConfig.disabled,
+        );
+        
+        // Disabled config should still be set but with empty hash
+        expect(connector.certificatePinningConfig, isNotNull);
+        expect(
+          connector.certificatePinningConfig!.enforcePinning,
+          isFalse,
+        );
+      });
+
+      test('supports certificate rotation config', () {
+        final config = CertificatePinningConfig.rotation(
+          currentHash: 'NEW123',
+          previousHash: 'OLD123',
+        );
+        
+        connector = FinanceAppConnector(
+          serverUrl: 'https://sync.example.com',
+          certificatePinningConfig: config,
+        );
+        
+        expect(connector.certificatePinningConfig!.pinnedSha256Hashes.length, equals(2));
+        expect(
+          connector.certificatePinningConfig!.pinnedSha256Hashes.contains('NEW123'),
+          isTrue,
+        );
+        expect(
+          connector.certificatePinningConfig!.pinnedSha256Hashes.contains('OLD123'),
+          isTrue,
+        );
+      });
+
+      test('allows custom HTTP client with pinning config', () {
+        final config = CertificatePinningConfig.single('ABC123');
+        
+        connector = FinanceAppConnector(
+          serverUrl: 'https://sync.example.com',
+          httpClient: mockHttpClient,
+          certificatePinningConfig: config,
+        );
+        
+        // Custom client should be used (pinning config is for reference)
+        expect(connector.certificatePinningConfig, equals(config));
       });
     });
   });

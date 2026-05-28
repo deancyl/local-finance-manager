@@ -2,7 +2,8 @@ part of '../database.dart';
 
 /// Data Access Object for attachments.
 @DriftAccessor(tables: [Attachments])
-class AttachmentsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$AttachmentsDaoMixin {
+class AttachmentsDao extends DatabaseAccessor<LocalFinanceDatabase> 
+    with _$AttachmentsDaoMixin, AuditableMixin {
   AttachmentsDao(super.db);
 
   /// Watches all non-deleted attachments for a specific transaction.
@@ -43,24 +44,33 @@ class AttachmentsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Attac
     final id = DateTime.now().microsecondsSinceEpoch.toString();
     final now = DateTime.now().millisecondsSinceEpoch;
     
-    await into(attachments).insert(
-      AttachmentsCompanion.insert(
-        id: id,
-        transactionId: transactionId,
-        fileName: fileName,
-        filePath: filePath,
-        fileType: fileType,
-        fileSize: fileSize,
-        thumbnailPath: Value(thumbnailPath),
-        thumbnailWidth: Value(thumbnailWidth),
-        thumbnailHeight: Value(thumbnailHeight),
-        fileHash: Value(fileHash),
-        description: Value(description),
-        sortOrder: Value(sortOrder),
-        createdAt: now,
-        updatedAt: now,
-      ),
+    final attachment = AttachmentsCompanion.insert(
+      id: id,
+      transactionId: transactionId,
+      fileName: fileName,
+      filePath: filePath,
+      fileType: fileType,
+      fileSize: fileSize,
+      thumbnailPath: Value(thumbnailPath),
+      thumbnailWidth: Value(thumbnailWidth),
+      thumbnailHeight: Value(thumbnailHeight),
+      fileHash: Value(fileHash),
+      description: Value(description),
+      sortOrder: Value(sortOrder),
+      createdAt: now,
+      updatedAt: now,
     );
+    
+    await into(attachments).insert(attachment);
+    
+    // Audit log for CREATE operation
+    await logMutation(
+      operation: 'CREATE',
+      entityType: 'attachment',
+      entityId: id,
+      newValue: attachment.toJson(),
+    );
+    
     return id;
   }
 
@@ -80,36 +90,73 @@ class AttachmentsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Attac
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     
-    await (update(attachments)..where((a) => a.id.equals(id))).write(
-      AttachmentsCompanion(
-        updatedAt: Value(now),
-        fileName: fileName != null ? Value(fileName) : const Value.absent(),
-        filePath: filePath != null ? Value(filePath) : const Value.absent(),
-        fileType: fileType != null ? Value(fileType) : const Value.absent(),
-        fileSize: fileSize != null ? Value(fileSize) : const Value.absent(),
-        thumbnailPath: thumbnailPath != null ? Value(thumbnailPath) : const Value.absent(),
-        thumbnailWidth: thumbnailWidth != null ? Value(thumbnailWidth) : const Value.absent(),
-        thumbnailHeight: thumbnailHeight != null ? Value(thumbnailHeight) : const Value.absent(),
-        fileHash: fileHash != null ? Value(fileHash) : const Value.absent(),
-        description: description != null ? Value(description) : const Value.absent(),
-        sortOrder: sortOrder != null ? Value(sortOrder) : const Value.absent(),
-      ),
+    // Get old value before update for audit log
+    final oldAttachment = await getById(id);
+    
+    final updateData = AttachmentsCompanion(
+      updatedAt: Value(now),
+      fileName: fileName != null ? Value(fileName) : const Value.absent(),
+      filePath: filePath != null ? Value(filePath) : const Value.absent(),
+      fileType: fileType != null ? Value(fileType) : const Value.absent(),
+      fileSize: fileSize != null ? Value(fileSize) : const Value.absent(),
+      thumbnailPath: thumbnailPath != null ? Value(thumbnailPath) : const Value.absent(),
+      thumbnailWidth: thumbnailWidth != null ? Value(thumbnailWidth) : const Value.absent(),
+      thumbnailHeight: thumbnailHeight != null ? Value(thumbnailHeight) : const Value.absent(),
+      fileHash: fileHash != null ? Value(fileHash) : const Value.absent(),
+      description: description != null ? Value(description) : const Value.absent(),
+      sortOrder: sortOrder != null ? Value(sortOrder) : const Value.absent(),
+    );
+    
+    await (update(attachments)..where((a) => a.id.equals(id))).write(updateData);
+    
+    // Audit log for UPDATE operation
+    await logMutation(
+      operation: 'UPDATE',
+      entityType: 'attachment',
+      entityId: id,
+      oldValue: oldAttachment?.toJson(),
+      newValue: updateData.toJson(),
     );
   }
 
   /// Soft deletes an attachment (sets deletedAt).
   Future<void> deleteAttachment(String id) async {
+    // Get old value before soft delete for audit log
+    final oldAttachment = await getById(id);
+    
+    final now = DateTime.now().millisecondsSinceEpoch;
     await (update(attachments)..where((a) => a.id.equals(id))).write(
       AttachmentsCompanion(
-        deletedAt: Value(DateTime.now().millisecondsSinceEpoch),
-        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+        deletedAt: Value(now),
+        updatedAt: Value(now),
       ),
+    );
+    
+    // Audit log for DELETE operation (soft delete)
+    await logMutation(
+      operation: 'DELETE',
+      entityType: 'attachment',
+      entityId: id,
+      oldValue: oldAttachment?.toJson(),
+      description: 'Soft delete',
     );
   }
 
   /// Permanently deletes an attachment (hard delete).
   Future<void> hardDeleteAttachment(String id) async {
+    // Get old value before hard delete for audit log
+    final oldAttachment = await getById(id);
+    
     await (delete(attachments)..where((a) => a.id.equals(id))).go();
+    
+    // Audit log for DELETE operation (hard delete)
+    await logMutation(
+      operation: 'DELETE',
+      entityType: 'attachment',
+      entityId: id,
+      oldValue: oldAttachment?.toJson(),
+      description: 'Hard delete (permanent)',
+    );
   }
 
   /// Gets the count of attachments for a transaction.

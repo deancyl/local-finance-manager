@@ -443,11 +443,9 @@ class _TransactionFilterDialogState extends ConsumerState<TransactionFilterDialo
   }
 
   Color _parseColor(String colorHex) {
-    try {
-      return Color(int.parse(colorHex.replaceFirst('#', '0xFF')));
-    } catch (e) {
-      return Colors.grey;
-    }
+    final colorValue = int.tryParse(colorHex.replaceFirst('#', '0xFF'));
+    if (colorValue == null) return Colors.grey;
+    return Color(colorValue);
   }
 
   void _clearFilters() {

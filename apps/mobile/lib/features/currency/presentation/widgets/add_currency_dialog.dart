@@ -12,6 +12,7 @@ class AddCurrencyDialog extends ConsumerStatefulWidget {
 }
 
 class _AddCurrencyDialogState extends ConsumerState<AddCurrencyDialog> {
+  final _formKey = GlobalKey<FormState>();
   final _idController = TextEditingController();
   final _nameController = TextEditingController();
   final _fullNameController = TextEditingController();
@@ -46,10 +47,12 @@ class _AddCurrencyDialogState extends ConsumerState<AddCurrencyDialog> {
     return AlertDialog(
       title: const Text('Add Currency'),
       content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Quick presets
             Text(
               'Quick Add',
@@ -85,25 +88,46 @@ class _AddCurrencyDialogState extends ConsumerState<AddCurrencyDialog> {
             ),
             const SizedBox(height: 8),
 
-            TextField(
+            TextFormField(
               controller: _idController,
               decoration: const InputDecoration(
                 labelText: 'Currency Code',
                 hintText: 'e.g., USD',
                 border: OutlineInputBorder(),
+                helperText: 'ISO 4217 format (3 uppercase letters)',
               ),
               textCapitalization: TextCapitalization.characters,
               maxLength: 3,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a currency code';
+                }
+                if (value.length != 3) {
+                  return 'Currency code must be exactly 3 letters';
+                }
+                if (!RegExp(r'^[A-Z]{3}$').hasMatch(value)) {
+                  return 'Currency code must be 3 uppercase letters (A-Z)';
+                }
+                return null;
+              },
+              autovalidateMode: AutovalidateMode.onUserInteraction,
             ),
             const SizedBox(height: 8),
 
-            TextField(
+            TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(
                 labelText: 'Symbol/Short Name',
                 hintText: 'e.g., \$',
                 border: OutlineInputBorder(),
               ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a symbol or short name';
+                }
+                return null;
+              },
+              autovalidateMode: AutovalidateMode.onUserInteraction,
             ),
             const SizedBox(height: 8),
 
@@ -136,7 +160,8 @@ class _AddCurrencyDialogState extends ConsumerState<AddCurrencyDialog> {
                 });
               },
             ),
-          ],
+            ],
+          ),
         ),
       ),
       actions: [
@@ -145,19 +170,17 @@ class _AddCurrencyDialogState extends ConsumerState<AddCurrencyDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: _canSave() ? _save : null,
+          onPressed: _save,
           child: const Text('Add'),
         ),
       ],
     );
   }
 
-  bool _canSave() {
-    return _idController.text.length == 3 &&
-        _nameController.text.isNotEmpty;
-  }
-
   void _save() {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
     ref.read(commodityNotifierProvider.notifier).addCurrency(
       id: _idController.text.toUpperCase(),
       mnemonic: _nameController.text,

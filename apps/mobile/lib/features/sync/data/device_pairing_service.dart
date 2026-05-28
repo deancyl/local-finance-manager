@@ -32,7 +32,7 @@ class DeviceInfo {
       deviceId: json['deviceId'] as String,
       deviceName: json['deviceName'] as String,
       platform: json['platform'] as String,
-      registeredAt: DateTime.parse(json['registeredAt'] as String),
+      registeredAt: DateTime.tryParse(json['registeredAt'] as String) ?? DateTime.now(),
     );
   }
   
@@ -177,7 +177,7 @@ class DevicePairingService {
         return PairingToken(
           token: data['pairingToken'] as String,
           serverUrl: serverUrl,
-          expiresAt: DateTime.parse(data['expiresAt'] as String),
+          expiresAt: DateTime.tryParse(data['expiresAt'] as String) ?? DateTime.now(),
           deviceId: deviceId,
         );
       } else {

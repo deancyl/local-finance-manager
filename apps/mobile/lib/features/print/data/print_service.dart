@@ -228,10 +228,11 @@ class _PrintPreviewScreenState extends State<PrintPreviewScreen> {
   }
 
   Future<void> _print() async {
-    if (_pdfBytes == null) return;
+    final pdfBytes = _pdfBytes;
+    if (pdfBytes == null) return;
 
     final success = await PrintService.showPrintDialog(
-      pdfBytes: _pdfBytes!,
+      pdfBytes: pdfBytes,
       title: widget.title,
     );
 
@@ -280,19 +281,26 @@ class _PrintPreviewScreenState extends State<PrintPreviewScreen> {
         children: [
           // Preview area
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _pdfBytes == null
-                    ? const Center(child: Text('无法生成预览'))
-                    : PdfPreview(
-                        bytes: _pdfBytes!,
-                        onPageChanged: (page, total) {
-                          setState(() {
-                            _currentPage = page;
-                            _totalPages = total;
-                          });
-                        },
-                      ),
+            child: Builder(
+              builder: (context) {
+                if (_isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final pdfBytes = _pdfBytes;
+                if (pdfBytes == null) {
+                  return const Center(child: Text('无法生成预览'));
+                }
+                return PdfPreview(
+                  bytes: pdfBytes,
+                  onPageChanged: (page, total) {
+                    setState(() {
+                      _currentPage = page;
+                      _totalPages = total;
+                    });
+                  },
+                );
+              },
+            ),
           ),
 
           // Page navigation controls
@@ -423,8 +431,11 @@ class _PageSetupSheetState extends State<_PageSetupSheet> {
   }
 
   void _apply() {
+    final format = PageSetup.formats[_formatName];
+    if (format == null) return; // Should not happen as _formatName is always valid
+    
     final setup = PageSetup(
-      format: PageSetup.formats[_formatName]!,
+      format: format,
       landscape: _landscape,
       marginTop: _marginTop,
       marginBottom: _marginBottom,

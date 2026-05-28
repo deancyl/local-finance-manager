@@ -102,10 +102,14 @@ class _QuickAmountInputState extends State<QuickAmountInput> {
       final tokens = expression.trim().split(' ').where((t) => t.isNotEmpty).toList();
       if (tokens.isEmpty) return null;
       
-      double result = double.parse(tokens[0]);
+      double? result = double.tryParse(tokens[0]);
+      if (result == null) return null;
+      
       for (int i = 1; i < tokens.length - 1; i += 2) {
         final op = tokens[i];
-        final operand = double.parse(tokens[i + 1]);
+        final operand = double.tryParse(tokens[i + 1]);
+        if (operand == null) return null;
+        
         switch (op) {
           case '+':
             result += operand;

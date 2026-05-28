@@ -310,12 +310,9 @@ class _TagAutocompleteSelectorState extends ConsumerState<TagAutocompleteSelecto
     });
     widget.onChanged?.call(_selectedTagIds.toList());
   }
-
   Color _parseColor(String colorHex) {
-    try {
-      return Color(int.parse(colorHex.replaceFirst('#', '0xFF')));
-    } catch (e) {
-      return Colors.grey;
-    }
+    final colorValue = int.tryParse(colorHex.replaceFirst('#', '0xFF'));
+    return colorValue != null ? Color(colorValue) : Colors.grey;
+  }
   }
 }

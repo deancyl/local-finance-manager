@@ -101,10 +101,10 @@ class TransactionFilter {
   factory TransactionFilter.fromJson(Map<String, dynamic> json) {
     return TransactionFilter(
       startDate: json['startDate'] != null
-          ? DateTime.parse(json['startDate'] as String)
+          ? DateTime.tryParse(json['startDate'] as String)
           : null,
       endDate: json['endDate'] != null
-          ? DateTime.parse(json['endDate'] as String)
+          ? DateTime.tryParse(json['endDate'] as String)
           : null,
       categoryId: json['categoryId'] as String?,
       accountId: json['accountId'] as String?,

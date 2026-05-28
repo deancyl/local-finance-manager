@@ -109,7 +109,8 @@ class _CategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = category.color != null
-        ? Color(int.parse(category.color!.replaceFirst('#', '0xFF')))
+        ? Color(int.tryParse(category.color!.replaceFirst('#', '0xFF')) ?? 0xFF2196F3)
+        : Theme.of(context).colorScheme.primary;
         : Theme.of(context).colorScheme.primary;
     
     return Material(

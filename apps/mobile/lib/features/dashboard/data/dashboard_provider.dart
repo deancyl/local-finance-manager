@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
+import 'package:finance_app/features/analytics/data/optimized_analytics_queries.dart';
 
 // ============================================================
 // DASHBOARD MODELS
@@ -49,7 +50,8 @@ class MonthlySummary {
 // DASHBOARD PROVIDERS
 // ============================================================
 
-/// Provider for dashboard summary
+/// Provider for dashboard summary - OPTIMIZED with single JOIN query + background isolate
+/// Performance improvement: 1 query instead of nested transaction→split→account loops
 final dashboardSummaryProvider = FutureProvider<DashboardSummary>((ref) async {
   final db = ref.watch(databaseProvider);
 
@@ -81,35 +83,16 @@ final dashboardSummaryProvider = FutureProvider<DashboardSummary>((ref) async {
   final monthStart = DateTime(now.year, now.month, 1);
   final monthEnd = DateTime(now.year, now.month + 1, 0);
 
-  final transactions = await (db.select(db.transactions)
-    ..where((t) =>
-        t.postDate.isBiggerOrEqualValue(monthStart.millisecondsSinceEpoch) &
-        t.postDate.isSmallerOrEqualValue(monthEnd.millisecondsSinceEpoch)))
-      .get();
+  // Optimized: Single JOIN query + background compute
+  // Replaces: transaction query → loop → splits query → loop → account query
+  final results = await getIncomeExpenseOptimized(
+    db,
+    monthStart.millisecondsSinceEpoch,
+    monthEnd.millisecondsSinceEpoch,
+  );
 
-  // Calculate income and expense
-  double monthIncome = 0;
-  double monthExpense = 0;
-
-  for (final txn in transactions) {
-    final splits = await (db.select(db.splits)
-      ..where((s) => s.transactionId.equals(txn.id)))
-      .get();
-
-    for (final split in splits) {
-      final account = accounts.firstWhere(
-        (a) => a.id == split.accountId,
-        orElse: () => accounts.first,
-      );
-
-      final value = split.valueNum / 100.0;
-      if (account.accountType == 'INCOME') {
-        monthIncome += value.abs();
-      } else if (account.accountType == 'EXPENSE') {
-        monthExpense += value.abs();
-      }
-    }
-  }
+  final monthIncome = results['income'] ?? 0.0;
+  final monthExpense = results['expense'] ?? 0.0;
 
   return DashboardSummary(
     totalAssets: totalAssets,
@@ -118,60 +101,45 @@ final dashboardSummaryProvider = FutureProvider<DashboardSummary>((ref) async {
     monthIncome: monthIncome,
     monthExpense: monthExpense,
     monthNet: monthIncome - monthExpense,
-    transactionCount: transactions.length,
+    transactionCount: results['expenseCount']?.toInt() ?? 0,
     accountCount: accounts.length,
   );
 });
 
-/// Provider for monthly summaries (last 12 months)
+/// Provider for monthly summaries (last 12 months) - OPTIMIZED with single JOIN query
+/// Performance improvement: 1 query instead of 12 sequential nested loops (36+ queries)
 final monthlySummariesProvider = FutureProvider<List<MonthlySummary>>((ref) async {
   final db = ref.watch(databaseProvider);
-  final summaries = <MonthlySummary>[];
 
   final now = DateTime.now();
-
+  
+  // Build month ranges for last 12 months
+  final monthStarts = <DateTime>[];
+  final monthEnds = <DateTime>[];
+  
   for (var i = 0; i < 12; i++) {
     final month = DateTime(now.year, now.month - i, 1);
     final monthStart = DateTime(month.year, month.month, 1);
     final monthEnd = DateTime(month.year, month.month + 1, 0);
-
-    final transactions = await (db.select(db.transactions)
-      ..where((t) =>
-          t.postDate.isBiggerOrEqualValue(monthStart.millisecondsSinceEpoch) &
-          t.postDate.isSmallerOrEqualValue(monthEnd.millisecondsSinceEpoch)))
-      .get();
-
-    // Calculate income/expense for month
-    double income = 0;
-    double expense = 0;
-
-    for (final txn in transactions) {
-      final splits = await (db.select(db.splits)
-        ..where((s) => s.transactionId.equals(txn.id)))
-        .get();
-
-      for (final split in splits) {
-        final account = await (db.select(db.accounts)
-          ..where((a) => a.id.equals(split.accountId)))
-          .getSingleOrNull();
-
-        if (account == null) continue;
-
-        final value = split.valueNum / 100.0;
-        if (account.accountType == 'INCOME') {
-          income += value.abs();
-        } else if (account.accountType == 'EXPENSE') {
-          expense += value.abs();
-        }
-      }
-    }
-
-    summaries.add(MonthlySummary(
-      month: month,
-      income: income,
-      expense: expense,
-    ));
+    monthStarts.add(monthStart);
+    monthEnds.add(monthEnd);
   }
+
+  // Optimized: Single query for all 12 months
+  // Replaces: 12 sequential loops with nested transaction→split→account queries
+  final results = await getMonthlySpendingData(db, monthStarts, monthEnds);
+
+  // Convert to MonthlySummary objects
+  final summaries = results.map((item) {
+    final monthIndex = item['monthIndex'] as int;
+    final month = DateTime(now.year, now.month - monthIndex, 1);
+    
+    return MonthlySummary(
+      month: month,
+      income: item['income'] as double,
+      expense: item['expense'] as double,
+    );
+  }).toList();
 
   return summaries;
 });

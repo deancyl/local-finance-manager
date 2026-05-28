@@ -132,8 +132,10 @@ extension type ExchangeRatesDao(LocalFinanceDatabase db) implements LocalFinance
     });
   }
 
-  /// Convert amount from one currency to another
-  /// Returns null if no rate is available
+  /// Convert amount from one currency to another using fixed-point arithmetic.
+  /// Returns null if no rate is available.
+  /// Note: Exchange rates are stored as doubles in the database schema,
+  /// so we convert them to FixedPoint for calculations to preserve precision.
   Future<double?> convertAmount(
     double amount,
     String fromCurrency,
@@ -148,12 +150,16 @@ extension type ExchangeRatesDao(LocalFinanceDatabase db) implements LocalFinance
       // Try inverse rate
       final inverseRate = await getLatestRate(toCurrency, fromCurrency);
       if (inverseRate != null) {
-        return amount / inverseRate.rate;
+        final amountFp = FixedPoint.parse(amount.toString());
+        final rateFp = FixedPoint.parse(inverseRate.rate.toString());
+        return (amountFp / rateFp).toDouble();
       }
       return null;
     }
 
-    return amount * rate.rate;
+    final amountFp = FixedPoint.parse(amount.toString());
+    final rateFp = FixedPoint.parse(rate.rate.toString());
+    return (amountFp * rateFp).toDouble();
   }
 
   /// Get the most recent rate date for a currency pair

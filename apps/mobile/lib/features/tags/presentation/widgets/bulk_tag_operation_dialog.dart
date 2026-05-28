@@ -217,12 +217,9 @@ class _BulkTagOperationDialogState extends ConsumerState<BulkTagOperationDialog>
       }
     }
   }
-
   Color _parseColor(String colorHex) {
-    try {
-      return Color(int.parse(colorHex.replaceFirst('#', '0xFF')));
-    } catch (e) {
-      return Colors.grey;
-    }
+    final colorValue = int.tryParse(colorHex.replaceFirst('#', '0xFF'));
+    return colorValue != null ? Color(colorValue) : Colors.grey;
+  }
   }
 }

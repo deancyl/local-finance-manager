@@ -44,10 +44,15 @@ class ReportsPage extends ConsumerWidget {
             onPressed: () => context.push('/reports/cash-flow'),
             tooltip: '现金流量表',
           ),
-          IconButton(
-            icon: const Icon(Icons.receipt_long),
-            onPressed: () => context.push('/reports/general-ledger'),
-            tooltip: '总账',
+          Semantics(
+            label: '总账报表',
+            hint: '点击查看总账报表',
+            button: true,
+            child: IconButton(
+              icon: const Icon(Icons.receipt_long),
+              onPressed: () => context.push('/reports/general-ledger'),
+              tooltip: '总账',
+            ),
           ),
         ],
       ),
@@ -79,70 +84,75 @@ class ReportsPage extends ConsumerWidget {
   }
 
   Widget _buildDateRangeSelector(BuildContext context, WidgetRef ref, DateRangeFilter dateRange) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.date_range,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
+    return Semantics(
+      label: '时间范围选择器',
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  ExcludeSemantics(
+                    child: Icon(
+                      Icons.date_range,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '时间范围',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _buildQuickSelector(
+                    context,
+                    ref,
+                    label: '本月',
+                    isSelected: dateRange.label == '本月',
+                    onTap: () {
+                      ref.read(dateRangeFilterProvider.notifier).state = DateRangeFilter.currentMonth();
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _buildQuickSelector(
+                    context,
+                    ref,
+                    label: '本年',
+                    isSelected: dateRange.label == '本年',
+                    onTap: () {
+                      ref.read(dateRangeFilterProvider.notifier).state = DateRangeFilter.currentYear();
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _buildQuickSelector(
+                    context,
+                    ref,
+                    label: '自定义',
+                    isSelected: dateRange.label == '自定义',
+                    onTap: () => _showDateRangePicker(context, ref, dateRange),
+                  ),
+                ],
+              ),
+              if (dateRange.label == '自定义') ...[
+                const SizedBox(height: 12),
                 Text(
-                  '时间范围',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                  '${DateFormat('yyyy-MM-dd').format(dateRange.startDate)} 至 ${DateFormat('yyyy-MM-dd').format(dateRange.endDate)}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.outline,
                       ),
                 ),
               ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _buildQuickSelector(
-                  context,
-                  ref,
-                  label: '本月',
-                  isSelected: dateRange.label == '本月',
-                  onTap: () {
-                    ref.read(dateRangeFilterProvider.notifier).state = DateRangeFilter.currentMonth();
-                  },
-                ),
-                const SizedBox(width: 8),
-                _buildQuickSelector(
-                  context,
-                  ref,
-                  label: '本年',
-                  isSelected: dateRange.label == '本年',
-                  onTap: () {
-                    ref.read(dateRangeFilterProvider.notifier).state = DateRangeFilter.currentYear();
-                  },
-                ),
-                const SizedBox(width: 8),
-                _buildQuickSelector(
-                  context,
-                  ref,
-                  label: '自定义',
-                  isSelected: dateRange.label == '自定义',
-                  onTap: () => _showDateRangePicker(context, ref, dateRange),
-                ),
-              ],
-            ),
-            if (dateRange.label == '自定义') ...[
-              const SizedBox(height: 12),
-              Text(
-                '${DateFormat('yyyy-MM-dd').format(dateRange.startDate)} 至 ${DateFormat('yyyy-MM-dd').format(dateRange.endDate)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-              ),
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -156,31 +166,38 @@ class ReportsPage extends ConsumerWidget {
     required VoidCallback onTap,
   }) {
     return Expanded(
-      child: InkWell(
+      child: Semantics(
+        label: '时间范围选择: $label',
+        hint: isSelected ? '已选择$label' : '点击选择$label',
+        button: true,
+        selected: isSelected,
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? Theme.of(context).colorScheme.primaryContainer
-                : Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(8),
-            border: isSelected
-                ? Border.all(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 1.5,
-                  )
-                : null,
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
               color: isSelected
-                  ? Theme.of(context).colorScheme.onPrimaryContainer
-                  : Theme.of(context).colorScheme.onSurface,
+                  ? Theme.of(context).colorScheme.primaryContainer
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8),
+              border: isSelected
+                  ? Border.all(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: 1.5,
+                    )
+                  : null,
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                color: isSelected
+                    ? Theme.of(context).colorScheme.onPrimaryContainer
+                    : Theme.of(context).colorScheme.onSurface,
+              ),
             ),
           ),
         ),
@@ -260,156 +277,199 @@ class ReportsPage extends ConsumerWidget {
   }
 
   Widget _buildMonthlyTrendSection(BuildContext context, AsyncValue<List<MonthlyData>> monthlyTrendAsync) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '月度趋势',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            Row(
-              children: [
-                Container(width: 12, height: 12, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
-                const SizedBox(width: 4),
-                const Text('收入', style: TextStyle(fontSize: 12)),
-                const SizedBox(width: 12),
-                Container(width: 12, height: 12, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
-                const SizedBox(width: 4),
-                const Text('支出', style: TextStyle(fontSize: 12)),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: monthlyTrendAsync.when(
-              data: (data) => MonthlyTrendChart(
-                data: data,
-                onBarTap: (filter) => _navigateToTransactions(context, filter),
+    return Semantics(
+      label: '月度趋势图表区域',
+      hint: '显示收入和支出的月度趋势，点击柱状图可查看详细交易',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '月度趋势',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(child: Text('加载失败: $error')),
+              ExcludeSemantics(
+                child: Row(
+                  children: [
+                    // Income legend indicator with accessibility
+                    ExcludeSemantics(
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Text('收入', style: TextStyle(fontSize: 12)),
+                    const SizedBox(width: 12),
+                    // Expense legend indicator with accessibility
+                    ExcludeSemantics(
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Text('支出', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: monthlyTrendAsync.when(
+                data: (data) => Semantics(
+                  label: '月度趋势柱状图，显示${data.length}个月的数据',
+                  child: MonthlyTrendChart(
+                    data: data,
+                    onBarTap: (filter) => _navigateToTransactions(context, filter),
+                  ),
+                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Center(child: Text('加载失败: $error')),
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildCategoryBreakdownSection(BuildContext context, AsyncValue<List<CategoryBreakdown>> categoryBreakdownAsync) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '支出分类',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: categoryBreakdownAsync.when(
-              data: (data) => SizedBox(
-                height: 300,
-                child: CategoryBreakdownChart(
-                  data: data,
-                  onCategoryTap: (filter) => _navigateToTransactions(context, filter),
+    return Semantics(
+      label: '支出分类图表区域',
+      hint: '显示各分类的支出占比，点击分类可查看详细交易',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '支出分类',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: categoryBreakdownAsync.when(
+                data: (data) => Semantics(
+                  label: '支出分类饼图，显示${data.length}个分类',
+                  child: SizedBox(
+                    height: 300,
+                    child: CategoryBreakdownChart(
+                      data: data,
+                      onCategoryTap: (filter) => _navigateToTransactions(context, filter),
+                    ),
+                  ),
+                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Center(child: Text('加载失败: $error')),
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(child: Text('加载失败: $error')),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildAssetTrendSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '资产负债趋势',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              height: 400,
-              child: const AssetTrendChart(),
+    return Semantics(
+      label: '资产负债趋势图表区域',
+      hint: '显示资产和负债的历史变化趋势',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '资产负债趋势',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Semantics(
+                label: '资产负债趋势折线图',
+                child: SizedBox(
+                  height: 400,
+                  child: const AssetTrendChart(),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildSummaryCard(BuildContext context, double income, double expense, double balance, DateRangeFilter dateRange) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Text(
-              '${dateRange.label}收支概览',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildSummaryItem(
-                    context,
-                    '收入',
-                    income,
-                    Colors.green,
-                    Icons.arrow_upward,
+    return Semantics(
+      label: '${dateRange.label}收支概览卡片',
+      value: '收入${income.toStringAsFixed(2)}元，支出${expense.toStringAsFixed(2)}元，结余${balance.toStringAsFixed(2)}元',
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Text(
+                '${dateRange.label}收支概览',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildSummaryItem(
+                      context,
+                      '收入',
+                      income,
+                      Colors.green,
+                      Icons.arrow_upward,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildSummaryItem(
-                    context,
-                    '支出',
-                    expense,
-                    Colors.red,
-                    Icons.arrow_downward,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildSummaryItem(
+                      context,
+                      '支出',
+                      expense,
+                      Colors.red,
+                      Icons.arrow_downward,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const Divider(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '结余: ',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                Text(
-                  '¥ ${balance.toStringAsFixed(2)}',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: balance >= 0 ? Colors.green : Colors.red,
-                      ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+              ExcludeSemantics(
+                child: const Divider(height: 32),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '结余: ',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  Text(
+                    '¥ ${balance.toStringAsFixed(2)}',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: balance >= 0 ? Colors.green : Colors.red,
+                        ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -422,30 +482,37 @@ class ReportsPage extends ConsumerWidget {
     Color color,
     IconData icon,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: color,
-                ),
+    return MergeSemantics(
+      child: Semantics(
+        label: '$label: ${amount.toStringAsFixed(2)}元',
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
           ),
-          const SizedBox(height: 4),
-          Text(
-            '¥ ${amount.toStringAsFixed(2)}',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+          child: Column(
+            children: [
+              ExcludeSemantics(
+                child: Icon(icon, color: color, size: 24),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: color,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '¥ ${amount.toStringAsFixed(2)}',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

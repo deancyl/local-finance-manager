@@ -9,6 +9,7 @@ import 'package:finance_app/features/accounts/data/account_provider.dart';
 import 'package:finance_app/features/budgets/data/budget_notification_service.dart';
 import 'package:core/core.dart' show BudgetPeriod, BudgetPeriodCalculator;
 import 'package:finance_app/core/performance/memory_optimization.dart';
+import 'package:finance_app/core/presentation/widgets/undoable_action.dart';
 import 'transaction_filter.dart';
 
 /// Page size for pagination (optimized for memory v0.3.120)
@@ -256,6 +257,12 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
   final Ref _ref;
   int _retryCount = 0;
   static const int _maxRetries = 3;
+  
+  /// Stores the most recent undoable action (for undo functionality)
+  UndoableAction? _pendingUndoAction;
+  
+  /// Getter for the pending undo action
+  UndoableAction? get pendingUndoAction => _pendingUndoAction;
 
   TransactionNotifier(this._db, this._ref) : super(const AsyncValue.data(null));
 
@@ -427,6 +434,77 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+    }
+  }
+
+  /// Deletes a transaction with undo capability.
+  /// 
+  /// Returns the UndoableAction if deletion was successful,
+  /// allowing the caller to show an undo snackbar.
+  /// Returns null if deletion failed.
+  Future<UndoableAction?> deleteTransactionWithUndo(String id) async {
+    state = const AsyncValue.loading();
+    try {
+      // Fetch transaction and splits before deletion
+      final transaction = await (_db.select(_db.transactions)
+        ..where((t) => t.id.equals(id))).getSingle();
+      final splits = await (_db.select(_db.splits)
+        ..where((s) => s.transactionId.equals(id))).get();
+      
+      // Perform soft delete
+      await (_db.update(_db.transactions)..where((t) => t.id.equals(id))).write(
+        TransactionsCompanion(
+          deletedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+        ),
+      );
+      
+      // Store for undo
+      _pendingUndoAction = UndoableAction.delete(
+        transaction: transaction,
+        splits: splits,
+      );
+      
+      state = const AsyncValue.data(null);
+      return _pendingUndoAction;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return null;
+    }
+  }
+
+  /// Restores a recently deleted transaction.
+  /// 
+  /// This undoes the most recent delete operation if within the undo window.
+  Future<bool> undoDelete() async {
+    if (_pendingUndoAction == null) return false;
+    
+    // Check if still within undo window (5 seconds)
+    if (!_pendingUndoAction!.isWithinUndoWindow(const Duration(seconds: 5))) {
+      _pendingUndoAction = null;
+      return false;
+    }
+    
+    state = const AsyncValue.loading();
+    try {
+      final action = _pendingUndoAction!;
+      
+      // Restore the transaction by clearing deletedAt
+      await (_db.update(_db.transactions)
+        ..where((t) => t.id.equals(action.transaction.id))).write(
+        TransactionsCompanion(
+          deletedAt: drift.Value(null),
+          updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+        ),
+      );
+      
+      // Clear the pending action
+      _pendingUndoAction = null;
+      
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
     }
   }
 

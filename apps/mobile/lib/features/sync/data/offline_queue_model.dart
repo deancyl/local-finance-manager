@@ -158,12 +158,12 @@ class OfflineQueueItem {
       status: QueueItemStatus.values.byName(json['status'] as String),
       retryCount: json['retryCount'] as int? ?? 0,
       errorMessage: json['errorMessage'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now(),
       lastAttemptAt: json['lastAttemptAt'] != null 
-          ? DateTime.parse(json['lastAttemptAt'] as String) 
+          ? DateTime.tryParse(json['lastAttemptAt'] as String) 
           : null,
       completedAt: json['completedAt'] != null 
-          ? DateTime.parse(json['completedAt'] as String) 
+          ? DateTime.tryParse(json['completedAt'] as String) 
           : null,
     );
   }

@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
+import 'package:core/core.dart';
 
 import 'connection/database_connection.dart';
 import 'tables/commodities.dart';
@@ -21,6 +24,7 @@ import 'tables/draft_transactions.dart';
 import 'tables/journal_entries.dart';
 
 part 'database.g.dart';
+part 'daos/auditable_mixin.dart';
 part 'daos/accounts_dao.dart';
 part 'daos/transactions_dao.dart';
 part 'daos/categories_dao.dart';
@@ -95,7 +99,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final DraftTransactionsDao draftTransactionsDao = DraftTransactionsDao(this);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration {
@@ -462,6 +466,43 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
           await customStatement(
             'CREATE INDEX IF NOT EXISTS idx_draft_transactions_updated '
             'ON draft_transactions(updated_at DESC)',
+          );
+        }
+        if (from < 16) {
+          // Version 16: Add journal entries tables for double-entry bookkeeping
+          await m.createTable(journalEntries);
+          await m.createTable(journalEntryLines);
+          
+          // Create indexes for journal entries
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_journal_entries_date '
+            'ON journal_entries(entry_date)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_journal_entries_status '
+            'ON journal_entries(status)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_journal_entries_type '
+            'ON journal_entries(entry_type)',
+          );
+          
+          // Create indexes for journal entry lines
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_journal_entry_lines_entry '
+            'ON journal_entry_lines(entry_id)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_journal_entry_lines_account '
+            'ON journal_entry_lines(account_id)',
+          );
+        }
+        if (from < 17) {
+          // Version 17: Add deletedAt column to accounts for soft delete
+          await m.addColumn(accounts, accounts.deletedAt);
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_accounts_deleted_at '
+            'ON accounts(deleted_at)',
           );
         }
       },
