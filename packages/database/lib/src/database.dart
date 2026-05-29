@@ -18,6 +18,7 @@ import 'tables/transaction_templates.dart';
 import 'tables/investment_holdings.dart';
 import 'tables/investment_transactions.dart';
 import 'tables/draft_transactions.dart';
+import 'tables/journal_entries.dart';
 
 part 'database.g.dart';
 part 'daos/auditable_mixin.dart';
@@ -64,6 +65,8 @@ part 'daos/draft_transactions_dao.dart';
     InvestmentHoldings,
     InvestmentTransactions,
     DraftTransactions,
+    JournalEntries,
+    JournalEntryLines,
   ],
 )
 class LocalFinanceDatabase extends _$LocalFinanceDatabase {
@@ -92,7 +95,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final DraftTransactionsDao draftTransactionsDao = DraftTransactionsDao(this);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration {
@@ -459,6 +462,35 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
           await customStatement(
             'CREATE INDEX IF NOT EXISTS idx_draft_transactions_updated '
             'ON draft_transactions(updated_at DESC)',
+          );
+        }
+        if (from < 17) {
+          // Version 17: Add journal entries tables for double-entry bookkeeping
+          await m.createTable(journalEntries);
+          await m.createTable(journalEntryLines);
+          
+          // Create indexes for journal entries
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_journal_entries_post_date '
+            'ON journal_entries(post_date)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_journal_entries_entry_number '
+            'ON journal_entries(entry_number)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_journal_entries_is_posted '
+            'ON journal_entries(is_posted)',
+          );
+          
+          // Create indexes for journal entry lines
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_journal_entry_lines_entry '
+            'ON journal_entry_lines(journal_entry_id)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_journal_entry_lines_account '
+            'ON journal_entry_lines(account_id)',
           );
         }
       },
