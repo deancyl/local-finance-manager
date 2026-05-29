@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ai/ai.dart';
-import 'package:core/core.dart';
-import 'package:database/database.dart';
+import 'package:core/core.dart' as core;
+import 'package:database/database.dart' hide Transaction;
+import '../../accounts/data/account_provider.dart';
 import '../../categories/data/category_provider.dart';
 import '../../transactions/data/transaction_provider.dart';
 
@@ -43,7 +44,7 @@ final categorySuggestionProvider = FutureProvider.family<CategorySuggestion?, St
   }
   
   // Convert to core Transaction model
-  final coreTransaction = Transaction(
+  final coreTransaction = core.Transaction(
     id: transaction.id,
     description: transaction.description,
     notes: transaction.notes,

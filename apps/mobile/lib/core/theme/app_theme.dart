@@ -98,7 +98,7 @@ class AppTheme {
         foregroundColor: Colors.black87,
         toolbarHeight: isDesktop ? 64 : 56,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: isWindows ? windowsCardElevation : (isDesktop ? 1 : 2),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(isWindows ? windowsBorderRadius : 12),
@@ -190,7 +190,7 @@ class AppTheme {
         foregroundColor: Colors.white,
         toolbarHeight: isDesktop ? 64 : 56,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: isWindows ? windowsCardElevation : (isDesktop ? 1 : 2),
         color: cardColor,
         shape: RoundedRectangleBorder(
@@ -285,7 +285,7 @@ class AppTheme {
         foregroundColor: highContrastSecondary,
         toolbarHeight: 56,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         color: highContrastSecondary,
         shape: RoundedRectangleBorder(
@@ -403,7 +403,7 @@ class AppTheme {
         foregroundColor: highContrastPrimary,
         toolbarHeight: 56,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         color: highContrastPrimary,
         shape: RoundedRectangleBorder(

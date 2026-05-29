@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart';
-import '../database.dart';
 
-part 'journal_entries_dao.dart';
+part of '../database.dart';
 
 /// Data Access Object for journal entries and journal entry lines.
 ///
