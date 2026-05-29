@@ -658,6 +658,121 @@ class ExportService {
     }
   }
 
+  /// Exports trial balance to CSV format.
+  Future<ExportResult> exportTrialBalanceToCSV({
+    required TrialBalance trialBalance,
+    String? customPath,
+  }) async {
+    // Build CSV rows
+    final rows = <List<String>>[];
+
+    // Header
+    rows.add(['试算平衡表']);
+    if (trialBalance.startDate != null && trialBalance.endDate != null) {
+      rows.add(['报告期间', '${DateFormat('yyyy-MM-dd').format(trialBalance.startDate!)} - ${DateFormat('yyyy-MM-dd').format(trialBalance.endDate!)}']);
+    }
+    rows.add(['生成时间', DateFormat('yyyy-MM-dd HH:mm:ss').format(trialBalance.generatedAt)]);
+    rows.add([]);
+
+    // Column headers
+    rows.add(['科目名称', '科目类型', '借方金额', '贷方金额']);
+
+    // Group accounts by type
+    final accountsByType = <AccountType, List<AccountBalance>>{};
+    for (final account in trialBalance.accounts) {
+      accountsByType.putIfAbsent(account.accountType, () => []).add(account);
+    }
+
+    // Define display order
+    const typeOrder = [
+      AccountType.asset,
+      AccountType.liability,
+      AccountType.equity,
+      AccountType.income,
+      AccountType.expense,
+    ];
+
+    // Add account rows by type
+    for (final type in typeOrder) {
+      final accounts = accountsByType[type];
+      if (accounts == null || accounts.isEmpty) continue;
+
+      // Type header
+      rows.add([]);
+      rows.add([_getAccountTypeLabel(type), '', '', '']);
+
+      // Account rows
+      _addTrialBalanceAccountRows(rows, accounts, depth: 0);
+    }
+
+    // Summary
+    rows.add([]);
+    rows.add(['合计', '', '¥${_formatDecimal(trialBalance.totalDebitsDecimal)}', '¥${_formatDecimal(trialBalance.totalCreditsDecimal)}']);
+    rows.add(['平衡状态', '', trialBalance.isBalanced ? '平衡' : '不平衡', '']);
+    if (!trialBalance.isBalanced) {
+      rows.add(['差额', '', '¥${_formatDecimal(trialBalance.difference)}', '']);
+    }
+
+    // Convert to CSV string
+    final csvString = const ListToCsvConverter().convert(rows);
+
+    // Add UTF-8 BOM for Excel compatibility
+    final bom = '\u{FEFF}';
+    final csvWithBom = '$bom$csvString';
+
+    // Save file
+    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final fileName = 'trial_balance_$timestamp.csv';
+    final filePath = await _saveFile(csvWithBom, fileName, customPath);
+
+    return ExportResult(
+      filePath: filePath,
+      transactionCount: 0,
+      accountCount: trialBalance.accounts.length,
+      categoryCount: 0,
+      format: 'CSV',
+    );
+  }
+
+  /// Recursively adds trial balance account rows to CSV.
+  void _addTrialBalanceAccountRows(
+    List<List<String>> rows,
+    List<AccountBalance> accounts, {
+    required int depth,
+  }) {
+    for (final account in accounts) {
+      final indent = '  ' * depth;
+      rows.add([
+        '$indent${account.accountName}',
+        _getAccountTypeLabel(account.accountType),
+        account.debitDecimal != Decimal.zero ? '¥${_formatDecimal(account.debitDecimal)}' : '',
+        account.creditDecimal != Decimal.zero ? '¥${_formatDecimal(account.creditDecimal)}' : '',
+      ]);
+
+      if (account.children != null && account.children!.isNotEmpty) {
+        _addTrialBalanceAccountRows(rows, account.children!, depth: depth + 1);
+      }
+    }
+  }
+
+  /// Gets the Chinese label for an account type.
+  String _getAccountTypeLabel(AccountType type) {
+    switch (type) {
+      case AccountType.asset:
+        return '资产类';
+      case AccountType.liability:
+        return '负债类';
+      case AccountType.equity:
+        return '权益类';
+      case AccountType.income:
+        return '收入类';
+      case AccountType.expense:
+        return '费用类';
+      case AccountType.investment:
+        return '投资类';
+    }
+  }
+
   /// Formats a Decimal value to string.
   String _formatDecimal(Decimal value) {
     final str = value.toString();

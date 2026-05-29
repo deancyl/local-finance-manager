@@ -746,6 +746,39 @@ class PdfExportService {
     return await _generateIncomeStatementPdf(incomeStatement, pageSetup: pageSetup);
   }
 
+  /// Exports trial balance to PDF format.
+  Future<PdfExportResult> exportTrialBalanceToPDF({
+    required TrialBalance trialBalance,
+    String? customPath,
+  }) async {
+    // Generate PDF
+    final pdfBytes = await _generateTrialBalancePdf(trialBalance);
+
+    // Save file
+    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final fileName = 'trial_balance_$timestamp.pdf';
+    final filePath = await _savePdfFile(pdfBytes, fileName, customPath);
+
+    return PdfExportResult(
+      filePath: filePath,
+      bytes: pdfBytes,
+      transactionCount: 0,
+      accountCount: trialBalance.accounts.length,
+      categoryCount: 0,
+      totalIncome: 0,
+      totalExpense: 0,
+      netAmount: 0,
+    );
+  }
+
+  /// Exports trial balance to PDF bytes (for printing).
+  Future<Uint8List> exportTrialBalanceToPDFBytes({
+    required TrialBalance trialBalance,
+    PageSetup? pageSetup,
+  }) async {
+    return await _generateTrialBalancePdf(trialBalance, pageSetup: pageSetup);
+  }
+
   /// Generates the balance sheet PDF document.
   Future<Uint8List> _generateBalanceSheetPdf(
     BalanceSheet balanceSheet, {
@@ -1068,6 +1101,390 @@ class PdfExportService {
         ],
       ),
     );
+  }
+
+  /// Generates the trial balance PDF document.
+  Future<Uint8List> _generateTrialBalancePdf(
+    TrialBalance trialBalance, {
+    PageSetup? pageSetup,
+  }) async {
+    final pdf = pw.Document();
+    final setup = pageSetup ?? const PageSetup();
+
+    // Determine period text
+    String periodText;
+    if (trialBalance.startDate != null && trialBalance.endDate != null) {
+      periodText = '报告期间: ${_displayFormat.format(trialBalance.startDate!)} - ${_displayFormat.format(trialBalance.endDate!)}';
+    } else if (trialBalance.endDate != null) {
+      periodText = '截止日期: ${_displayFormat.format(trialBalance.endDate!)}';
+    } else {
+      periodText = '全部期间';
+    }
+
+    // Group accounts by type
+    final accountsByType = <AccountType, List<AccountBalance>>{};
+    for (final account in trialBalance.accounts) {
+      accountsByType.putIfAbsent(account.accountType, () => []).add(account);
+    }
+
+    const typeOrder = [
+      AccountType.asset,
+      AccountType.liability,
+      AccountType.equity,
+      AccountType.income,
+      AccountType.expense,
+    ];
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: setup.effectiveFormat,
+        margin: setup.margins,
+        build: (pw.Context context) {
+          return [
+            // Title
+            pw.Center(
+              child: pw.Text(
+                '试算平衡表',
+                style: pw.TextStyle(
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            // Period
+            pw.Center(
+              child: pw.Text(
+                periodText,
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  color: PdfColors.grey700,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            // Generated date
+            pw.Center(
+              child: pw.Text(
+                '生成时间: ${_displayFormat.format(trialBalance.generatedAt)}',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  color: PdfColors.grey500,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 24),
+
+            // Account type sections
+            ...typeOrder.map((type) {
+              final accounts = accountsByType[type];
+              if (accounts == null || accounts.isEmpty) {
+                return pw.SizedBox.shrink();
+              }
+              return _buildTrialBalanceTypeSection(type, accounts);
+            }),
+
+            pw.SizedBox(height: 24),
+
+            // Summary section
+            _buildTrialBalanceSummary(trialBalance),
+          ];
+        },
+        footer: (pw.Context context) {
+          return pw.Container(
+            alignment: pw.Alignment.centerRight,
+            margin: const pw.EdgeInsets.only(top: 20),
+            child: pw.Text(
+              '第 ${context.pageNumber} 页，共 ${context.pagesCount} 页',
+              style: pw.TextStyle(
+                fontSize: 10,
+                color: PdfColors.grey500,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  /// Builds a trial balance account type section.
+  pw.Widget _buildTrialBalanceTypeSection(
+    AccountType type,
+    List<AccountBalance> accounts,
+  ) {
+    final typeColor = _getAccountTypePdfColor(type);
+    final typeLabel = _getAccountTypeLabel(type);
+    final rows = <pw.TableRow>[];
+
+    // Header row
+    rows.add(
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: typeColor),
+        children: [
+          _buildTableCell('科目', isHeader: true),
+          _buildTableCell('借方', isHeader: true, alignRight: true),
+          _buildTableCell('贷方', isHeader: true, alignRight: true),
+        ],
+      ),
+    );
+
+    // Account rows
+    for (final account in accounts) {
+      _addTrialBalanceAccountRows(rows, account, depth: 0);
+    }
+
+    // Subtotal row
+    final (subtotalDebit, subtotalCredit) = _calculateTrialBalanceSubtotals(accounts);
+    rows.add(
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: typeColor.withOpacity(0.3)),
+        children: [
+          _buildTableCell('小计', isBold: true),
+          _buildTableCell(
+            subtotalDebit != Decimal.zero ? '¥${_formatDecimal(subtotalDebit)}' : '-',
+            isBold: true,
+            alignRight: true,
+            textColor: PdfColors.blue700,
+          ),
+          _buildTableCell(
+            subtotalCredit != Decimal.zero ? '¥${_formatDecimal(subtotalCredit)}' : '-',
+            isBold: true,
+            alignRight: true,
+            textColor: PdfColors.orange700,
+          ),
+        ],
+      ),
+    );
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          typeLabel,
+          style: pw.TextStyle(
+            fontSize: 14,
+            fontWeight: pw.FontWeight.bold,
+            color: typeColor,
+          ),
+        ),
+        pw.SizedBox(height: 8),
+        pw.Table(
+          border: pw.TableBorder.all(color: PdfColors.grey300),
+          columnWidths: {
+            0: const pw.FlexColumnWidth(4),
+            1: const pw.FlexColumnWidth(2),
+            2: const pw.FlexColumnWidth(2),
+          },
+          children: rows,
+        ),
+        pw.SizedBox(height: 16),
+      ],
+    );
+  }
+
+  /// Recursively adds trial balance account rows.
+  void _addTrialBalanceAccountRows(
+    List<pw.TableRow> rows,
+    AccountBalance account, {
+    required int depth,
+  }) {
+    rows.add(
+      pw.TableRow(
+        children: [
+          pw.Padding(
+            padding: pw.EdgeInsets.only(left: depth * 8.0, top: 6, bottom: 6, right: 8),
+            child: pw.Text(
+              account.accountName,
+              style: pw.TextStyle(
+                fontSize: 10,
+                fontWeight: depth == 0 ? pw.FontWeight.bold : pw.FontWeight.normal,
+              ),
+            ),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+            child: pw.Text(
+              account.debitDecimal != Decimal.zero ? '¥${_formatDecimal(account.debitDecimal)}' : '-',
+              style: pw.TextStyle(
+                fontSize: 10,
+                fontWeight: depth == 0 ? pw.FontWeight.bold : pw.FontWeight.normal,
+                color: PdfColors.blue700,
+              ),
+              textAlign: pw.TextAlign.right,
+            ),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+            child: pw.Text(
+              account.creditDecimal != Decimal.zero ? '¥${_formatDecimal(account.creditDecimal)}' : '-',
+              style: pw.TextStyle(
+                fontSize: 10,
+                fontWeight: depth == 0 ? pw.FontWeight.bold : pw.FontWeight.normal,
+                color: PdfColors.orange700,
+              ),
+              textAlign: pw.TextAlign.right,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (account.children != null) {
+      for (final child in account.children!) {
+        _addTrialBalanceAccountRows(rows, child, depth: depth + 1);
+      }
+    }
+  }
+
+  /// Calculates subtotals for a list of account balances.
+  (Decimal, Decimal) _calculateTrialBalanceSubtotals(List<AccountBalance> accounts) {
+    Decimal totalDebit = Decimal.zero;
+    Decimal totalCredit = Decimal.zero;
+
+    void addAccount(AccountBalance account) {
+      totalDebit += account.debitDecimal;
+      totalCredit += account.creditDecimal;
+      if (account.children != null) {
+        for (final child in account.children!) {
+          addAccount(child);
+        }
+      }
+    }
+
+    for (final account in accounts) {
+      addAccount(account);
+    }
+
+    return (totalDebit, totalCredit);
+  }
+
+  /// Builds the trial balance summary section.
+  pw.Widget _buildTrialBalanceSummary(TrialBalance trialBalance) {
+    final isBalanced = trialBalance.isBalanced;
+    final statusColor = isBalanced ? PdfColors.green700 : PdfColors.red700;
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(16),
+      decoration: pw.BoxDecoration(
+        color: statusColor,
+        border: pw.Border.all(color: statusColor),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            children: [
+              pw.Icon(
+                pw.IconData(isBalanced ? 0xe5ca : 0xe001),
+                color: statusColor,
+                size: 20,
+              ),
+              pw.SizedBox(width: 8),
+              pw.Text(
+                '试算平衡汇总',
+                style: pw.TextStyle(
+                  fontSize: 14,
+                  fontWeight: pw.FontWeight.bold,
+                  color: statusColor,
+                ),
+              ),
+              pw.Spacer(),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: pw.BoxDecoration(
+                  color: statusColor,
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
+                ),
+                child: pw.Text(
+                  isBalanced ? '平衡' : '不平衡',
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    color: PdfColors.white,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 16),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+            children: [
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Text('借方合计', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                  pw.Text(
+                    '¥${_formatDecimal(trialBalance.totalDebitsDecimal)}',
+                    style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.blue700),
+                  ),
+                ],
+              ),
+              pw.Text('=', style: pw.TextStyle(fontSize: 18)),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Text('贷方合计', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                  pw.Text(
+                    '¥${_formatDecimal(trialBalance.totalCreditsDecimal)}',
+                    style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.orange700),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (!isBalanced) ...[
+            pw.SizedBox(height: 12),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(8),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.red50,
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+              ),
+              child: pw.Row(
+                children: [
+                  pw.Icon(
+                    pw.IconData(0xe002),
+                    color: PdfColors.red700,
+                    size: 16,
+                  ),
+                  pw.SizedBox(width: 8),
+                  pw.Text(
+                    '差额: ¥${_formatDecimal(trialBalance.difference)}',
+                    style: pw.TextStyle(
+                      fontSize: 12,
+                      color: PdfColors.red700,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Gets PDF color for account type.
+  PdfColor _getAccountTypePdfColor(AccountType type) {
+    switch (type) {
+      case AccountType.asset:
+        return PdfColors.green700;
+      case AccountType.liability:
+        return PdfColors.red700;
+      case AccountType.equity:
+        return PdfColors.purple700;
+      case AccountType.income:
+        return PdfColors.blue700;
+      case AccountType.expense:
+        return PdfColors.orange700;
+      case AccountType.investment:
+        return PdfColors.teal700;
+    }
   }
 
   /// Formats a Decimal value to string.

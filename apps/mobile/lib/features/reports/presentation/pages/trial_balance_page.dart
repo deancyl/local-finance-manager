@@ -83,12 +83,18 @@ class _TrialBalancePageState extends ConsumerState<TrialBalancePage> {
   }
 
   void _handleExport() {
+    final trialBalance = ref.read(trialBalanceProvider).valueOrNull;
+    if (trialBalance == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先加载数据')),
+      );
+      return;
+    }
     showModalBottomSheet<void>(
       context: context,
       builder: (context) => _ExportOptionsSheet(
         reportName: '试算平衡表',
-        startDate: _startDate,
-        endDate: _endDate,
+        trialBalance: trialBalance,
       ),
     );
   }
@@ -370,13 +376,11 @@ class _TrialBalancePageState extends ConsumerState<TrialBalancePage> {
 /// Export options bottom sheet for reports
 class _ExportOptionsSheet extends ConsumerStatefulWidget {
   final String reportName;
-  final DateTime? startDate;
-  final DateTime? endDate;
+  final TrialBalance trialBalance;
 
   const _ExportOptionsSheet({
     required this.reportName,
-    this.startDate,
-    this.endDate,
+    required this.trialBalance,
   });
 
   @override
@@ -453,18 +457,15 @@ class _ExportOptionsSheetState extends ConsumerState<_ExportOptionsSheet> {
 
     try {
       final exportService = ref.read(exportServiceProvider);
-      final filters = ExportFilters(
-        startDate: widget.startDate,
-        endDate: widget.endDate,
+      final result = await exportService.exportTrialBalanceToPDF(
+        trialBalance: widget.trialBalance,
       );
-
-      final result = await exportService.exportTransactionsToPDF(filters: filters);
 
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('导出成功：${result.transactionCount} 条记录'),
+            content: Text('导出成功：${result.accountCount} 个账户'),
             action: SnackBarAction(
               label: '分享',
               onPressed: () => Share.shareXFiles([XFile(result.filePath)]),
@@ -489,18 +490,15 @@ class _ExportOptionsSheetState extends ConsumerState<_ExportOptionsSheet> {
 
     try {
       final exportService = ref.read(exportServiceProvider);
-      final filters = ExportFilters(
-        startDate: widget.startDate,
-        endDate: widget.endDate,
+      final result = await exportService.exportTrialBalanceToCSV(
+        trialBalance: widget.trialBalance,
       );
-
-      final result = await exportService.exportTransactionsToCSV(filters: filters);
 
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('导出成功：${result.transactionCount} 条记录'),
+            content: Text('导出成功：${result.accountCount} 个账户'),
             action: SnackBarAction(
               label: '分享',
               onPressed: () => Share.shareXFiles([XFile(result.filePath)]),
