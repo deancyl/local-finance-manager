@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'keychain_service.dart';
 
@@ -38,7 +39,7 @@ class MobileKeychainService implements KeychainService {
 
   @override
   Future<String> generateAndStoreKey(String keyName, int length) async {
-    final key = _generateRandomKey(length);
+    final key = generateRandomKey(length);
     await storeKey(keyName, key);
     return key;
   }
@@ -48,8 +49,15 @@ class MobileKeychainService implements KeychainService {
     await _storage.deleteAll();
   }
 
-  String _generateRandomKey(int length) {
-    final random = DateTime.now().microsecondsSinceEpoch.toString();
-    return random.padRight(length, '0').substring(0, length);
+  /// Generates a cryptographically secure random key.
+  /// 
+  /// Uses [Random.secure] for cryptographically secure random number generation.
+  /// Returns a hex string of the specified length.
+  String generateRandomKey(int length) {
+    // Use cryptographically secure random number generator
+    final key = List<int>.generate(32, (_) => Random.secure().nextInt(256))
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
+    return key.padRight(length, '0').substring(0, length);
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:encryption/encryption.dart';
@@ -303,6 +304,64 @@ void main() {
       KeychainFactory.initialize(mockService);
       
       expect(KeychainFactory.instance, same(mockService));
+    });
+  });
+
+  group('MobileKeychainService Secure Key Generation', () {
+    test('generates cryptographically random key', () {
+      final service = MobileKeychainService();
+      final key1 = service.generateRandomKey(64);
+      final key2 = service.generateRandomKey(64);
+      
+      // Keys should be different (cryptographically random)
+      expect(key1, isNot(equals(key2)));
+      
+      // Keys should be 64 characters (32 bytes in hex)
+      expect(key1.length, equals(64));
+      expect(key2.length, equals(64));
+      
+      // Keys should only contain hex characters
+      expect(RegExp(r'^[0-9a-f]+$').hasMatch(key1), isTrue);
+      expect(RegExp(r'^[0-9a-f]+$').hasMatch(key2), isTrue);
+    });
+
+    test('keys are unique across calls', () {
+      final service = MobileKeychainService();
+      final keys = <String>{};
+      
+      // Generate 100 keys
+      for (var i = 0; i < 100; i++) {
+        final key = service.generateRandomKey(64);
+        keys.add(key);
+      }
+      
+      // All keys should be unique
+      expect(keys.length, equals(100));
+    });
+
+    test('does not use timestamp-based generation', () {
+      final service = MobileKeychainService();
+      
+      // Generate multiple keys rapidly
+      final keys = <String>[];
+      for (var i = 0; i < 10; i++) {
+        keys.add(service.generateRandomKey(64));
+      }
+      
+      // If timestamp-based, keys would be sequential or very similar
+      // With Random.secure(), keys should be completely different
+      final uniqueKeys = keys.toSet();
+      expect(uniqueKeys.length, equals(10), 
+          reason: 'Keys should all be unique, not timestamp-based');
+      
+      // Verify keys are not timestamp-based by checking they don't contain
+      // patterns that would appear in timestamp strings
+      for (final key in keys) {
+        // Timestamps would have digits like year (2024, 2025, etc.)
+        // Cryptographically random keys should not have predictable patterns
+        expect(key.contains(RegExp(r'20\d{2}')), isFalse,
+            reason: 'Key should not contain timestamp year pattern');
+      }
     });
   });
 }
