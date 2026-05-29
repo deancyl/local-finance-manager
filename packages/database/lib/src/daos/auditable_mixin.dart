@@ -21,7 +21,7 @@ mixin AuditableMixin on DatabaseAccessor<LocalFinanceDatabase> {
     Map<String, dynamic>? newValue,
   }) async {
     await into(db.auditLogs).insert(AuditLogsCompanion(
-      id: Value(const Uuid().v4()),
+      id: Value(Uuid().v4()),
       operation: Value(operation),
       entityType: Value(entityType),
       entityId: Value(entityId),

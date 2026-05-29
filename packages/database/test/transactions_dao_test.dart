@@ -1,5 +1,5 @@
 import 'package:database/database.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -21,25 +21,38 @@ void main() {
   group('TransactionsDao Atomic Operations', () {
     test('createWithSplits is atomic', () async {
       final transactionId = 'test-tx-${DateTime.now().millisecondsSinceEpoch}';
+      final now = DateTime.now().millisecondsSinceEpoch;
       
       final transaction = TransactionsCompanion.insert(
         id: transactionId,
-        description: 'Test Transaction',
-        postDate: DateTime.now().millisecondsSinceEpoch,
-        enteredDate: DateTime.now().millisecondsSinceEpoch,
-        currency: 'CNY',
+        description: Value('Test Transaction'),
+        postDate: now,
+        enterDate: now,
+        currencyId: 'CNY',
+        createdAt: now,
+        updatedAt: now,
       );
 
       final splits = [
         SplitsCompanion.insert(
+          id: 'split-1-$transactionId',
+          transactionId: transactionId,
           accountId: 'test-account',
           valueNum: 10000,
-          valueDenom: 100,
+          valueDenom: Value(100),
+          quantityNum: 10000,
+          reconcileState: Value('n'),
+          createdAt: now,
         ),
         SplitsCompanion.insert(
+          id: 'split-2-$transactionId',
+          transactionId: transactionId,
           accountId: 'test-account-2',
           valueNum: -10000,
-          valueDenom: 100,
+          valueDenom: Value(100),
+          quantityNum: -10000,
+          reconcileState: Value('n'),
+          createdAt: now,
         ),
       ];
 
@@ -65,21 +78,29 @@ void main() {
 
     test('failure rolls back all changes', () async {
       final transactionId = 'test-tx-fail-${DateTime.now().millisecondsSinceEpoch}';
+      final now = DateTime.now().millisecondsSinceEpoch;
       
       final transaction = TransactionsCompanion.insert(
         id: transactionId,
-        description: 'Test Transaction',
-        postDate: DateTime.now().millisecondsSinceEpoch,
-        enteredDate: DateTime.now().millisecondsSinceEpoch,
-        currency: 'CNY',
+        description: Value('Test Transaction'),
+        postDate: now,
+        enterDate: now,
+        currencyId: 'CNY',
+        createdAt: now,
+        updatedAt: now,
       );
 
       // Create a valid split and an invalid one (will cause failure)
       final splits = [
         SplitsCompanion.insert(
+          id: 'split-fail-$transactionId',
+          transactionId: transactionId,
           accountId: 'test-account',
           valueNum: 10000,
-          valueDenom: 100,
+          valueDenom: Value(100),
+          quantityNum: 10000,
+          reconcileState: Value('n'),
+          createdAt: now,
         ),
       ];
 
@@ -104,20 +125,28 @@ void main() {
 
     test('audit logging works correctly', () async {
       final transactionId = 'test-tx-audit-${DateTime.now().millisecondsSinceEpoch}';
+      final now = DateTime.now().millisecondsSinceEpoch;
       
       final transaction = TransactionsCompanion.insert(
         id: transactionId,
-        description: 'Test Transaction for Audit',
-        postDate: DateTime.now().millisecondsSinceEpoch,
-        enteredDate: DateTime.now().millisecondsSinceEpoch,
-        currency: 'CNY',
+        description: Value('Test Transaction for Audit'),
+        postDate: now,
+        enterDate: now,
+        currencyId: 'CNY',
+        createdAt: now,
+        updatedAt: now,
       );
 
       final splits = [
         SplitsCompanion.insert(
+          id: 'split-audit-$transactionId',
+          transactionId: transactionId,
           accountId: 'test-account',
           valueNum: 5000,
-          valueDenom: 100,
+          valueDenom: Value(100),
+          quantityNum: 5000,
+          reconcileState: Value('n'),
+          createdAt: now,
         ),
       ];
 

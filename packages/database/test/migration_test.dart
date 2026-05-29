@@ -1,5 +1,5 @@
 import 'package:database/database.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -25,28 +25,28 @@ void main() {
 
     test('creates journal_entries table', () async {
       // Verify table exists by querying it
-      final result = await db.customStatement(
+      final result = await db.customSelect(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='journal_entries'",
-      );
+      ).get();
       expect(result, isNotEmpty);
     });
 
     test('creates journal_entry_lines table', () async {
       // Verify table exists by querying it
-      final result = await db.customStatement(
+      final result = await db.customSelect(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='journal_entry_lines'",
-      );
+      ).get();
       expect(result, isNotEmpty);
     });
 
     test('journal_entries table has correct columns', () async {
       // Get table info
-      final result = await db.customStatement(
+      final result = await db.customSelect(
         "PRAGMA table_info(journal_entries)",
-      );
+      ).get();
       
       // Verify expected columns exist
-      final columns = result.map((row) => row['name'] as String).toList();
+      final columns = result.map((row) => row.read<String>('name')).toList();
       
       expect(columns.contains('id'), isTrue);
       expect(columns.contains('entry_number'), isTrue);
@@ -66,12 +66,12 @@ void main() {
 
     test('journal_entry_lines table has correct columns', () async {
       // Get table info
-      final result = await db.customStatement(
+      final result = await db.customSelect(
         "PRAGMA table_info(journal_entry_lines)",
-      );
+      ).get();
       
       // Verify expected columns exist
-      final columns = result.map((row) => row['name'] as String).toList();
+      final columns = result.map((row) => row.read<String>('name')).toList();
       
       expect(columns.contains('id'), isTrue);
       expect(columns.contains('journal_entry_id'), isTrue);
@@ -87,11 +87,11 @@ void main() {
 
     test('journal_entries indexes are created', () async {
       // Verify indexes exist
-      final result = await db.customStatement(
+      final result = await db.customSelect(
         "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='journal_entries'",
-      );
+      ).get();
       
-      final indexes = result.map((row) => row['name'] as String).toList();
+      final indexes = result.map((row) => row.read<String>('name')).toList();
       
       expect(indexes.contains('idx_journal_entries_post_date'), isTrue);
       expect(indexes.contains('idx_journal_entries_entry_number'), isTrue);
@@ -100,11 +100,11 @@ void main() {
 
     test('journal_entry_lines indexes are created', () async {
       // Verify indexes exist
-      final result = await db.customStatement(
+      final result = await db.customSelect(
         "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='journal_entry_lines'",
-      );
+      ).get();
       
-      final indexes = result.map((row) => row['name'] as String).toList();
+      final indexes = result.map((row) => row.read<String>('name')).toList();
       
       expect(indexes.contains('idx_journal_entry_lines_entry'), isTrue);
       expect(indexes.contains('idx_journal_entry_lines_account'), isTrue);

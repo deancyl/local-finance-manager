@@ -42,7 +42,7 @@ class JournalEntriesDao extends DatabaseAccessor<LocalFinanceDatabase>
     return await transaction(() async {
       // Insert the journal entry
       await into(journalEntries).insert(JournalEntriesCompanion.insert(
-        id: Value(id),
+        id: id,
         entryNumber: Value(actualEntryNumber),
         description: Value(description),
         postDate: postDate.millisecondsSinceEpoch,
@@ -56,7 +56,7 @@ class JournalEntriesDao extends DatabaseAccessor<LocalFinanceDatabase>
       for (final line in lines) {
         final lineId = _generateId();
         await into(journalEntryLines).insert(JournalEntryLinesCompanion.insert(
-          id: Value(lineId),
+          id: lineId,
           journalEntryId: id,
           accountId: line.accountId,
           debitNum: line.debitNum,
@@ -180,7 +180,7 @@ class JournalEntriesDao extends DatabaseAccessor<LocalFinanceDatabase>
       for (final line in newLines) {
         final lineId = _generateId();
         await into(journalEntryLines).insert(JournalEntryLinesCompanion.insert(
-          id: Value(lineId),
+          id: lineId,
           journalEntryId: journalEntryId,
           accountId: line.accountId,
           debitNum: line.debitNum,
@@ -458,21 +458,20 @@ class JournalEntriesDao extends DatabaseAccessor<LocalFinanceDatabase>
 
   /// Counts journal entries.
   Future<int> count() async {
-    return (select(journalEntries).get()).length;
+    final entries = await select(journalEntries).get();
+    return entries.length;
   }
 
   /// Counts posted journal entries.
   Future<int> countPosted() async {
-    return (select(journalEntries)..where((e) => e.isPosted.equals(true)))
-        .get()
-        .length;
+    final entries = await (select(journalEntries)..where((e) => e.isPosted.equals(true))).get();
+    return entries.length;
   }
 
   /// Counts unposted journal entries.
   Future<int> countUnposted() async {
-    return (select(journalEntries)..where((e) => e.isPosted.equals(false)))
-        .get()
-        .length;
+    final entries = await (select(journalEntries)..where((e) => e.isPosted.equals(false))).get();
+    return entries.length;
   }
 
   /// Checks if a journal entry exists.
