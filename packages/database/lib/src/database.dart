@@ -41,6 +41,7 @@ part 'daos/balance_sheet_dao.dart';
 part 'daos/investment_holdings_dao.dart';
 part 'daos/investment_transactions_dao.dart';
 part 'daos/draft_transactions_dao.dart';
+part 'daos/journal_entries_dao.dart';
 
 /// Local finance database with all tables.
 @DriftDatabase(
@@ -93,6 +94,7 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final InvestmentHoldingsDao investmentHoldingsDao = InvestmentHoldingsDao(this);
   late final InvestmentTransactionsDao investmentTransactionsDao = InvestmentTransactionsDao(this);
   late final DraftTransactionsDao draftTransactionsDao = DraftTransactionsDao(this);
+  late final JournalEntriesDao journalEntriesDao = JournalEntriesDao(this);
 
   @override
   int get schemaVersion => 17;
