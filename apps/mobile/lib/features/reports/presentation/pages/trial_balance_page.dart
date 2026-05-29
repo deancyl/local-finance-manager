@@ -9,6 +9,7 @@ import '../widgets/account_type_section.dart';
 import '../widgets/balance_summary_card.dart';
 import '../../../export/data/export_service.dart';
 import '../../../export/data/export_provider.dart';
+import '../../../print/data/print_provider.dart';
 import '../../../accounts/data/account_provider.dart';
 
 /// Trial balance report page with date range filtering.
@@ -456,8 +457,8 @@ class _ExportOptionsSheetState extends ConsumerState<_ExportOptionsSheet> {
     setState(() => _isExporting = true);
 
     try {
-      final exportService = ref.read(exportServiceProvider);
-      final result = await exportService.exportTrialBalanceToPDF(
+      final pdfService = ref.read(pdfExportServiceProvider);
+      final result = await pdfService.exportTrialBalanceToPDF(
         trialBalance: widget.trialBalance,
       );
 

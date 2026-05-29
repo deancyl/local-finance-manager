@@ -1237,9 +1237,15 @@ class PdfExportService {
 
     // Subtotal row
     final (subtotalDebit, subtotalCredit) = _calculateTrialBalanceSubtotals(accounts);
+    final typeColorLight = PdfColor(
+      typeColor.red,
+      typeColor.green,
+      typeColor.blue,
+      0.3,
+    );
     rows.add(
       pw.TableRow(
-        decoration: pw.BoxDecoration(color: typeColor.withOpacity(0.3)),
+        decoration: pw.BoxDecoration(color: typeColorLight),
         children: [
           _buildTableCell('小计', isBold: true),
           _buildTableCell(
@@ -1484,6 +1490,24 @@ class PdfExportService {
         return PdfColors.orange700;
       case AccountType.investment:
         return PdfColors.teal700;
+    }
+  }
+
+  /// Gets label for account type.
+  String _getAccountTypeLabel(AccountType type) {
+    switch (type) {
+      case AccountType.asset:
+        return '资产';
+      case AccountType.liability:
+        return '负债';
+      case AccountType.equity:
+        return '所有者权益';
+      case AccountType.income:
+        return '收入';
+      case AccountType.expense:
+        return '费用';
+      case AccountType.investment:
+        return '投资';
     }
   }
 

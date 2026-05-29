@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:decimal/decimal.dart';
-
+import 'package:drift/drift.dart' show Expression, isSmallerOrEqualValue;
 import 'package:database/database.dart' hide Account, AccountBalanceRaw, LiquidityType;
 import 'package:core/core.dart';
 import '../../accounts/data/account_provider.dart';
@@ -121,7 +121,8 @@ class BalanceSheetNotifier extends AsyncNotifier<BalanceSheet?> {
           e.postDate.isSmallerOrEqualValue(asOfDateMs) &
           e.deletedAt.isNull());
     
-    return query.get().length;
+    final results = await query.get();
+    return results.length;
   }
 
   /// Convert journal entry data to BalanceSheet model
@@ -558,7 +559,8 @@ class BalanceSheetComparisonNotifier extends AsyncNotifier<BalanceSheet?> {
           e.postDate.isSmallerOrEqualValue(asOfDateMs) &
           e.deletedAt.isNull());
     
-    return query.get().length;
+    final results = await query.get();
+    return results.length;
   }
 
   BalanceSheet _convertJournalDataToBalanceSheet(
