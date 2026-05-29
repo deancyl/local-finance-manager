@@ -17,19 +17,35 @@ late AuthService _authService;
 late SyncService _syncService;
 late DeviceService _deviceService;
 
+/// Validates that a secret meets security requirements
+void _validateSecret(String name, String? value) {
+  if (value == null || value.isEmpty) {
+    throw ArgumentError('$name is required');
+  }
+  if (value == 'your-secret-key' || value == 'change-me' ||
+      value == 'your-jwt-secret-key-change-in-production' ||
+      value == 'default-secret-change-in-production' ||
+      value == 'default-encryption-key-32-chars') {
+    throw ArgumentError('$name cannot use default value');
+  }
+  if (value.length < 32) {
+    throw ArgumentError('$name must be at least 32 characters');
+  }
+}
+
 Future<HttpServer> run(InternetAddress ip, int port) async {
   final env = DotEnv(includePlatformEnvironment: true)..load();
   
-  // Initialize services
-  final jwtSecret = env.containsKey('JWT_SECRET')
-      ? env['JWT_SECRET']!
-      : 'default-secret-change-in-production';
-  final encryptionKey = env.containsKey('ENCRYPTION_KEY')
-      ? env['ENCRYPTION_KEY']!
-      : 'default-encryption-key-32-chars';
+  // Get and validate secrets
+  final jwtSecret = env['JWT_SECRET'];
+  final encryptionKey = env['ENCRYPTION_KEY'];
   
-  final encryption = EncryptionService(encryptionKey);
-  _authService = AuthService(encryption, jwtSecret);
+  _validateSecret('JWT_SECRET', jwtSecret);
+  _validateSecret('ENCRYPTION_KEY', encryptionKey);
+  
+  // Initialize services
+  final encryption = EncryptionService(encryptionKey!);
+  _authService = AuthService(encryption, jwtSecret!);
   _syncService = SyncService(encryption, null);
   _deviceService = DeviceService();
 
@@ -409,9 +425,12 @@ String? _getUserIdFromRequest(Request request) {
   
   final token = authHeader.substring(7);
   final env = DotEnv(includePlatformEnvironment: true)..load();
-  final jwtSecret = env.containsKey('JWT_SECRET')
-      ? env['JWT_SECRET']!
-      : 'default-secret-change-in-production';
+  final jwtSecret = env['JWT_SECRET'];
+  
+  // Note: Validation already done at startup, but double-check here
+  if (jwtSecret == null || jwtSecret.isEmpty) {
+    return null;
+  }
   
   try {
     final jwt = JWT.verify(token, SecretKey(jwtSecret));

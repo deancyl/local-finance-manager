@@ -8,7 +8,7 @@ services:
       - "8080:8080"
     environment:
       - POWERSYNC_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/finance_sync
-      - POWERSYNC_JWT_SECRET=your-jwt-secret-key-change-in-production
+      - POWERSYNC_JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
       - POWERSYNC_INSTANCE_NAME=finance-sync
     depends_on:
       - postgres
@@ -41,7 +41,8 @@ services:
       - DATABASE_NAME=finance_sync
       - DATABASE_USER=postgres
       - DATABASE_PASSWORD=postgres
-      - JWT_SECRET=your-jwt-secret-key-change-in-production
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       - POWERSYNC_ENDPOINT=http://powersync:8080
     depends_on:
       - postgres
