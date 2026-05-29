@@ -294,8 +294,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   }
 
   Widget _buildTransactionList(BuildContext context, PaginationState paginationState) {
-    final transactions = paginationState.items.map((t) => t.$1).toList();
-    final grouped = _groupByDate(transactions);
+    final grouped = _groupByDateWithSplits(paginationState.items);
     final itemCount = grouped.length + (paginationState.hasMore || paginationState.isLoading ? 1 : 0);
 
     return ListView.builder(
@@ -322,15 +321,16 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                     ),
               ),
             ),
-            ...entry.value.map((transaction) => TransactionCard(
-                  transaction: transaction,
-                  onTap: () => _showEditDialog(context, transaction),
-                  onDelete: () => _deleteTransaction(context, transaction),
-                  onEdit: () => _showEditDialog(context, transaction),
-                  onDuplicate: () => _duplicateTransaction(context, transaction),
-                  onCategorize: () => _categorizeTransaction(context, transaction),
-                  onAddNote: () => _addNoteToTransaction(context, transaction),
-                  onArchive: () => _archiveTransaction(context, transaction),
+            ...entry.value.map((item) => TransactionCard(
+                  transaction: item.$1,
+                  splits: item.$2, // Pass pre-loaded splits (v0.3.188)
+                  onTap: () => _showEditDialog(context, item.$1),
+                  onDelete: () => _deleteTransaction(context, item.$1),
+                  onEdit: () => _showEditDialog(context, item.$1),
+                  onDuplicate: () => _duplicateTransaction(context, item.$1),
+                  onCategorize: () => _categorizeTransaction(context, item.$1),
+                  onAddNote: () => _addNoteToTransaction(context, item.$1),
+                  onArchive: () => _archiveTransaction(context, item.$1),
                 )),
             const SizedBox(height: 8),
           ],
@@ -352,6 +352,16 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
             : const SizedBox.shrink(),
       ),
     );
+  }
+
+  Map<DateTime, List<(Transaction, List<Split>)>> _groupByDateWithSplits(List<(Transaction, List<Split>)> items) {
+    final grouped = <DateTime, List<(Transaction, List<Split>)>>{};
+    for (final item in items) {
+      final date = DateTime.fromMillisecondsSinceEpoch(item.$1.postDate);
+      final dateKey = DateTime(date.year, date.month, date.day);
+      grouped.putIfAbsent(dateKey, () => []).add(item);
+    }
+    return grouped;
   }
 
   Map<DateTime, List<Transaction>> _groupByDate(List<Transaction> transactions) {

@@ -4,8 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:crypto/crypto.dart';
+import 'package:pointycastle/pointycastle.dart';
+import 'package:uuid/uuid.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import '../../security/data/biometric_service.dart';
 
@@ -121,14 +124,13 @@ class SecurityNotifier extends StateNotifier<SecuritySettings> {
     state = state.copyWith(autoLockTimeoutMinutes: minutes);
   }
 
-  /// Set a new password (stores hash only)
+  /// Set a new password (stores PBKDF2 hash) (v0.3.188)
   Future<bool> setPassword(String password) async {
     if (password.length < 6) {
       return false;
     }
     
-    // In production, use proper password hashing (e.g., PBKDF2)
-    // For now, we'll use a simple hash for demonstration
+    // Use PBKDF2 with 100k iterations
     final hash = _hashPassword(password);
     await _secureStorage.write(key: _keyPasswordHash, value: hash);
     
@@ -136,16 +138,15 @@ class SecurityNotifier extends StateNotifier<SecuritySettings> {
     return true;
   }
 
-  /// Verify password
+  /// Verify password with backward compatibility (v0.3.188)
   Future<bool> verifyPassword(String password) async {
     final storedHash = await _secureStorage.read(key: _keyPasswordHash);
     if (storedHash == null) return false;
     
-    final inputHash = _hashPassword(password);
-    return storedHash == inputHash;
+    return _verifyPasswordHash(password, storedHash);
   }
 
-  /// Set a new PIN
+  /// Set a new PIN (stores PBKDF2 hash) (v0.3.188)
   Future<bool> setPin(String pin) async {
     if (pin.length < 4 || pin.length > 6) {
       return false;
@@ -163,13 +164,12 @@ class SecurityNotifier extends StateNotifier<SecuritySettings> {
     return true;
   }
 
-  /// Verify PIN
+  /// Verify PIN with backward compatibility (v0.3.188)
   Future<bool> verifyPin(String pin) async {
     final storedHash = await _secureStorage.read(key: _keyPinHash);
     if (storedHash == null) return false;
     
-    final inputHash = _hashPassword(pin);
-    return storedHash == inputHash;
+    return _verifyPasswordHash(pin, storedHash);
   }
 
   /// Clear password
@@ -212,10 +212,60 @@ class SecurityNotifier extends StateNotifier<SecuritySettings> {
     }
   }
 
-  /// Simple hash function (use proper hashing in production)
-  String _hashPassword(String input) {
-    // Use SHA-256 for better security
-    // In production, use PBKDF2 with salt and iterations
+  /// Hash password using PBKDF2 with 100k iterations (v0.3.188)
+  String _hashPassword(String input, {String? salt}) {
+    salt ??= _generateSalt();
+    const iterations = 100000;
+    const keyLength = 32;
+    
+    try {
+      final pbkdf2 = PBKDF2KeyDerivator(HMac(SHA256Digest(), 64))
+        ..init(Pbkdf2Parameters(
+          Uint8List.fromList(utf8.encode(salt)),
+          iterations,
+          keyLength,
+        ));
+      
+      final key = pbkdf2.process(Uint8List.fromList(utf8.encode(input)));
+      final hashHex = key.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+      return '$salt:$hashHex';
+    } catch (e) {
+      debugPrint('PBKDF2 hashing failed, falling back to SHA-256: $e');
+      // Fallback to SHA-256 if PBKDF2 fails
+      final bytes = utf8.encode(input);
+      final hash = sha256.convert(bytes);
+      return hash.toString();
+    }
+  }
+  
+  /// Generate a random salt for PBKDF2
+  String _generateSalt() {
+    final random = DateTime.now().microsecondsSinceEpoch.toString() + 
+                   const Uuid().v4();
+    final bytes = utf8.encode(random);
+    final hash = sha256.convert(bytes);
+    return hash.toString().substring(0, 16);
+  }
+  
+  /// Verify password with backward compatibility for legacy SHA-256 (v0.3.188)
+  bool _verifyPasswordHash(String input, String storedHash) {
+    // Check if it's PBKDF2 format (salt:hash)
+    if (storedHash.contains(':')) {
+      final parts = storedHash.split(':');
+      if (parts.length == 2) {
+        final salt = parts[0];
+        final newHash = _hashPassword(input, salt: salt);
+        return newHash == storedHash;
+      }
+    }
+    
+    // Legacy SHA-256 verification
+    final inputHash = _hashLegacySha256(input);
+    return storedHash == inputHash;
+  }
+  
+  /// Legacy SHA-256 hash for backward compatibility
+  String _hashLegacySha256(String input) {
     final bytes = utf8.encode(input);
     final hash = sha256.convert(bytes);
     return hash.toString();

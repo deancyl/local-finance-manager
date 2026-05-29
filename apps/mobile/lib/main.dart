@@ -23,10 +23,12 @@ void main() async {
   // Initialize SharedPreferences
   final sharedPreferences = await SharedPreferences.getInstance();
   
-  // Initialize budget notification service
-  final notificationService = BudgetNotificationService();
-  await notificationService.initialize();
-  await notificationService.requestPermissions();
+  // Defer heavy notification initialization (v0.3.188)
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    final notificationService = BudgetNotificationService();
+    await notificationService.initialize();
+    await notificationService.requestPermissions();
+  });
   
   runApp(ProviderScope(
     overrides: [

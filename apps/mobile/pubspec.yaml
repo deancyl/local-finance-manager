@@ -1,7 +1,7 @@
 name: finance_app
 description: "本地金融管家 - Local-first personal finance manager"
 publish_to: 'none'
-version: 0.3.187+1
+version: 0.3.188+1
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -42,6 +42,7 @@ dependencies:
   image_picker: ^1.1.2
   photo_view: ^0.15.0
   crypto: ^3.0.3
+  pointycastle: ^3.9.0
   http: ^1.2.0
   qr_flutter: ^4.1.0
   mobile_scanner: ^4.0.0
