@@ -188,25 +188,17 @@ class AiService {
     List<Transaction> transactions,
     List<Category> categories,
   ) {
-    final byCategory = <String, double>{};
+    // Note: Transaction model doesn't have categoryId directly.
+    // Categories are determined through Split entries linked to Accounts.
+    // For basic insights, we analyze transaction amounts without category breakdown.
+    double totalAmount = 0;
     for (final t in transactions) {
-      if (t.categoryId != null) {
-        // Parse amount from notes if available
-        final amount = double.tryParse(t.notes ?? '0') ?? 0;
-        byCategory[t.categoryId!] = (byCategory[t.categoryId!] ?? 0) + amount.abs();
-      }
+      final amount = double.tryParse(t.notes ?? '0') ?? 0;
+      totalAmount += amount.abs();
     }
 
-    final sortedCategories = byCategory.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    final topCategories = sortedCategories.take(5).map((e) {
-      final cat = categories.firstWhere((c) => c.id == e.key, orElse: () => Category(id: e.key, name: '未知', createdAt: DateTime.now(), updatedAt: DateTime.now()));
-      return '${cat.name}: ${e.value.toStringAsFixed(2)}';
-    }).toList();
-
     return SpendingInsights(
-      topSpendingCategories: topCategories,
+      topSpendingCategories: ['总计: ${totalAmount.toStringAsFixed(2)}'],
       summary: '分析了 ${transactions.length} 笔交易',
       confidence: 0.7,
     );
@@ -260,24 +252,25 @@ class AiService {
     List<Category> categories,
     Map<String, double> currentBudgets,
   ) {
-    final spendingByCategory = <String, double>{};
+    // Note: Transaction model doesn't have categoryId directly.
+    // Categories are determined through Split entries linked to Accounts.
+    // For basic recommendations, we return a simple overall budget suggestion.
+    double totalSpending = 0;
     for (final t in transactions) {
-      if (t.categoryId != null) {
-        final amount = double.tryParse(t.notes ?? '0') ?? 0;
-        spendingByCategory[t.categoryId!] = (spendingByCategory[t.categoryId!] ?? 0) + amount.abs();
-      }
+      final amount = double.tryParse(t.notes ?? '0') ?? 0;
+      totalSpending += amount.abs();
     }
-    return spendingByCategory.entries.map((entry) {
-      final category = categories.firstWhere((c) => c.id == entry.key, orElse: () => Category(id: entry.key, name: '未知', createdAt: DateTime.now(), updatedAt: DateTime.now()));
-      return BudgetRecommendation(
-        categoryId: entry.key,
-        categoryName: category.name,
-        recommendedAmount: currentBudgets[entry.key] ?? entry.value * 1.2,
-        currentSpending: entry.value,
+
+    return [
+      BudgetRecommendation(
+        categoryId: 'overall',
+        categoryName: '总体预算',
+        recommendedAmount: totalSpending * 1.2,
+        currentSpending: totalSpending,
         reasoning: '基于历史消费数据分析',
         priority: 3,
-      );
-    }).toList();
+      ),
+    ];
   }
 
   /// Detect basic anomalies without LLM.

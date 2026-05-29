@@ -222,20 +222,12 @@ class OllamaProvider implements LlmProvider {
     buffer.writeln();
     buffer.writeln('交易数据 (最近${transactions.length}笔):');
 
-    // Group transactions by category
-    final byCategory = <String, List<Transaction>>{};
+    // Note: Transaction model doesn't have categoryId directly.
+    // Categories are determined through Split entries linked to Accounts.
+    // For analysis, we list transactions without category grouping.
     for (final t in transactions) {
-      final catId = t.categoryId ?? 'uncategorized';
-      byCategory.putIfAbsent(catId, () => []).add(t);
-    }
-
-    for (final entry in byCategory.entries) {
-      final category = categories.firstWhere(
-        (c) => c.id == entry.key,
-        orElse: () => Category(id: entry.key, name: '未分类', createdAt: DateTime.now(), updatedAt: DateTime.now()),
-      );
-      final total = entry.value.fold(0.0, (sum, t) => sum + (t.notes?.toDouble() ?? 0));
-      buffer.writeln('- ${category.name}: ${entry.value.length}笔, 总计: $total');
+      final amount = double.tryParse(t.notes ?? '0') ?? 0;
+      buffer.writeln('- ${t.description ?? "无描述"}: $amount');
     }
 
     buffer.writeln();
@@ -280,25 +272,25 @@ class OllamaProvider implements LlmProvider {
     required Map<String, double> currentBudgets,
   }) async {
     if (transactions.isEmpty || categories.isEmpty) return [];
-    // Basic statistical recommendation
-    final spendingByCategory = <String, double>{};
+    // Note: Transaction model doesn't have categoryId directly.
+    // Categories are determined through Split entries linked to Accounts.
+    // For basic recommendations, we return a simple overall budget suggestion.
+    double totalSpending = 0;
     for (final t in transactions) {
-      if (t.categoryId != null) {
-        final amount = double.tryParse(t.notes ?? '0') ?? 0;
-        spendingByCategory[t.categoryId!] = (spendingByCategory[t.categoryId!] ?? 0) + amount.abs();
-      }
+      final amount = double.tryParse(t.notes ?? '0') ?? 0;
+      totalSpending += amount.abs();
     }
-    return spendingByCategory.entries.map((entry) {
-      final category = categories.firstWhere((c) => c.id == entry.key, orElse: () => Category(id: entry.key, name: '未知', createdAt: DateTime.now(), updatedAt: DateTime.now()));
-      return BudgetRecommendation(
-        categoryId: entry.key,
-        categoryName: category.name,
-        recommendedAmount: currentBudgets[entry.key] ?? entry.value * 1.2,
-        currentSpending: entry.value,
+
+    return [
+      BudgetRecommendation(
+        categoryId: 'overall',
+        categoryName: '总体预算',
+        recommendedAmount: totalSpending * 1.2,
+        currentSpending: totalSpending,
         reasoning: '基于历史消费数据分析',
-        priority: entry.value > (currentBudgets[entry.key] ?? 0) ? 5 : 3,
-      );
-    }).toList();
+        priority: 3,
+      ),
+    ];
   }
 
   /// Detect anomalies in transactions.

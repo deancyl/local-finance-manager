@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.183] - 2026-05-29
+
+### Fixed
+- **Critical CI Build Fix**: Resolved compilation errors in AI and Core packages
+  - AI package: Removed invalid `Transaction.categoryId` references (19 errors)
+    - Transaction model doesn't have categoryId, uses Split → Account relationship
+    - Updated analysis functions to use transaction-based grouping
+    - Fixed `String.toDouble()` → `double.tryParse()`
+    - Fixed Category constructor `updatedAt` parameter
+  - Core package: Added `flutter_test` dev dependency for test files
+  - CI Quality Gates (dart analyze) should now pass
+
+## [v0.3.182] - 2026-05-29
+
+### Fixed
+- **Critical CI Build Fix**: Resolved intl dependency conflict in importers package
+  - Changed intl: ^0.19.0 to intl: ^0.20.2 in packages/importers/pubspec.yaml
+  - Complete fix for all intl version conflicts across the monorepo
+
 ## [v0.3.181] - 2026-05-29
 
 ### Fixed
