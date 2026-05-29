@@ -161,7 +161,7 @@ void main() {
       expect(auditLog.operation, equals('CREATE'));
       expect(auditLog.entityType, equals('transaction'));
       expect(auditLog.entityId, equals(id));
-      expect(auditLog.timestamp, isNotNull);
+      expect(auditLog.changedAt, isNotNull);
     });
   });
 }
