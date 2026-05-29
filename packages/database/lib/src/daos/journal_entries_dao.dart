@@ -78,6 +78,19 @@ class JournalEntriesDao extends DatabaseAccessor<LocalFinanceDatabase>
         .getSingleOrNull();
   }
 
+  /// Gets a journal entry line by ID.
+  Future<JournalEntryLine?> getLineById(String id) {
+    return (select(journalEntryLines)..where((l) => l.id.equals(id)))
+        .getSingleOrNull();
+  }
+
+  /// Gets all lines for a journal entry.
+  Future<List<JournalEntryLine>> getLinesForEntry(String journalEntryId) {
+    return (select(journalEntryLines)
+          ..where((l) => l.journalEntryId.equals(journalEntryId)))
+        .get();
+  }
+
   /// Gets a journal entry with all its lines.
   Future<JournalEntryWithLines?> getJournalEntryWithLines(String id) async {
     final entry = await (select(journalEntries)

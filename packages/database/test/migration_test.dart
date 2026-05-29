@@ -124,11 +124,9 @@ void main() {
       );
       
       await db.into(db.journalEntries).insert(entry);
-      
-      final queried = await (db.select(db.journalEntries)
-          .where((t) => t.id.equals('test-je-001')))
-          .getSingle();
-      
+
+      final queried = await db.journalEntriesDao.getById('test-je-001');
+
       expect(queried, isNotNull);
       expect(queried!.id, equals('test-je-001'));
       expect(queried.isPosted, isFalse);
@@ -153,11 +151,9 @@ void main() {
       );
       
       await db.into(db.journalEntries).insert(entry);
-      
-      final queried = await (db.select(db.journalEntries)
-          .where((t) => t.id.equals('test-je-002')))
-          .getSingle();
-      
+
+      final queried = await db.journalEntriesDao.getById('test-je-002');
+
       expect(queried, isNotNull);
       expect(queried!.entryNumber, equals('JE-2024-0001'));
       expect(queried.description, equals('Test journal entry'));
@@ -192,11 +188,9 @@ void main() {
       );
       
       await db.into(db.journalEntryLines).insert(line);
-      
-      final queried = await (db.select(db.journalEntryLines)
-          .where((t) => t.id.equals('test-jel-001')))
-          .getSingle();
-      
+
+      final queried = await db.journalEntriesDao.getLineById('test-jel-001');
+
       expect(queried, isNotNull);
       expect(queried!.journalEntryId, equals('test-je-003'));
       expect(queried.accountId, equals('account-001'));
@@ -245,10 +239,8 @@ void main() {
       );
       
       // Query all lines for this entry
-      final lines = await (db.select(db.journalEntryLines)
-          .where((t) => t.journalEntryId.equals('test-je-004')))
-          .get();
-      
+      final lines = await db.journalEntriesDao.getLinesForEntry('test-je-004');
+
       expect(lines.length, equals(2));
       
       // Verify balance (sum of debits = sum of credits)
