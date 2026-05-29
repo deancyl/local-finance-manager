@@ -1,7 +1,7 @@
 name: finance_app
 description: "本地金融管家 - Local-first personal finance manager"
 publish_to: 'none'
-version: 0.3.190+1
+version: 0.3.191+1
 
 environment:
   sdk: '>=3.5.0 <4.0.0'

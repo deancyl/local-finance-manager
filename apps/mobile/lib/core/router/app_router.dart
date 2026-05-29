@@ -41,6 +41,7 @@ import '../../features/templates/presentation/pages/template_list_page.dart' hid
 import '../../features/templates/presentation/template_page.dart';
 import '../../features/templates/data/template_provider.dart' show TemplateModel;
 import '../../features/dashboard/presentation/pages/analytics_dashboard_page.dart';
+import '../../features/journal/presentation/pages/journal_entry_editor_page.dart';
 // Sync with feature flag support
 import '../../features/sync/presentation/pages/sync_settings_page.dart';
 import '../../features/sync/presentation/pages/sync_login_page.dart';
@@ -204,6 +205,14 @@ GoRouter _createRouter(Ref ref) {
             path: '/closing',
             name: 'closing',
             builder: (context, state) => const PeriodClosingPage(),
+          ),
+          GoRoute(
+            path: '/journal-entry',
+            name: 'journal-entry-editor',
+            builder: (context, state) {
+              final entryId = state.extra as String?;
+              return JournalEntryEditorPage(entryId: entryId);
+            },
           ),
           GoRoute(
             path: '/settings',
