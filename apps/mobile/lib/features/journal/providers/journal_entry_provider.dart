@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart' as uuid_pkg;
 
-import 'package:core/core.dart';
+import 'package:core/core.dart' hide Account;
 import 'package:database/database.dart';
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 

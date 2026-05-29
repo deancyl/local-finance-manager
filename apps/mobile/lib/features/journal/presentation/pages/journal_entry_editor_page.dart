@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import 'package:finance_app/features/journal/providers/journal_entry_provider.dart';
 import 'package:finance_app/features/journal/presentation/widgets/journal_entry_line_widget.dart';
+import 'package:finance_app/features/accounts/data/account_provider.dart';
 
 /// Journal Entry Editor Page.
 /// 
