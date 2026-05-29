@@ -20,6 +20,7 @@ import 'tables/investment_transactions.dart';
 import 'tables/draft_transactions.dart';
 
 part 'database.g.dart';
+part 'daos/auditable_mixin.dart';
 part 'daos/accounts_dao.dart';
 part 'daos/transactions_dao.dart';
 part 'daos/categories_dao.dart';
