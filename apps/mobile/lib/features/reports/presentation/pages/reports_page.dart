@@ -25,6 +25,11 @@ class ReportsPage extends ConsumerWidget {
         title: const Text('报表分析'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.book_outlined),
+            onPressed: () => context.push('/journal-entries'),
+            tooltip: '凭证列表',
+          ),
+          IconButton(
             icon: const Icon(Icons.account_balance),
             onPressed: () => context.push('/reports/trial-balance'),
             tooltip: '试算平衡表',
