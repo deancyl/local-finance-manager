@@ -149,6 +149,7 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
     final dateFormat = DateFormat('yyyy-MM-dd');
     final currencies = ref.watch(currenciesProvider);
     final selectedCurrency = ref.watch(reportCurrencyProvider);
+    final calculationSource = ref.watch(balanceSheetCalculationSourceProvider);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -164,7 +165,58 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Calculation Source Toggle (NEW)
+          Row(
+            children: [
+              Icon(
+                Icons.account_balance,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '计算来源',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: theme.colorScheme.outline,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildSourceToggleOption(
+                    context,
+                    source: BalanceSheetDataSource.singleEntry,
+                    label: '单式记账',
+                    icon: Icons.receipt_long,
+                    isSelected: calculationSource == BalanceSheetDataSource.singleEntry,
+                  ),
+                ),
+                Expanded(
+                  child: _buildSourceToggleOption(
+                    context,
+                    source: BalanceSheetDataSource.doubleEntry,
+                    label: '复式记账',
+                    icon: Icons.book,
+                    isSelected: calculationSource == BalanceSheetDataSource.doubleEntry,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
           // Date selector row
+          const SizedBox(height: 16),
           Row(
             children: [
               Icon(
@@ -267,6 +319,52 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
     );
   }
 
+  Widget _buildSourceToggleOption(
+    BuildContext context, {
+    required BalanceSheetDataSource source,
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+  }) {
+    final theme = Theme.of(context);
+    
+    return InkWell(
+      onTap: () {
+        ref.read(balanceSheetProvider.notifier).setCalculationSource(source);
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? theme.colorScheme.primaryContainer : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected 
+                  ? theme.colorScheme.onPrimaryContainer 
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: isSelected 
+                    ? theme.colorScheme.onPrimaryContainer 
+                    : theme.colorScheme.onSurfaceVariant,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildContent(BuildContext context, BalanceSheet balanceSheet) {
     if (balanceSheet.assets.items.isEmpty &&
         balanceSheet.liabilities.items.isEmpty &&
@@ -281,6 +379,11 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
         padding: const EdgeInsets.only(top: 12, bottom: 12),
         child: Column(
           children: [
+            // Data Source Info Card (NEW for v0.3.193)
+            _buildDataSourceInfoCard(context, balanceSheet),
+            
+            const SizedBox(height: 12),
+            
             // Assets section
             if (balanceSheet.assets.items.isNotEmpty)
               BalanceSheetSectionWidget(
@@ -309,10 +412,280 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
             
             // Balance verification card
             BalanceVerificationCard.fromBalanceSheet(balanceSheet),
+            
+            // Double-entry specific info (NEW)
+            if (balanceSheet.isDoubleEntry) ...[
+              const SizedBox(height: 12),
+              _buildDoubleEntryInfoCard(context, balanceSheet),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  /// Build data source info card
+  Widget _buildDataSourceInfoCard(BuildContext context, BalanceSheet balanceSheet) {
+    final theme = Theme.of(context);
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: balanceSheet.isDoubleEntry 
+                  ? Colors.indigo.withOpacity(0.15)
+                  : Colors.teal.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              balanceSheet.isDoubleEntry ? Icons.book : Icons.receipt_long,
+              color: balanceSheet.isDoubleEntry ? Colors.indigo : Colors.teal,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  balanceSheet.dataSourceLabel,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  balanceSheet.isDoubleEntry
+                      ? '基于 ${balanceSheet.journalEntryCount} 张已过账凭证'
+                      : '基于交易记录自动计算',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Validation status badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: _getValidationStatusColor(balanceSheet).withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _getValidationStatusIcon(balanceSheet),
+                  size: 14,
+                  color: _getValidationStatusColor(balanceSheet),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _getValidationStatusText(balanceSheet),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: _getValidationStatusColor(balanceSheet),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build double-entry specific info card
+  Widget _buildDoubleEntryInfoCard(BuildContext context, BalanceSheet balanceSheet) {
+    final theme = Theme.of(context);
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.indigo.withOpacity(0.08),
+            Colors.indigo.withOpacity(0.03),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.indigo.withOpacity(0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                size: 18,
+                color: Colors.indigo,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '复式记账说明',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.indigo,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildInfoRow(
+            context,
+            icon: Icons.account_balance_wallet,
+            label: '资产',
+            description: '余额 = 借方 - 贷方',
+          ),
+          const SizedBox(height: 8),
+          _buildInfoRow(
+            context,
+            icon: Icons.credit_card,
+            label: '负债',
+            description: '余额 = 贷方 - 借方',
+          ),
+          const SizedBox(height: 8),
+          _buildInfoRow(
+            context,
+            icon: Icons.pie_chart,
+            label: '权益',
+            description: '余额 = 贷方 - 借方',
+          ),
+          if (balanceSheet.showRetainedEarnings) ...[
+            const SizedBox(height: 8),
+            _buildInfoRow(
+              context,
+              icon: Icons.trending_up,
+              label: '未分配利润',
+              description: '本期净利润已自动计入权益',
+            ),
+          ],
+          if (!balanceSheet.isBalanced) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.orange.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.warning_amber,
+                    size: 16,
+                    color: Colors.orange,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '会计等式不平衡，建议检查凭证记录',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String description,
+  }) {
+    final theme = Theme.of(context);
+    
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          description,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getValidationStatusColor(BalanceSheet balanceSheet) {
+    switch (balanceSheet.validationStatus) {
+      case BalanceSheetValidationStatus.balanced:
+        return Colors.green;
+      case BalanceSheetValidationStatus.essentiallyBalanced:
+        return Colors.lightGreen;
+      case BalanceSheetValidationStatus.unbalanced:
+        return Colors.red;
+      case BalanceSheetValidationStatus.noData:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getValidationStatusIcon(BalanceSheet balanceSheet) {
+    switch (balanceSheet.validationStatus) {
+      case BalanceSheetValidationStatus.balanced:
+        return Icons.check_circle;
+      case BalanceSheetValidationStatus.essentiallyBalanced:
+        return Icons.check_circle_outline;
+      case BalanceSheetValidationStatus.unbalanced:
+        return Icons.error;
+      case BalanceSheetValidationStatus.noData:
+        return Icons.info_outline;
+    }
+  }
+
+  String _getValidationStatusText(BalanceSheet balanceSheet) {
+    switch (balanceSheet.validationStatus) {
+      case BalanceSheetValidationStatus.balanced:
+        return '平衡';
+      case BalanceSheetValidationStatus.essentiallyBalanced:
+        return '基本平衡';
+      case BalanceSheetValidationStatus.unbalanced:
+        return '不平衡';
+      case BalanceSheetValidationStatus.noData:
+        return '无数据';
+    }
   }
 
   Widget _buildEmptyState(BuildContext context) {

@@ -2,6 +2,26 @@ import 'package:equatable/equatable.dart';
 import 'package:decimal/decimal.dart';
 import 'account.dart';
 
+/// Data source for balance sheet calculation.
+enum BalanceSheetDataSource {
+  /// Single-entry bookkeeping (splits/transactions)
+  singleEntry,
+  /// Double-entry bookkeeping (journal entries)
+  doubleEntry,
+}
+
+/// Validation status for balance sheet.
+enum BalanceSheetValidationStatus {
+  /// Accounting equation balances perfectly
+  balanced,
+  /// Small rounding difference, essentially balanced
+  essentiallyBalanced,
+  /// Accounting equation does not balance, needs investigation
+  unbalanced,
+  /// No data to validate
+  noData,
+}
+
 /// Balance sheet item representing a single account in the balance sheet.
 ///
 /// Represents an account with its balance in the balance sheet report.
@@ -140,6 +160,11 @@ class BalanceSheet extends Equatable {
   final BalanceSheetSection equity;
   final bool isBalanced;
   final DateTime generatedAt;
+  final BalanceSheetDataSource dataSource;
+  final BalanceSheetValidationStatus validationStatus;
+  final Decimal? differenceAmount;
+  final int journalEntryCount;
+  final bool showRetainedEarnings;
 
   const BalanceSheet({
     required this.asOfDate,
@@ -148,6 +173,11 @@ class BalanceSheet extends Equatable {
     required this.equity,
     required this.isBalanced,
     required this.generatedAt,
+    this.dataSource = BalanceSheetDataSource.singleEntry,
+    this.validationStatus = BalanceSheetValidationStatus.noData,
+    this.differenceAmount,
+    this.journalEntryCount = 0,
+    this.showRetainedEarnings = false,
   });
 
   /// Returns the accounting equation: Assets = Liabilities + Equity.
@@ -168,6 +198,36 @@ class BalanceSheet extends Equatable {
     return diff.abs();
   }
 
+  /// Returns true if this is from double-entry bookkeeping.
+  bool get isDoubleEntry => dataSource == BalanceSheetDataSource.doubleEntry;
+
+  /// Returns true if there are posted journal entries.
+  bool get hasJournalEntries => journalEntryCount > 0;
+
+  /// Returns a human-readable description of the data source.
+  String get dataSourceLabel {
+    switch (dataSource) {
+      case BalanceSheetDataSource.singleEntry:
+        return '单式记账 (Single-Entry)';
+      case BalanceSheetDataSource.doubleEntry:
+        return '复式记账 (Double-Entry)';
+    }
+  }
+
+  /// Returns a human-readable validation status message.
+  String get validationMessage {
+    switch (validationStatus) {
+      case BalanceSheetValidationStatus.balanced:
+        return '资产负债表平衡';
+      case BalanceSheetValidationStatus.essentiallyBalanced:
+        return '资产负债表基本平衡（小额尾差）';
+      case BalanceSheetValidationStatus.unbalanced:
+        return '资产负债表不平衡，请检查凭证';
+      case BalanceSheetValidationStatus.noData:
+        return '暂无数据';
+    }
+  }
+
   /// Creates a copy of this balance sheet with the given fields replaced.
   BalanceSheet copyWith({
     DateTime? asOfDate,
@@ -176,6 +236,11 @@ class BalanceSheet extends Equatable {
     BalanceSheetSection? equity,
     bool? isBalanced,
     DateTime? generatedAt,
+    BalanceSheetDataSource? dataSource,
+    BalanceSheetValidationStatus? validationStatus,
+    Decimal? differenceAmount,
+    int? journalEntryCount,
+    bool? showRetainedEarnings,
   }) {
     return BalanceSheet(
       asOfDate: asOfDate ?? this.asOfDate,
@@ -184,6 +249,11 @@ class BalanceSheet extends Equatable {
       equity: equity ?? this.equity,
       isBalanced: isBalanced ?? this.isBalanced,
       generatedAt: generatedAt ?? this.generatedAt,
+      dataSource: dataSource ?? this.dataSource,
+      validationStatus: validationStatus ?? this.validationStatus,
+      differenceAmount: differenceAmount ?? this.differenceAmount,
+      journalEntryCount: journalEntryCount ?? this.journalEntryCount,
+      showRetainedEarnings: showRetainedEarnings ?? this.showRetainedEarnings,
     );
   }
 
@@ -195,5 +265,10 @@ class BalanceSheet extends Equatable {
         equity,
         isBalanced,
         generatedAt,
+        dataSource,
+        validationStatus,
+        differenceAmount,
+        journalEntryCount,
+        showRetainedEarnings,
       ];
 }

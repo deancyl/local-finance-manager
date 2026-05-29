@@ -3,8 +3,8 @@ part of '../database.dart';
 /// Data Access Object for income statement queries.
 ///
 /// Provides optimized queries for generating income statement reports
-/// with period comparison support.
-@DriftAccessor(tables: [Splits, Accounts, Transactions])
+/// with period comparison support and double-entry bookkeeping.
+@DriftAccessor(tables: [Splits, Accounts, Transactions, JournalEntries, JournalEntryLines])
 class IncomeStatementDao extends DatabaseAccessor<LocalFinanceDatabase> with _$IncomeStatementDaoMixin {
   IncomeStatementDao(super.db);
 
@@ -215,6 +215,124 @@ class IncomeStatementDao extends DatabaseAccessor<LocalFinanceDatabase> with _$I
       a = temp;
     }
     return a;
+  }
+
+  /// Calculates retained earnings for a specific period from journal entries.
+  ///
+  /// This method uses posted journal entries (double-entry bookkeeping) to
+  /// calculate retained earnings, which is added to the equity section of
+  /// the balance sheet.
+  ///
+  /// Parameters:
+  /// - [startDate]: The start date of the period (inclusive)
+  /// - [endDate]: The end date of the period (inclusive)
+  ///
+  /// Returns: Net Income = Revenue - Expenses for the period
+  ///
+  /// Note: This calculates period-specific net income, not cumulative
+  /// retained earnings. For cumulative retained earnings, use the
+  /// BalanceSheetDao.getRetainedEarnings() method.
+  Future<double> calculateRetainedEarnings({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final startMs = startDate.millisecondsSinceEpoch;
+    final endMs = endDate.millisecondsSinceEpoch;
+
+    // Query posted journal entry lines for income accounts
+    final incomeQuery = selectOnly(journalEntryLines)
+      ..join([
+        innerJoin(journalEntries, journalEntries.id.equalsExp(journalEntryLines.journalEntryId) &
+            journalEntries.isPosted.equals(true) &
+            journalEntries.postDate.isBiggerOrEqualValue(startMs) &
+            journalEntries.postDate.isSmallerOrEqualValue(endMs) &
+            journalEntries.deletedAt.isNull()),
+        innerJoin(accounts, accounts.id.equalsExp(journalEntryLines.accountId) &
+            accounts.accountType.equals('INCOME')),
+      ]);
+
+    incomeQuery.addColumns([
+      journalEntryLines.creditNum.sum(),
+      journalEntryLines.creditDenom,
+      journalEntryLines.debitNum.sum(),
+      journalEntryLines.debitDenom,
+    ]);
+    incomeQuery.groupBy([journalEntryLines.creditDenom, journalEntryLines.debitDenom]);
+
+    final incomeResults = await incomeQuery.get();
+    int totalIncomeCreditNum = 0;
+    int totalIncomeDebitNum = 0;
+    int incomeCreditDenom = 1;
+    int incomeDebitDenom = 1;
+
+    for (final row in incomeResults) {
+      incomeCreditDenom = _lcm(incomeCreditDenom, row.read(journalEntryLines.creditDenom) ?? 1);
+      incomeDebitDenom = _lcm(incomeDebitDenom, row.read(journalEntryLines.debitDenom) ?? 1);
+    }
+    final incomeCommonDenom = _lcm(incomeCreditDenom, incomeDebitDenom);
+
+    for (final row in incomeResults) {
+      final creditScale = incomeCommonDenom ~/ (row.read(journalEntryLines.creditDenom) ?? 1);
+      final debitScale = incomeCommonDenom ~/ (row.read(journalEntryLines.debitDenom) ?? 1);
+      totalIncomeCreditNum += (row.read(journalEntryLines.creditNum.sum()) ?? 0) * creditScale;
+      totalIncomeDebitNum += (row.read(journalEntryLines.debitNum.sum()) ?? 0) * debitScale;
+    }
+
+    // Income: Credit increases, Debit decreases → Revenue = Credits - Debits
+    final incomeNum = totalIncomeCreditNum - totalIncomeDebitNum;
+
+    // Query posted journal entry lines for expense accounts
+    final expenseQuery = selectOnly(journalEntryLines)
+      ..join([
+        innerJoin(journalEntries, journalEntries.id.equalsExp(journalEntryLines.journalEntryId) &
+            journalEntries.isPosted.equals(true) &
+            journalEntries.postDate.isBiggerOrEqualValue(startMs) &
+            journalEntries.postDate.isSmallerOrEqualValue(endMs) &
+            journalEntries.deletedAt.isNull()),
+        innerJoin(accounts, accounts.id.equalsExp(journalEntryLines.accountId) &
+            accounts.accountType.equals('EXPENSE')),
+      ]);
+
+    expenseQuery.addColumns([
+      journalEntryLines.debitNum.sum(),
+      journalEntryLines.debitDenom,
+      journalEntryLines.creditNum.sum(),
+      journalEntryLines.creditDenom,
+    ]);
+    expenseQuery.groupBy([journalEntryLines.debitDenom, journalEntryLines.creditDenom]);
+
+    final expenseResults = await expenseQuery.get();
+    int totalExpenseDebitNum = 0;
+    int totalExpenseCreditNum = 0;
+    int expenseDebitDenom = 1;
+    int expenseCreditDenom = 1;
+
+    for (final row in expenseResults) {
+      expenseDebitDenom = _lcm(expenseDebitDenom, row.read(journalEntryLines.debitDenom) ?? 1);
+      expenseCreditDenom = _lcm(expenseCreditDenom, row.read(journalEntryLines.creditDenom) ?? 1);
+    }
+    final expenseCommonDenom = _lcm(expenseDebitDenom, expenseCreditDenom);
+
+    for (final row in expenseResults) {
+      final debitScale = expenseCommonDenom ~/ (row.read(journalEntryLines.debitDenom) ?? 1);
+      final creditScale = expenseCommonDenom ~/ (row.read(journalEntryLines.creditDenom) ?? 1);
+      totalExpenseDebitNum += (row.read(journalEntryLines.debitNum.sum()) ?? 0) * debitScale;
+      totalExpenseCreditNum += (row.read(journalEntryLines.creditNum.sum()) ?? 0) * creditScale;
+    }
+
+    // Expense: Debit increases, Credit decreases → Expense = Debits - Credits
+    final expenseNum = totalExpenseDebitNum - totalExpenseCreditNum;
+
+    // Find common denominator for final calculation
+    final finalDenom = _lcm(incomeCommonDenom, expenseCommonDenom);
+    final incomeScaled = incomeNum * (finalDenom ~/ incomeCommonDenom);
+    final expenseScaled = expenseNum * (finalDenom ~/ expenseCommonDenom);
+
+    // Net Income = Revenue - Expenses
+    final netIncomeNum = incomeScaled - expenseScaled;
+
+    // Return as decimal
+    return netIncomeNum / finalDenom.toDouble();
   }
 }
 
