@@ -205,7 +205,7 @@ class JournalListNotifier extends StateNotifier<JournalListPaginationState> {
       final query = _filter.searchQuery!.toLowerCase();
       entries = entries.where((e) {
         final descMatch = e.description?.toLowerCase().contains(query) ?? false;
-        final numMatch = e.entryNumber.toLowerCase().contains(query);
+        final numMatch = e.entryNumber?.toLowerCase().contains(query) ?? false;
         final refMatch = e.reference?.toLowerCase().contains(query) ?? false;
         return descMatch || numMatch || refMatch;
       }).toList();

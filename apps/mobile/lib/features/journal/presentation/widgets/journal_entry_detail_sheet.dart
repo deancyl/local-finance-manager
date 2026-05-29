@@ -267,7 +267,7 @@ class _JournalEntryDetailSheetState extends ConsumerState<JournalEntryDetailShee
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
-            entry.entryNumber,
+            entry.entryNumber ?? '',
             style: theme.textTheme.titleMedium?.copyWith(
               color: theme.colorScheme.onPrimaryContainer,
               fontWeight: FontWeight.w600,

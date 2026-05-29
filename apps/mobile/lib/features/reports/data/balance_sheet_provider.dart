@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:decimal/decimal.dart';
-import 'package:drift/drift.dart' hide Account, AccountBalanceRaw, LiquidityType;
+import 'package:drift/drift.dart' hide AccountBalanceRaw, LiquidityType;
 import 'package:database/database.dart' hide Account, AccountBalanceRaw, LiquidityType;
 import 'package:core/core.dart';
 import '../../accounts/data/account_provider.dart';
