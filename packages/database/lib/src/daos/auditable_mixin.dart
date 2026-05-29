@@ -20,13 +20,14 @@ mixin AuditableMixin on DatabaseAccessor<LocalFinanceDatabase> {
     Map<String, dynamic>? oldValue,
     Map<String, dynamic>? newValue,
   }) async {
-    await into(auditLogs).insert(AuditLogsCompanion.insert(
-      operation: operation,
-      entityType: entityType,
-      entityId: entityId,
-      oldValue: Value(oldValue != null ? jsonEncode(oldValue) : null),
-      newValue: Value(newValue != null ? jsonEncode(newValue) : null),
-      timestamp: DateTime.now(),
+    await into(db.auditLogs).insert(AuditLogsCompanion(
+      id: Value(const Uuid().v4()),
+      operation: Value(operation),
+      entityType: Value(entityType),
+      entityId: Value(entityId),
+      beforeData: Value(oldValue != null ? jsonEncode(oldValue) : null),
+      afterData: Value(newValue != null ? jsonEncode(newValue) : null),
+      changedAt: Value(DateTime.now()),
     ));
   }
 }

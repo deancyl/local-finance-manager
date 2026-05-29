@@ -48,7 +48,8 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase>
     List<SplitsCompanion> splitList,
   ) async {
     return await this.transaction(() async {
-      final id = await into(transactions).insert(transaction);
+      await into(transactions).insert(transaction);
+      final id = transaction.id.value;
       for (final split in splitList) {
         await into(splits).insert(split.copyWith(transactionId: Value(id)));
       }
