@@ -2,7 +2,8 @@ part of '../database.dart';
 
 /// Data Access Object for transactions.
 @DriftAccessor(tables: [Transactions, Splits, TransactionTags])
-class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$TransactionsDaoMixin {
+class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase>
+    with _$TransactionsDaoMixin, AuditableMixin {
   TransactionsDao(super.db);
 
   /// Gets all transactions (not deleted).
@@ -41,18 +42,24 @@ class TransactionsDao extends DatabaseAccessor<LocalFinanceDatabase> with _$Tran
     return (select(splits)..where((s) => s.transactionId.equals(transactionId))).get();
   }
 
-  /// Creates a transaction with splits in a single transaction.
+  /// Creates a transaction with splits in a single atomic transaction.
   Future<String> createWithSplits(
     TransactionsCompanion transaction,
     List<SplitsCompanion> splitList,
   ) async {
-    await batch((b) async {
-      b.insert(transactions, transaction);
+    return await this.transaction(() async {
+      final id = await into(transactions).insert(transaction);
       for (final split in splitList) {
-        b.insert(splits, split);
+        await into(splits).insert(split.copyWith(transactionId: Value(id)));
       }
+      await logMutation(
+        operation: 'CREATE',
+        entityType: 'transaction',
+        entityId: id,
+        newValue: {}, // TODO: implement toJson
+      );
+      return id;
     });
-    return transaction.id.value;
   }
 
   /// Updates a transaction with splits.
