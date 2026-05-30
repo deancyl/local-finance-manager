@@ -166,7 +166,15 @@ Text(
               icon: const Icon(Icons.folder_open),
               label: const Text('选择文件'),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            
+            // Export guide button
+            TextButton.icon(
+              onPressed: () => context.push('/import/guide'),
+              icon: const Icon(Icons.help_outline),
+              label: const Text('如何导出？'),
+            ),
+            const SizedBox(height: 16),
             _buildSupportedFormats(),
           ],
         ),

@@ -28,6 +28,7 @@ import '../../features/export/presentation/pages/export_page.dart';
 import '../../features/export/presentation/pages/import_page.dart' as export_import;
 import '../../features/import/presentation/pages/import_page.dart';
 import '../../features/import/presentation/pages/import_history_page.dart';
+import '../../features/import/presentation/pages/export_guide_page.dart';
 import '../../features/tags/presentation/pages/tags_page.dart';
 import '../../features/recurring/presentation/pages/recurring_page.dart';
 import '../../features/attachments/presentation/pages/attachments_page.dart';
@@ -362,6 +363,11 @@ GoRouter _createRouter(Ref ref) {
         path: '/import/history',
         name: 'import-history',
         builder: (context, state) => const ImportHistoryPage(),
+      ),
+      GoRoute(
+        path: '/import/guide',
+        name: 'import-guide',
+        builder: (context, state) => const ExportGuidePage(),
       ),
       GoRoute(
         path: '/transactions/attachments/:transactionId',
