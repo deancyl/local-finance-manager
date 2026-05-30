@@ -77,22 +77,41 @@ finance-app/
   - [x] Startup optimization with deferred initialization
   - [x] Error recovery with retry mechanisms
   - [x] Background sync service
-- [ ] WebSocket real-time sync notifications
+- [x] v0.3.194-v0.3.200: Double-Entry Bookkeeping
+  - [x] v0.3.194: Journal entry list and management
+  - [x] v0.3.195: Drill-down navigation from reports
+  - [x] v0.3.196: Account hierarchy validation
+  - [x] v0.3.197: Enhanced error handling and progress tracking
+  - [x] v0.3.198: Backup verification and migration safety
+  - [x] v0.3.199: Performance indexes and caching
+  - [x] v0.3.200: Loading states, error states, UI polish
+- [ ] v0.3.201+: WebSocket real-time sync notifications
 - [ ] QR code device pairing
 - [ ] Sync status indicator in app bar
 - [ ] Offline queue visualization
 - [ ] Multi-device sync testing
 
-### Phase 4: Double-Entry Bookkeeping (计划中)
+### Phase 4: Double-Entry Bookkeeping ✅ 完成
 
-- [ ] Full double-entry transaction support
-- [ ] Account hierarchy management
-- [ ] Journal entry editor
-- [ ] Trial balance report
-- [ ] Balance sheet report
-- [ ] Income statement report
+- [x] Full double-entry transaction support
+- [x] Account hierarchy management
+- [x] Journal entry editor
+- [x] Trial balance report
+- [x] Balance sheet report
+- [x] Income statement report
 
-### Phase 5: AI Integration (计划中)
+### Version History
+
+#### v0.3.194 - v0.3.200: Double-Entry Bookkeeping
+- v0.3.194: Journal entry list and management
+- v0.3.195: Drill-down navigation from reports
+- v0.3.196: Account hierarchy validation
+- v0.3.197: Enhanced error handling and progress tracking
+- v0.3.198: Backup verification and migration safety
+- v0.3.199: Performance indexes and caching
+- v0.3.200: Loading states, error states, UI polish
+
+### Phase 5: AI Integration (计划中 v0.4.1-v0.4.5)
 
 - [ ] Local AI setup (Ollama/llama.cpp)
 - [ ] Transaction categorization
