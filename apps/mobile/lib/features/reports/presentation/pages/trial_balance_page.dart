@@ -138,7 +138,7 @@ class _TrialBalancePageState extends ConsumerState<TrialBalancePage>
                 }
                 return _buildContent(context, trialBalance);
               },
-              loading: () => const LoadingStateWidget.page(
+              loading: () => LoadingStateWidget.page(
                 message: '加载中...',
               ),
               error: (error, stack) => ErrorStateWidget.fromError(
@@ -146,8 +146,6 @@ class _TrialBalancePageState extends ConsumerState<TrialBalancePage>
                 stackTrace: stack,
                 onRetry: _handleRefresh,
               ),
-            ),
-          ),
             ),
           ),
         ],
@@ -330,7 +328,7 @@ class _TrialBalancePageState extends ConsumerState<TrialBalancePage>
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return const EmptyStateWidget.reports();
+    return EmptyStateWidget.reports();
   }
 
   Widget _buildErrorState(BuildContext context, Object error) {
