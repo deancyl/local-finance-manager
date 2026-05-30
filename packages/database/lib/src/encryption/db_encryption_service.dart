@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart';
+import 'package:pointycastle/export.dart';
 import 'package:encryption/encryption.dart';
 
 class DbEncryptionService {
