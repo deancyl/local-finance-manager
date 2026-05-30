@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:core/core.dart';
 import '../widgets/account_selector.dart';
+import '../../../core/presentation/widgets/accounting_help_icon.dart';
+import '../../../core/presentation/widgets/accounting_help_icon.dart';
 
 /// Widget for a single journal entry line in the editor.
 class JournalEntryLineWidget extends StatefulWidget {
@@ -208,6 +210,7 @@ class _JournalEntryLineWidgetState extends State<JournalEntryLineWidget> {
             controller: _debitController,
             label: '借方',
             color: Colors.orange,
+            helpKey: 'debit',
             onChanged: (value) {
               widget.onDebitChanged(value);
               setState(() {
@@ -223,6 +226,7 @@ class _JournalEntryLineWidgetState extends State<JournalEntryLineWidget> {
             controller: _creditController,
             label: '贷方',
             color: Colors.blue,
+            helpKey: 'credit',
             onChanged: (value) {
               widget.onCreditChanged(value);
               setState(() {
@@ -240,6 +244,7 @@ class _JournalEntryLineWidgetState extends State<JournalEntryLineWidget> {
     required TextEditingController controller,
     required String label,
     required Color color,
+    required String helpKey,
     required void Function(double) onChanged,
   }) {
     return TextField(
@@ -249,6 +254,11 @@ class _JournalEntryLineWidgetState extends State<JournalEntryLineWidget> {
         labelStyle: TextStyle(color: color),
         prefixText: '¥ ',
         prefixStyle: TextStyle(color: color),
+        suffixIcon: AccountingHelpIcon.fromKey(
+          glossaryKey: helpKey,
+          iconSize: 16,
+          iconColor: color,
+        ),
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,

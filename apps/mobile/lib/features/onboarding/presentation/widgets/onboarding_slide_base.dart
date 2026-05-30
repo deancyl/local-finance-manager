@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Base slide widget for onboarding pages
-abstract class OnboardingSlide extends StatelessWidget {
+class OnboardingSlide extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;

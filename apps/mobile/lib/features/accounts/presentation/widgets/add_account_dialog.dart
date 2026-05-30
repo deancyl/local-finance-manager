@@ -4,6 +4,8 @@ import 'package:drift/drift.dart' as drift;
 
 import 'package:database/database.dart';
 import '../../data/account_provider.dart';
+import '../../../core/presentation/widgets/accounting_help_icon.dart';
+import '../../../core/presentation/widgets/accounting_help_icon.dart';
 
 class AddAccountDialog extends ConsumerStatefulWidget {
   final Account? account;
@@ -88,11 +90,21 @@ class _AddAccountDialogState extends ConsumerState<AddAccountDialog> {
                 },
               ),
               const SizedBox(height: 16),
+              // Account type dropdown with help icon
               DropdownButtonFormField<String>(
                 value: _selectedType,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: '账户类型',
-                  prefixIcon: Icon(Icons.category_outlined),
+                  prefixIcon: const Icon(Icons.category_outlined),
+                  suffixIcon: AccountingHelpIcon.fromAccountType(
+                    accountType: _selectedType,
+                    showChinese: true,
+                    iconSize: 18,
+                  ),
+                  suffixIconConstraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'ASSET', child: Text('资产')),

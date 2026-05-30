@@ -4,6 +4,7 @@
 /// - Drift database definition
 /// - Table schemas
 /// - Data Access Objects (DAOs)
+/// - SQLCipher encryption support
 library database;
 
 export 'src/database.dart';
@@ -17,3 +18,5 @@ export 'src/tables/closing_entries.dart';
 export 'src/tables/attachments.dart';
 export 'src/tables/journal_entries.dart';
 export 'src/tables/cost_centers.dart';
+export 'src/encryption/db_encryption_service.dart';
+export 'src/encryption/encryption_migration_helper.dart';

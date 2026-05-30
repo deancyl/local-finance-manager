@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../main.dart' show sharedPreferencesProvider;
+import '../../../core/presentation/widgets/gesture_config_provider.dart' show sharedPreferencesProvider;
 
 /// Key for storing onboarding completion status
 const _onboardingCompletedKey = 'onboarding_completed';
