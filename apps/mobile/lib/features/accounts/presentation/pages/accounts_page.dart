@@ -68,7 +68,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             child: accountsAsync.when(
               data: (accounts) {
                 if (accounts.isEmpty) {
-                  return const EmptyStateWidget.accounts();
+                  return EmptyStateWidget.accounts();
                 }
                 if (hierarchy.isEmpty && (searchQuery.isNotEmpty || typeFilter != null)) {
                   return EmptyStateWidget.accounts(hasSearch: true);

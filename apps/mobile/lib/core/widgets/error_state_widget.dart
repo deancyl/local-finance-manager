@@ -357,6 +357,7 @@ class _AnimatedErrorStateWidgetState extends State<AnimatedErrorStateWidget>
           ),
         );
       },
+      child: const SizedBox.shrink(),
     );
   }
 }

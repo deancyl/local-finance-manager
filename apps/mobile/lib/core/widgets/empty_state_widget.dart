@@ -243,7 +243,7 @@ class EmptyStateWidget extends StatelessWidget {
   /// Get filled version of outlined icons
   IconData _getFilledIcon(IconData outlinedIcon) {
     // Map common outlined icons to filled versions
-    const iconMap = {
+    final iconMap = {
       Icons.receipt_long_outlined: Icons.receipt_long,
       Icons.account_balance_wallet_outlined: Icons.account_balance_wallet,
       Icons.upload_file_outlined: Icons.upload_file,
@@ -332,6 +332,7 @@ class _AnimatedEmptyStateWidgetState extends State<AnimatedEmptyStateWidget>
           ),
         );
       },
+      child: const SizedBox.shrink(),
     );
   }
 }
