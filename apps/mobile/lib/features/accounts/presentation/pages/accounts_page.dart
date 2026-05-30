@@ -7,12 +7,9 @@ import '../../data/account_provider.dart';
 import '../widgets/account_tree_card.dart';
 import '../widgets/add_account_dialog.dart';
 import '../widgets/move_account_dialog.dart';
-import '../../../../core/widgets/loading_state_widget.dart';
-import '../../../../core/widgets/empty_state_widget.dart';
-import '../../../../core/widgets/error_state_widget.dart';
-import '../../../core/widgets/loading_state_widget.dart';
-import '../../../core/widgets/empty_state_widget.dart';
-import '../../../core/widgets/error_state_widget.dart';
+import 'package:finance_app/core/widgets/loading_state_widget.dart';
+import 'package:finance_app/core/widgets/empty_state_widget.dart';
+import 'package:finance_app/core/widgets/error_state_widget.dart';
 
 class AccountsPage extends ConsumerStatefulWidget {
   const AccountsPage({super.key});

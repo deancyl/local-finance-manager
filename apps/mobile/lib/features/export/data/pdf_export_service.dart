@@ -150,6 +150,203 @@ class PdfExportService {
       netAmount: summary['net'] ?? 0.0,
     );
   }
+  
+  /// Generates the PDF document with pagination for large datasets.
+  Future<Uint8List> _generatePdfPaginated({
+    required ExportFilters filters,
+    required Map<String, double> summary,
+    required List<CategoryBreakdown> categoryBreakdown,
+    required List<MonthlyData> monthlyTrend,
+    required List<(db.Transaction, List<db.Split>)> transactionsWithSplits,
+    required Map<String, db.Account> accountMap,
+    required Map<String, db.Category> categoryMap,
+    required Map<String, db.Commodity> commodityMap,
+    required int pageSize,
+    required PdfExportProgressCallback? onProgress,
+    required PdfExportCancellationToken? cancellationToken,
+    required int totalCount,
+  }) async {
+    final pdf = pw.Document();
+
+    // Determine date range text
+    String dateRangeText;
+    if (filters.startDate != null && filters.endDate != null) {
+      dateRangeText =
+          '${_displayFormat.format(filters.startDate!)} - ${_displayFormat.format(filters.endDate!)}';
+    } else if (filters.startDate != null) {
+      dateRangeText = '${_displayFormat.format(filters.startDate!)} - Present';
+    } else if (filters.endDate != null) {
+      dateRangeText = 'Until ${_displayFormat.format(filters.endDate!)}';
+    } else {
+      dateRangeText = 'All Time';
+    }
+
+    // Group transactions by account for pagination
+    final transactionsByAccount = <String, List<(db.Transaction, List<db.Split>)>>{};
+    for (final tuple in transactionsWithSplits) {
+      final (_, splits) = tuple;
+      for (final split in splits) {
+        final accountId = split.accountId;
+        transactionsByAccount.putIfAbsent(accountId, () => []).add(tuple);
+      }
+    }
+    
+    final accountIds = transactionsByAccount.keys.toList();
+    final totalAccounts = accountIds.length;
+    var processedAccounts = 0;
+
+    // Add summary page
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(40),
+        build: (pw.Context context) {
+          return [
+            pw.Center(
+              child: pw.Text(
+                'Financial Report',
+                style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Center(
+              child: pw.Text(dateRangeText, style: pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Center(
+              child: pw.Text(
+                'Generated: ${_displayFormat.format(DateTime.now())}',
+                style: pw.TextStyle(fontSize: 10, color: PdfColors.grey500),
+              ),
+            ),
+            pw.SizedBox(height: 24),
+            pw.Text('Summary', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 12),
+            _buildSummaryTable(summary),
+            pw.SizedBox(height: 24),
+            pw.Text('Category Breakdown', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 12),
+            _buildCategoryBreakdownTable(categoryBreakdown),
+            pw.SizedBox(height: 24),
+            if (monthlyTrend.isNotEmpty) ...[
+              pw.Text('Monthly Trend', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 12),
+              _buildMonthlyTrendTable(monthlyTrend),
+            ],
+          ];
+        },
+        footer: (pw.Context context) {
+          return pw.Container(
+            alignment: pw.Alignment.centerRight,
+            margin: const pw.EdgeInsets.only(top: 20),
+            child: pw.Text(
+              'Page ${context.pageNumber} of ${context.pagesCount}',
+              style: pw.TextStyle(fontSize: 10, color: PdfColors.grey500),
+            ),
+          );
+        },
+      ),
+    );
+
+    // Add paginated transaction details by account
+    for (final accountId in accountIds) {
+      if (cancellationToken?.isCancelled ?? false) {
+        throw ExportException('导出已取消');
+      }
+      
+      final account = accountMap[accountId];
+      final accountName = account?.name ?? 'Unknown Account';
+      final accountTransactions = transactionsByAccount[accountId]!;
+      
+      processedAccounts++;
+      final progress = (totalCount ~/ 2) + (processedAccounts * totalCount ~/ 2 ~/ totalAccounts);
+      onProgress?.call(progress, totalCount, '正在导出账户: $accountName ($processedAccounts/$totalAccounts)');
+      
+      // Paginate transactions within account
+      for (var i = 0; i < accountTransactions.length; i += pageSize) {
+        final pageTransactions = accountTransactions.skip(i).take(pageSize).toList();
+        
+        pdf.addPage(
+          pw.MultiPage(
+            pageFormat: PdfPageFormat.a4,
+            margin: const pw.EdgeInsets.all(40),
+            build: (pw.Context context) {
+              return [
+                pw.Text('Account: $accountName', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.blue700)),
+                pw.SizedBox(height: 12),
+                pw.Text(
+                  'Transactions ${i + 1} - ${i + pageTransactions.length} of ${accountTransactions.length}',
+                  style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
+                ),
+                pw.SizedBox(height: 12),
+                _buildPaginatedTransactionTable(pageTransactions, accountMap, categoryMap),
+              ];
+            },
+            footer: (pw.Context context) {
+              return pw.Container(
+                alignment: pw.Alignment.centerRight,
+                margin: const pw.EdgeInsets.only(top: 20),
+                child: pw.Text(
+                  'Page ${context.pageNumber} of ${context.pagesCount}',
+                  style: pw.TextStyle(fontSize: 10, color: PdfColors.grey500),
+                ),
+              );
+            },
+          ),
+        );
+      }
+    }
+    
+    onProgress?.call(totalCount, totalCount, 'PDF生成完成');
+    return pdf.save();
+  }
+  
+  /// Builds a paginated transaction table.
+  pw.Widget _buildPaginatedTransactionTable(
+    List<(db.Transaction, List<db.Split>)> transactions,
+    Map<String, db.Account> accountMap,
+    Map<String, db.Category> categoryMap,
+  ) {
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey300),
+      columnWidths: {
+        0: const pw.FlexColumnWidth(2),
+        1: const pw.FlexColumnWidth(3),
+        2: const pw.FlexColumnWidth(2),
+        3: const pw.FlexColumnWidth(2),
+      },
+      children: [
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+          children: [
+            _buildTableCell('Date', isHeader: true),
+            _buildTableCell('Description', isHeader: true),
+            _buildTableCell('Category', isHeader: true),
+            _buildTableCell('Amount', isHeader: true),
+          ],
+        ),
+        ...transactions.expand((tuple) {
+          final (transaction, splits) = tuple;
+          return splits.map((split) {
+            final category = split.categoryId != null ? categoryMap[split.categoryId] : null;
+            final amount = split.valueNum / split.valueDenom.toDouble();
+            final date = DateTime.fromMillisecondsSinceEpoch(transaction.postDate);
+            return pw.TableRow(
+              children: [
+                _buildTableCell(_dateFormat.format(date)),
+                _buildTableCell(transaction.description ?? ''),
+                _buildTableCell(category?.name ?? ''),
+                _buildTableCell(
+                  amount >= 0 ? '+${amount.toStringAsFixed(2)}' : amount.toStringAsFixed(2),
+                  textColor: amount >= 0 ? PdfColors.green700 : PdfColors.red700,
+                ),
+              ],
+            );
+          });
+        }),
+      ],
+    );
+  }
 
   /// Generates the PDF document with pagination for large datasets.
   Future<Uint8List> _generatePdf({

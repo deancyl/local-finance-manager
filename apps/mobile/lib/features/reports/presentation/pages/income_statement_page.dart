@@ -12,6 +12,9 @@ import '../../../export/data/export_provider.dart';
 import '../../../print/data/print_service.dart';
 import '../../../print/data/print_provider.dart';
 import '../mixins/drill_down_mixin.dart';
+import '../../../../core/widgets/loading_state_widget.dart';
+import '../../../../core/widgets/empty_state_widget.dart';
+import '../../../../core/widgets/error_state_widget.dart';
 
 /// Income statement report page with date range filtering and period comparison.
 ///
@@ -205,12 +208,19 @@ class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage>
             child: incomeStatementAsync.when(
               data: (statementWithComparison) {
                 if (statementWithComparison == null) {
-                  return _buildEmptyState(context);
+                  return const EmptyStateWidget(
+                    icon: Icons.receipt_long_outlined,
+                    title: '暂无收支数据',
+                    subtitle: '请先添加收入和费用账户的交易记录',
+                  );
                 }
                 return _buildContent(context, statementWithComparison);
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => _buildErrorState(context, error),
+              loading: () => const LoadingStateWidget(message: '加载利润表...'),
+              error: (error, stack) => ErrorStateWidget.fromError(
+                error: error,
+                onRetry: _handleRefresh,
+              ),
             ),
           ),
         ],
@@ -834,74 +844,17 @@ class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage>
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.receipt_long_outlined,
-            size: 64,
-            color: theme.colorScheme.outline,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '暂无收支数据',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '请先添加收入和费用账户的交易记录',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.outline,
-            ),
-          ),
-        ],
-      ),
+    return const EmptyStateWidget(
+      icon: Icons.receipt_long_outlined,
+      title: '暂无收支数据',
+      subtitle: '请先添加收入和费用账户的交易记录',
     );
   }
 
   Widget _buildErrorState(BuildContext context, Object error) {
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: theme.colorScheme.error,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '加载失败',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.error,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error.toString(),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _handleRefresh,
-              icon: const Icon(Icons.refresh),
-              label: const Text('重试'),
-            ),
-          ],
-        ),
-      ),
+    return ErrorStateWidget(
+      message: error.toString(),
+      onRetry: _handleRefresh,
     );
   }
 

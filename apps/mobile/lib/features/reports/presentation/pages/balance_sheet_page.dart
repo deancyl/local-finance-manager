@@ -14,6 +14,9 @@ import '../../../export/data/export_provider.dart';
 import '../../../print/data/print_service.dart';
 import '../../../print/data/print_provider.dart';
 import '../mixins/drill_down_mixin.dart';
+import '../../../../core/widgets/loading_state_widget.dart';
+import '../../../../core/widgets/empty_state_widget.dart';
+import '../../../../core/widgets/error_state_widget.dart';
 
 /// Balance sheet report page with as-of date selection.
 ///
@@ -133,12 +136,19 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage>
             child: balanceSheetAsync.when(
               data: (balanceSheet) {
                 if (balanceSheet == null) {
-                  return _buildEmptyState(context);
+                  return const EmptyStateWidget(
+                    icon: Icons.account_balance_wallet_outlined,
+                    title: '暂无资产负债数据',
+                    subtitle: '请先添加资产、负债或权益账户',
+                  );
                 }
                 return _buildContent(context, balanceSheet);
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => _buildErrorState(context, error),
+              loading: () => const LoadingStateWidget(message: '加载资产负债表...'),
+              error: (error, stack) => ErrorStateWidget.fromError(
+                error: error,
+                onRetry: _handleRefresh,
+              ),
             ),
           ),
         ],
@@ -721,74 +731,17 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage>
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.account_balance_wallet_outlined,
-            size: 64,
-            color: theme.colorScheme.outline,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '暂无资产负债数据',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '请先添加资产、负债或权益账户',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.outline,
-            ),
-          ),
-        ],
-      ),
+    return const EmptyStateWidget(
+      icon: Icons.account_balance_wallet_outlined,
+      title: '暂无资产负债数据',
+      subtitle: '请先添加资产、负债或权益账户',
     );
   }
 
   Widget _buildErrorState(BuildContext context, Object error) {
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: theme.colorScheme.error,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '加载失败',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.error,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error.toString(),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _handleRefresh,
-              icon: const Icon(Icons.refresh),
-              label: const Text('重试'),
-            ),
-          ],
-        ),
-      ),
+    return ErrorStateWidget(
+      message: error.toString(),
+      onRetry: _handleRefresh,
     );
   }
 }

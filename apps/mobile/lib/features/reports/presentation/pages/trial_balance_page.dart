@@ -12,12 +12,11 @@ import '../../../export/data/export_provider.dart';
 import '../../../print/data/print_provider.dart';
 import '../../../accounts/data/account_provider.dart';
 import '../mixins/drill_down_mixin.dart';
-import '../../../../core/widgets/loading_state_widget.dart';
-import '../../../../core/widgets/empty_state_widget.dart';
-import '../../../../core/widgets/error_state_widget.dart';
-import '../../../../core/widgets/loading_state_widget.dart';
-import '../../../../core/widgets/empty_state_widget.dart';
-import '../../../../core/widgets/error_state_widget.dart';
+import 'package:finance_app/core/widgets/loading_state_widget.dart';
+import 'package:finance_app/core/widgets/empty_state_widget.dart';
+import 'package:finance_app/core/widgets/error_state_widget.dart';
+
+/// Trial balance report page with date range filtering.
 
 /// Trial balance report page with date range filtering.
 ///

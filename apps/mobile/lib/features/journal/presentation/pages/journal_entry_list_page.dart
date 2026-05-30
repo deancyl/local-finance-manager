@@ -6,8 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:database/database.dart';
 import 'package:finance_app/features/journal/data/journal_list_provider.dart';
 import 'package:finance_app/features/journal/presentation/widgets/journal_entry_detail_sheet.dart';
-import '../../../core/widgets/loading_state_widget.dart';
-import '../../../core/widgets/empty_state_widget.dart';
 import 'package:finance_app/core/widgets/loading_state_widget.dart';
 import 'package:finance_app/core/widgets/empty_state_widget.dart';
 import 'package:finance_app/core/widgets/error_state_widget.dart';
