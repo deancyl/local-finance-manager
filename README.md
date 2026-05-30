@@ -5,7 +5,7 @@
 ## 功能特性
 
 - 🏦 **多机构导入**: 支持支付宝、微信支付、工商银行、建设银行、中国银行等
-- 🔐 **本地加密**: SQLCipher加密存储，OS密钥链保护
+- 🔐 **本地加密**: AES-256-GCM加密存储，OS密钥链保护
 - 🔄 **多设备同步**: 自托管同步服务器，端到端加密
 - 📊 **智能分析**: 本地AI分析，无需云端
 - 💰 **预算管理**: 分类预算、预警提醒
@@ -14,7 +14,7 @@
 ## 技术栈
 
 - **框架**: Flutter (跨平台)
-- **数据库**: Drift (SQLite ORM) + SQLCipher
+- **数据库**: Drift (SQLite ORM) + AES-256-GCM加密
 - **同步**: PowerSync
 - **后端**: Dart Frog + PostgreSQL
 - **AI**: Ollama (桌面) / llama.cpp (移动)
@@ -44,7 +44,7 @@ finance-app/
 - [x] Phase 1.1: 项目设置（monorepo、Git、CI/CD）
 - [x] Phase 1.2: 数据库schema + Drift设置
 - [x] Phase 1.3: 核心models + repositories
-- [x] Phase 1.4: 加密层（SQLCipher + keychain）
+- [x] Phase 1.4: 加密层（AES-256-GCM + keychain）
 - [x] Phase 1.5: 基础UI shell（导航、主题）
 - [x] Phase 1.6: 账户管理CRUD
 - [x] Phase 1.7: 交易CRUD（单式记账）
@@ -85,6 +85,9 @@ finance-app/
   - [x] v0.3.198: Backup verification and migration safety
   - [x] v0.3.199: Performance indexes and caching
   - [x] v0.3.200: Loading states, error states, UI polish
+- [x] v0.3.206: Release build verification
+  - [x] Background budget checker database access fix
+  - [x] Documentation updated for encryption architecture
 - [ ] v0.3.201+: WebSocket real-time sync notifications
 - [ ] QR code device pairing
 - [ ] Sync status indicator in app bar

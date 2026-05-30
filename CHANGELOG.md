@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.206] - 2026-05-30
+
+### Fixed
+- **Background Budget Checker**: Fixed database access in background isolate
+  - Previously threw `UnimplementedError` when trying to access database
+  - Now properly uses `LocalFinanceDatabase.forTesting(executor)` like recurring processor
+  - Budget alert background notifications now work correctly
+
+### Documentation
+- **Release Build Verification**: Updated DEVELOPMENT.md with accurate encryption information
+  - Clarified that SQLCipher is NOT used at database level
+  - Database uses application-level AES-256-GCM encryption via `packages/encryption`
+  - Added background services documentation for Android release builds
+
 ## [v0.3.107] - 2026-05-25
 
 ### Added

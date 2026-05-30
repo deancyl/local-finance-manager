@@ -108,9 +108,9 @@ finance-app/
 - Deep linking support (planned)
 
 ### Encryption
-- **SQLCipher** for database encryption at rest
-- **flutter_secure_storage** for keychain access
-- **AES-256-GCM** for data encryption
+- **Drift + sqlite3_flutter_libs** for database storage (unencrypted at SQLite level)
+- **AES-256-GCM** for application-level encryption (sync data, sensitive fields)
+- **flutter_secure_storage** for keychain access (iOS Keychain / Android Keystore)
 
 ## Development Workflow
 
@@ -179,10 +179,18 @@ flutter build windows --release
 - **Distribution**: Package as ZIP for distribution
 
 #### SQLCipher Encryption
-- Uses `drift_flutter` with bundled SQLite libraries
-- Encryption is handled at the database connection layer
+- Uses `drift_flutter` with `sqlite3_flutter_libs` for bundled SQLite libraries
+- **Note**: The database file itself is NOT encrypted with SQLCipher
+- Application-level encryption is provided via `packages/encryption` using AES-256-GCM
+- Sensitive data (sync tokens, E2E encryption keys) are encrypted before storage
 - Works in both debug and release modes
 - No additional configuration needed for release builds
+
+#### Background Services (Android)
+- Background tasks use `workmanager` for periodic operations
+- Budget alerts and recurring transaction processing run in background isolates
+- These services access the database directly (no encryption at SQLite level)
+- Background isolate database access is handled via `NativeDatabase.createInBackground`
 
 #### CI Release Workflow
 - Triggered on tag push (`v*`) or manual dispatch

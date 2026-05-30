@@ -10,6 +10,7 @@ import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:core/core.dart' show BudgetPeriod, BudgetPeriodCalculator;
+import 'package:database/database.dart';
 
 /// Background task identifier for budget checks.
 const String _budgetCheckTask = 'budget_alert_check';
@@ -200,19 +201,15 @@ BudgetPeriod _parseBudgetPeriod(String period) {
 }
 
 /// Open database connection for background task.
-Future<dynamic> _openDatabase() async {
-  // This is a simplified version - in production, use the actual database setup
-  // with proper encryption support
+Future<LocalFinanceDatabase> _openDatabase() async {
   final dbFolder = await getApplicationDocumentsDirectory();
   final file = File('${dbFolder.path}/finance.db');
   
   // Note: For encrypted database, you'd need to handle the key retrieval
-  // This is a placeholder for the background isolate database access
+  // This is a simplified version - in production, use the actual encrypted database setup
   final executor = NativeDatabase.createInBackground(file);
   
-  // Return a minimal database instance
-  // In production, this should be the actual LocalFinanceDatabase
-  throw UnimplementedError('Database access in background isolate requires proper setup');
+  return LocalFinanceDatabase.forTesting(executor);
 }
 
 /// Background budget checker manager.
