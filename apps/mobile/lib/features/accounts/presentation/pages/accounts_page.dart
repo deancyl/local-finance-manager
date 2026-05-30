@@ -567,7 +567,24 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     );
   }
 
-  void _deleteAccount(BuildContext context, WidgetRef ref, Account account) {
+  void _deleteAccount(BuildContext context, WidgetRef ref, Account account) async {
+    final db = ref.read(databaseProvider);
+    
+    // Check if account can be deleted
+    final canDelete = await db.accountsDao.canDeleteAccount(account.id);
+    
+    if (!canDelete) {
+      // Get details about why deletion is blocked
+      final transactionCount = await db.accountsDao.getTransactionCount(account.id);
+      final childCount = await db.accountsDao.getChildCount(account.id);
+      
+      if (mounted) {
+        _showCannotDeleteDialog(context, account, transactionCount, childCount);
+      }
+      return;
+    }
+    
+    // Show confirmation dialog
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -587,6 +604,55 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
               );
             },
             child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _showCannotDeleteDialog(
+    BuildContext context,
+    Account account,
+    int transactionCount,
+    int childCount,
+  ) {
+    final reasons = <String>[];
+    if (transactionCount > 0) {
+      reasons.add('• 包含 $transactionCount 笔交易记录');
+    }
+    if (childCount > 0) {
+      reasons.add('• 包含 $childCount 个子账户');
+    }
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('无法删除账户'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('无法删除账户 "${account.name}"。\n\n原因：'),
+            const SizedBox(height: 8),
+            ...reasons.map((r) => Text(r)),
+            const SizedBox(height: 16),
+            const Text('如需删除此账户，请先：'),
+            if (transactionCount > 0)
+              const Text('• 删除或移动所有交易记录'),
+            if (childCount > 0)
+              const Text('• 删除或移动所有子账户'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('确定'),
           ),
         ],
       ),

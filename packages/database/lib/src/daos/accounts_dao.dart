@@ -111,4 +111,89 @@ extension AccountsDaoHierarchy on AccountsDao {
       .then((list) => list.length);
     return count > 0;
   }
+
+  /// Checks if setting newParentId as parent of accountId would create a circular reference.
+  /// 
+  /// A circular reference occurs when newParentId is already a descendant of accountId,
+  /// or when newParentId is the same as accountId.
+  Future<bool> wouldCreateCircularReference(String accountId, String? newParentId) async {
+    if (newParentId == null) return false;
+    if (newParentId == accountId) return true;
+    
+    // Traverse parent chain from newParentId to see if it reaches accountId
+    String? currentId = newParentId;
+    final visited = <String>{};
+    
+    while (currentId != null) {
+      if (currentId == accountId) return true;
+      if (visited.contains(currentId)) break; // Prevent infinite loop
+      visited.add(currentId);
+      
+      final account = await getById(currentId);
+      currentId = account?.parentId;
+    }
+    
+    return false;
+  }
+
+  /// Checks if an account can have its type changed.
+  /// Returns false if the account has any transactions (splits or journal entry lines).
+  Future<bool> canChangeAccountType(String accountId) async {
+    // Check for splits
+    final hasSplits = await _hasSplits(accountId);
+    if (hasSplits) return false;
+    
+    // Check for journal entry lines
+    final hasJournalLines = await _hasJournalEntryLines(accountId);
+    if (hasJournalLines) return false;
+    
+    return true;
+  }
+
+  /// Checks if an account can be deleted.
+  /// Returns false if the account has transactions or has child accounts.
+  Future<bool> canDeleteAccount(String accountId) async {
+    // Check for child accounts
+    if (await hasChildren(accountId)) return false;
+    
+    // Check for splits
+    if (await _hasSplits(accountId)) return false;
+    
+    // Check for journal entry lines
+    if (await _hasJournalEntryLines(accountId)) return false;
+    
+    return true;
+  }
+
+  /// Gets the count of transactions (splits) for an account.
+  Future<int> getTransactionCount(String accountId) async {
+    final db = this.db;
+    final query = db.select(db.splits)
+      ..where((s) => s.accountId.equals(accountId));
+    return query.get().then((list) => list.length);
+  }
+
+  /// Gets the count of child accounts.
+  Future<int> getChildCount(String accountId) async {
+    return (select(accounts)
+      ..where((a) => a.parentId.equals(accountId)))
+      .get()
+      .then((list) => list.length);
+  }
+
+  /// Checks if account has splits.
+  Future<bool> _hasSplits(String accountId) async {
+    final db = this.db;
+    final query = db.select(db.splits)
+      ..where((s) => s.accountId.equals(accountId));
+    return query.get().then((list) => list.isNotEmpty);
+  }
+
+  /// Checks if account has journal entry lines.
+  Future<bool> _hasJournalEntryLines(String accountId) async {
+    final db = this.db;
+    final query = db.select(db.journalEntryLines)
+      ..where((j) => j.accountId.equals(accountId));
+    return query.get().then((list) => list.isNotEmpty);
+  }
 }

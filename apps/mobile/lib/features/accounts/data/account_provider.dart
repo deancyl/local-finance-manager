@@ -209,13 +209,8 @@ class AccountNotifier extends StateNotifier<AsyncValue<void>> {
   }) async {
     state = const AsyncValue.loading();
     try {
-      // VALIDATION: Check for circular reference
-      if (parentId != null) {
-        final wouldCreateCycle = await _wouldCreateCycle(parentId, parentId);
-        if (wouldCreateCycle) {
-          throw ArgumentError('Cannot set parent: would create circular reference');
-        }
-      }
+      // NOTE: Circular reference check is not needed for new accounts
+      // since they don't exist in the hierarchy yet
       
       final id = const uuid_pkg.Uuid().v4();
       final now = DateTime.now().millisecondsSinceEpoch;
@@ -241,12 +236,12 @@ class AccountNotifier extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  Future<void> updateAccount(Account account) async {
+  Future<void> updateAccount(Account account, {String? oldAccountType}) async {
     state = const AsyncValue.loading();
     try {
       // VALIDATION: Check for circular reference
       if (account.parentId != null) {
-        final wouldCreateCycle = await _wouldCreateCycle(account.id, account.parentId!);
+        final wouldCreateCycle = await _db.accountsDao.wouldCreateCircularReference(account.id, account.parentId);
         if (wouldCreateCycle) {
           throw ArgumentError('Cannot set parent: would create circular reference');
         }
@@ -255,6 +250,14 @@ class AccountNotifier extends StateNotifier<AsyncValue<void>> {
       // VALIDATION: Cannot make account its own parent
       if (account.parentId == account.id) {
         throw ArgumentError('Cannot make account its own parent');
+      }
+      
+      // VALIDATION: Check if account type can be changed
+      if (oldAccountType != null && oldAccountType != account.accountType) {
+        final canChange = await _db.accountsDao.canChangeAccountType(account.id);
+        if (!canChange) {
+          throw ArgumentError('Cannot change account type: account has transactions');
+        }
       }
       
       await (_db.update(_db.accounts)
@@ -280,10 +283,12 @@ class AccountNotifier extends StateNotifier<AsyncValue<void>> {
   Future<void> deleteAccount(String id) async {
     state = const AsyncValue.loading();
     try {
-      // VALIDATION: Check for children
-      final children = await _db.accountsDao.getChildren(id);
-      if (children.isNotEmpty) {
-        throw ArgumentError('Cannot delete account with children. Move or delete children first.');
+      // VALIDATION: Check if account can be deleted
+      final canDelete = await _db.accountsDao.canDeleteAccount(id);
+      if (!canDelete) {
+        final transactionCount = await _db.accountsDao.getTransactionCount(id);
+        final childCount = await _db.accountsDao.getChildCount(id);
+        throw ArgumentError('Cannot delete account: has $transactionCount transactions and $childCount child accounts');
       }
       
       await (_db.delete(_db.accounts)..where((a) => a.id.equals(id))).go();
@@ -291,31 +296,6 @@ class AccountNotifier extends StateNotifier<AsyncValue<void>> {
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
-  }
-
-  /// Checks if setting parentId would create a circular reference
-  Future<bool> _wouldCreateCycle(String accountId, String newParentId) async {
-    // Can't be own parent
-    if (accountId == newParentId) return true;
-    
-    // Walk up the tree from newParentId to check if we reach accountId
-    String? currentId = newParentId;
-    final visited = <String>{};
-    
-    while (currentId != null) {
-      if (visited.contains(currentId)) {
-        // Cycle detected in existing tree (shouldn't happen, but safety check)
-        return true;
-      }
-      visited.add(currentId);
-      
-      if (currentId == accountId) return true;
-      
-      final parent = await _db.accountsDao.getById(currentId);
-      currentId = parent?.parentId;
-    }
-    
-    return false;
   }
 
   // ============================================================
@@ -362,7 +342,7 @@ class AccountNotifier extends StateNotifier<AsyncValue<void>> {
     try {
       // VALIDATION: Check for circular reference
       if (newParentId != null) {
-        final wouldCreateCycle = await _wouldCreateCycle(accountId, newParentId);
+        final wouldCreateCycle = await _db.accountsDao.wouldCreateCircularReference(accountId, newParentId);
         if (wouldCreateCycle) {
           throw ArgumentError('Cannot move account: would create circular reference');
         }

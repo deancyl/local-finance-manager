@@ -180,6 +180,34 @@ class _AddAccountDialogState extends ConsumerState<AddAccountDialog> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    // VALIDATION: Check for circular reference when changing parent
+    if (widget.account != null && _selectedParentId != null) {
+      final db = ref.read(databaseProvider);
+      final wouldCreateCycle = await db.accountsDao.wouldCreateCircularReference(
+        widget.account!.id,
+        _selectedParentId,
+      );
+      if (wouldCreateCycle) {
+        if (mounted) {
+          _showCircularReferenceError(context);
+        }
+        return;
+      }
+    }
+    
+    // VALIDATION: Check if account type can be changed
+    if (widget.account != null && widget.account!.accountType != _selectedType) {
+      final db = ref.read(databaseProvider);
+      final canChange = await db.accountsDao.canChangeAccountType(widget.account!.id);
+      if (!canChange) {
+        if (mounted) {
+          final transactionCount = await db.accountsDao.getTransactionCount(widget.account!.id);
+          _showAccountTypeChangeError(context, transactionCount);
+        }
+        return;
+      }
+    }
 
     setState(() => _isLoading = true);
 
@@ -207,6 +235,7 @@ class _AddAccountDialogState extends ConsumerState<AddAccountDialog> {
             description: drift.Value(_descriptionController.text.isEmpty ? null : _descriptionController.text),
             isPlaceholder: _isPlaceholder,
           ),
+          oldAccountType: widget.account!.accountType,
         );
       }
 
@@ -227,6 +256,58 @@ class _AddAccountDialogState extends ConsumerState<AddAccountDialog> {
         setState(() => _isLoading = false);
       }
     }
+  }
+  
+  void _showCircularReferenceError(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red),
+            SizedBox(width: 8),
+            Text('无效的父账户'),
+          ],
+        ),
+        content: const Text(
+          '无法将此账户设置为所选父账户的子账户。\n\n'
+          '原因：这将创建循环引用，即该账户会成为其自身的祖先账户。\n\n'
+          '请选择其他父账户，或将其设置为根级账户。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _showAccountTypeChangeError(BuildContext context, int transactionCount) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('无法更改账户类型'),
+          ],
+        ),
+        content: Text(
+          '无法更改此账户的类型。\n\n'
+          '原因：该账户已有 $transactionCount 笔交易记录。\n\n'
+          '如需更改账户类型，请先删除所有相关交易记录。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildParentSelector() {
