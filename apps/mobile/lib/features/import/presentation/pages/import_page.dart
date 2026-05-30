@@ -7,8 +7,10 @@ import 'package:go_router/go_router.dart';
 import 'package:importers/importers.dart' hide FileType;
 import 'package:database/database.dart' hide Transaction, Split, Account, ImportBatch;
 import 'package:core/core.dart' show ImportBatchStatus;
+import 'package:importers/src/utils/encoding_detector.dart';
 
 import '../../providers/import_providers.dart';
+import '../../data/import_error_messages.dart';
 import '../../../accounts/data/account_provider.dart';
 import '../widgets/field_mapping_dialog.dart';
 
@@ -36,6 +38,19 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   ImportPreview? _importPreview;
   String? _selectedAccountId;
   Map<String, String> _fieldMapping = {};
+  
+  // New state for encoding detection
+  EncodingDetectionResult? _encodingResult;
+  String? _manualEncoding;
+  
+  // New state for validation
+  ImportValidationResult? _validationResult;
+  Set<int> _duplicateRowIndices = {};
+  int _totalRowCount = 0;
+  
+  // New state for progress
+  bool _isImporting = false;
+  ImportProgress _importProgress = const ImportProgress();
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +76,44 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   }
 
   Widget _buildBody() {
+    if (_isLoading) {
+      return const LoadingStateWidget(
+        message: '正在解析文件...',
+        indicatorSize: 48,
+      );
+    }
+
+    if (_error != null) {
+      return ErrorStateWidget(
+        title: '解析失败',
+        message: _error,
+        onRetry: _pickFile,
+        retryText: '选择其他文件',
+      );
+    }
+
+    if (_fileContent == null) {
+      return _buildSelectFile();
+    }
+
+    return _buildPreview();
+  }
+
+    if (_error != null) {
+      return ErrorStateWidget.file(
+        message: _error,
+        onRetry: _pickFile,
+        retryText: '选择其他文件',
+      );
+    }
+
+    if (_fileContent == null) {
+      return _buildSelectFile();
+    }
+
+    return _buildPreview();
+  }
+    
     if (_isLoading) {
       return const Center(
         child: Column(
@@ -216,41 +269,105 @@ Text(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primaryContainer,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.check_circle,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '文件已解析',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
+          Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '文件已解析',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                    ),
+                    Text(
+                      '$_fileName • ${_previewRows.length} 条预览 (共 $_totalRowCount 条)',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                    ),
+                  ],
                 ),
-                Text(
-                  '$_fileName • ${_previewRows.length} 条记录',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
+              ),
+              if (_detectedSource != null)
+                Chip(
+                  label: Text(_detectedSource!),
+                  backgroundColor: Theme.of(context).colorScheme.surface,
                 ),
-              ],
-            ),
+            ],
           ),
-          if (_detectedSource != null)
-            Chip(
-              label: Text(_detectedSource!),
-              backgroundColor: Theme.of(context).colorScheme.surface,
+          
+          // Show encoding information
+          if (_encodingResult != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.code,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _encodingResult!.userDescription,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                    ),
+                  ),
+                  if (!_encodingResult!.isHighConfidence)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: OutlinedButton(
+                        onPressed: _showEncodingDialog,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                        ),
+                        child: const Text('手动选择', style: TextStyle(fontSize: 12)),
+                      ),
+                    ),
+                ],
+              ),
             ),
+          
+          // Show validation warnings
+          if (_validationResult != null && (_validationResult!.hasWarnings || _validationResult!.hasDuplicates))
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.warning_amber,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      '发现 ${_validationResult!.warningCount} 条警告，${_validationResult!.duplicateCount} 条重复交易',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          
           // Add field mapping button
           if (_fieldMapping.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(left: 8),
+              padding: const EdgeInsets.only(top: 8),
               child: Chip(
                 label: const Text('已映射'),
                 avatar: const Icon(Icons.map, size: 16),
@@ -289,12 +406,43 @@ Text(
               );
             }).toList(),
             rows: _previewRows.take(20).map((row) {
+              final rowIndex = _previewRows.indexOf(row);
+              final isDuplicate = _duplicateRowIndices.contains(rowIndex);
+              
               return DataRow(
+                color: WidgetStateProperty.all(
+                  isDuplicate 
+                      ? Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5)
+                      : null,
+                ),
                 cells: headers.map((header) {
-                  return DataCell(Text(
-                    row[header]?.toString() ?? '',
-                    overflow: TextOverflow.ellipsis,
-                  ));
+                  final value = row[header]?.toString() ?? '';
+                  return DataCell(
+                    Row(
+                      children: [
+                        if (isDuplicate)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 4),
+                            child: Icon(
+                              Icons.content_copy,
+                              size: 14,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        Expanded(
+                          child: Text(
+                            value,
+                            overflow: TextOverflow.ellipsis,
+                            style: isDuplicate 
+                                ? TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  )
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
                 }).toList(),
               );
             }).toList(),
@@ -359,39 +507,11 @@ Text(
   }
 
   Widget _buildError() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '解析失败',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _pickFile,
-              icon: const Icon(Icons.refresh),
-              label: const Text('选择其他文件'),
-            ),
-          ],
-        ),
-      ),
+    return ErrorStateWidget(
+      title: '解析失败',
+      message: _error,
+      onRetry: _pickFile,
+      retryText: '选择其他文件',
     );
   }
 
@@ -457,16 +577,25 @@ setState(() {
         });
         return;
       }
+      
+      // Detect encoding
+      final encodingResult = EncodingDetector.detectWithConfidence(file.bytes!);
 
       // Store for later import
       _importer = importer;
       _importPreview = preview;
+      
+      // Run validation on preview data
+      final validationResult = _validatePreview(preview);
 
       setState(() {
         _fileContent = file.bytes;
         _fileName = file.name;
         _detectedSource = importer.name;
         _previewRows = preview.rows;
+        _totalRowCount = preview.totalRowCount;
+        _encodingResult = encodingResult;
+        _validationResult = validationResult;
         _isLoading = false;
       });
     } catch (e) {
@@ -497,7 +626,70 @@ setState(() {
       _importer = null;
       _importPreview = null;
       _fieldMapping = {};
+      _encodingResult = null;
+      _manualEncoding = null;
+      _validationResult = null;
+      _duplicateRowIndices = {};
+      _totalRowCount = 0;
+      _isImporting = false;
+      _importProgress = const ImportProgress();
     });
+  }
+  
+  /// Validate preview data and return validation result.
+  ImportValidationResult _validatePreview(ImportPreview preview) {
+    final warnings = <ValidationWarning>[];
+    var validRows = preview.rows.length;
+    
+    // Check for required fields
+    for (var i = 0; i < preview.rows.length; i++) {
+      final row = preview.rows[i];
+      
+      // Check for missing date
+      if (row['date'] == null && row['日期'] == null && row['交易时间'] == null) {
+        warnings.add(ValidationWarning(
+          row: i + 1,
+          messageZh: '缺少日期字段',
+          messageEn: 'Missing date field',
+        ));
+      }
+      
+      // Check for missing amount
+      if (row['amount'] == null && row['金额'] == null && row['交易金额'] == null) {
+        warnings.add(ValidationWarning(
+          row: i + 1,
+          messageZh: '缺少金额字段',
+          messageEn: 'Missing amount field',
+        ));
+      }
+    }
+    
+    // Check for potential duplicates (simplified check based on row similarity)
+    final seenSignatures = <String, int>{};
+    for (var i = 0; i < preview.rows.length; i++) {
+      final row = preview.rows[i];
+      final signature = '${row['date']}_${row['amount']}_${row['description'] ?? ''}';
+      if (seenSignatures.containsKey(signature)) {
+        warnings.add(ValidationWarning(
+          row: i + 1,
+          messageZh: '可能为重复交易 (与第 ${seenSignatures[signature]} 行相似)',
+          messageEn: 'Potential duplicate (similar to row ${seenSignatures[signature]})',
+          isDuplicate: true,
+        ));
+        _duplicateRowIndices.add(i);
+      } else {
+        seenSignatures[signature] = i + 1;
+      }
+    }
+    
+    return ImportValidationResult(
+      warnings: warnings,
+      duplicateRowIndices: _duplicateRowIndices.toList(),
+      totalRows: preview.totalRowCount,
+      validRows: validRows,
+      detectedEncoding: _encodingResult?.encoding ?? 'utf-8',
+      encodingConfidence: _encodingResult?.confidence ?? 1.0,
+    );
   }
   
   /// Show field mapping dialog for manual column mapping.
@@ -519,6 +711,190 @@ setState(() {
       });
     }
   }
+  
+  /// Show encoding selection dialog.
+  Future<void> _showEncodingDialog() async {
+    final encodings = ['UTF-8', 'GBK', 'GB2312', 'UTF-16 LE', 'UTF-16 BE'];
+    
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('选择编码'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('检测到的编码: ${_encodingResult?.encodingDisplayName ?? "未知"}'),
+            Text('置信度: ${((_encodingResult?.confidence ?? 0) * 100).toInt()}%'),
+            const SizedBox(height: 16),
+            ...encodings.map((enc) => RadioListTile<String>(
+              title: Text(enc),
+              value: enc.toLowerCase().replaceAll(' ', ''),
+              groupValue: _manualEncoding,
+              onChanged: (value) {
+                Navigator.pop(context, value);
+              },
+            )),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text('使用自动检测'),
+          ),
+        ],
+      ),
+    );
+    
+    if (result != null) {
+      setState(() {
+        _manualEncoding = result;
+      });
+      // Re-parse with new encoding
+      if (_fileContent != null) {
+        await _reparseWithEncoding(result);
+      }
+    }
+  }
+  
+  /// Re-parse file with new encoding.
+  Future<void> _reparseWithEncoding(String encoding) async {
+    if (_importer == null || _fileContent == null) return;
+    
+    setState(() => _isLoading = true);
+    
+    try {
+      final preview = await _importer!.preview(
+        content: _fileContent!,
+        maxRows: 20,
+        encoding: encoding,
+      );
+      
+      setState(() {
+        _previewRows = preview.rows;
+        _totalRowCount = preview.totalRowCount;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = '编码解析失败: $e';
+        _isLoading = false;
+      });
+    }
+  }
+  
+  /// Build progress indicator for large file import.
+  Widget _buildImportProgress() {
+    final progress = _importProgress;
+    
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Progress bar
+            if (progress.totalRows > 0)
+              SizedBox(
+                width: 300,
+                child: LinearProgressIndicator(
+                  value: progress.progress,
+                  minHeight: 8,
+                ),
+              )
+            else
+              const CircularProgressIndicator(),
+            
+            const SizedBox(height: 24),
+            
+            // Progress text
+            Text(
+              progress.statusMessage,
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            
+            if (progress.totalRows > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  '${progress.currentRow} / ${progress.totalRows} 条 (${progress.progressPercent}%)',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            
+            // Estimated time
+            if (progress.estimatedSecondsRemaining != null && progress.estimatedSecondsRemaining! > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  '预计剩余: ${_formatTime(progress.estimatedSecondsRemaining!)}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            
+            // Stats
+            if (progress.successCount > 0 || progress.duplicateCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (progress.successCount > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle, size: 16, color: Colors.green),
+                            const SizedBox(width: 4),
+                            Text('成功: ${progress.successCount}'),
+                          ],
+                        ),
+                      ),
+                    if (progress.duplicateCount > 0)
+                      Row(
+                        children: [
+                          Icon(Icons.content_copy, size: 16, color: Colors.orange),
+                          const SizedBox(width: 4),
+                          Text('重复: ${progress.duplicateCount}'),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            
+            const SizedBox(height: 24),
+            
+            // Cancel button
+            OutlinedButton.icon(
+              onPressed: _cancelImport,
+              icon: const Icon(Icons.cancel),
+              label: const Text('取消导入'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  /// Format time in seconds to readable format.
+  String _formatTime(int seconds) {
+    if (seconds < 60) return '$seconds 秒';
+    final minutes = seconds / 60;
+    if (minutes < 60) return '${minutes.toInt()} 分钟';
+    final hours = minutes / 60;
+    return '${hours.toInt()} 小时 ${minutes.toInt() % 60} 分钟';
+  }
+  
+  /// Cancel ongoing import.
+  void _cancelImport() {
+    ref.read(importNotifierProvider.notifier).cancelImport();
+  }
 
   Future<void> _importTransactions() async {
     if (_importer == null || _fileContent == null) {
@@ -531,12 +907,53 @@ setState(() {
     
     if (accountId == null) {
       setState(() {
-        _error = '请先创建一个账户';
+        _error = ImportErrorMessages.missingAccountError().getFullMessage(true);
       });
       return;
     }
 
-    setState(() => _isLoading = true);
+    // Show warning about validation before importing
+    if (_validationResult != null && _validationResult!.hasWarnings) {
+      final shouldContinue = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('验证警告'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('发现 ${_validationResult!.warningCount} 条警告'),
+              Text('${_validationResult!.duplicateCount} 条可能为重复交易'),
+              const SizedBox(height: 8),
+              Text(
+                '警告的交易仍可导入，重复交易将被自动跳过。\n是否继续导入?',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('继续导入'),
+            ),
+          ],
+        ),
+      );
+      
+      if (shouldContinue != true) return;
+    }
+
+    setState(() {
+      _isImporting = true;
+      _importProgress = ImportProgress(
+        startTime: DateTime.now(),
+        statusMessage: '准备导入...',
+      );
+    });
 
     try {
       final notifier = ref.read(importNotifierProvider.notifier);
@@ -555,9 +972,17 @@ setState(() {
         content: _fileContent!,
         config: config,
         filename: _fileName ?? 'unknown.csv',
+        onProgress: (progress) {
+          setState(() {
+            _importProgress = progress;
+          });
+        },
       );
 
-      setState(() => _isLoading = false);
+      setState(() {
+        _isImporting = false;
+        _isLoading = false;
+      });
 
       // Show result dialog
       showDialog(
@@ -574,6 +999,8 @@ setState(() {
                 Text('⊗ 跳过重复: ${batch.duplicateCount} 条'),
               if (batch.errorCount > 0)
                 Text('✗ 导入失败: ${batch.errorCount} 条'),
+              const SizedBox(height: 8),
+              Text('耗时: ${_importProgress.elapsedSeconds} 秒'),
             ],
           ),
           actions: [
@@ -588,10 +1015,24 @@ setState(() {
         ),
       );
     } catch (e) {
-      setState(() {
-        _error = '导入失败: $e';
-        _isLoading = false;
-      });
+      // Check if cancelled
+      if (ref.read(importNotifierProvider.notifier).isCancelled) {
+        setState(() {
+          _isImporting = false;
+          _isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('导入已取消')),
+        );
+      } else {
+        final errorMsg = ImportErrorMessages.fromException(e);
+        setState(() {
+          _error = errorMsg.getFullMessage(true);
+          _isImporting = false;
+          _isLoading = false;
+        });
+      }
     }
   }
 }

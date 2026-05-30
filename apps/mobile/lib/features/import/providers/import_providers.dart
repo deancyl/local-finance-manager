@@ -176,11 +176,130 @@ class ImportState {
   }
 }
 
+/// Progress state for import operation with row-by-row tracking.
+class ImportProgress {
+  /// Total rows to process.
+  final int totalRows;
+  
+  /// Current row being processed.
+  final int currentRow;
+  
+  /// Successfully processed rows.
+  final int successCount;
+  
+  /// Failed rows.
+  final int errorCount;
+  
+  /// Duplicate rows skipped.
+  final int duplicateCount;
+  
+  /// Current status message.
+  final String statusMessage;
+  
+  /// Whether the import is cancelled.
+  final bool isCancelled;
+  
+  /// Whether the import is complete.
+  final bool isComplete;
+  
+  /// Processing start time.
+  final DateTime? startTime;
+  
+  /// Processing end time.
+  final DateTime? endTime;
+
+  const ImportProgress({
+    this.totalRows = 0,
+    this.currentRow = 0,
+    this.successCount = 0,
+    this.errorCount = 0,
+    this.duplicateCount = 0,
+    this.statusMessage = '',
+    this.isCancelled = false,
+    this.isComplete = false,
+    this.startTime,
+    this.endTime,
+  });
+
+  /// Progress percentage (0.0 to 1.0).
+  double get progress => totalRows > 0 ? currentRow / totalRows : 0;
+  
+  /// Progress percentage as integer (0 to 100).
+  int get progressPercent => (progress * 100).round();
+  
+  /// Whether progress should be shown (for files > 100 rows).
+  bool get showProgress => totalRows > 100;
+  
+  /// Estimated time remaining in seconds.
+  int? get estimatedSecondsRemaining {
+    if (startTime == null || currentRow == 0 || currentRow >= totalRows) return null;
+    final elapsed = DateTime.now().difference(startTime!);
+    final rowsPerMs = currentRow / elapsed.inMilliseconds;
+    final remainingRows = totalRows - currentRow;
+    return (remainingRows / rowsPerMs / 1000).round();
+  }
+  
+  /// Elapsed time in seconds.
+  int get elapsedSeconds {
+    if (startTime == null) return 0;
+    final end = endTime ?? DateTime.now();
+    return end.difference(startTime!).inSeconds;
+  }
+
+  ImportProgress copyWith({
+    int? totalRows,
+    int? currentRow,
+    int? successCount,
+    int? errorCount,
+    int? duplicateCount,
+    String? statusMessage,
+    bool? isCancelled,
+    bool? isComplete,
+    DateTime? startTime,
+    DateTime? endTime,
+  }) {
+    return ImportProgress(
+      totalRows: totalRows ?? this.totalRows,
+      currentRow: currentRow ?? this.currentRow,
+      successCount: successCount ?? this.successCount,
+      errorCount: errorCount ?? this.errorCount,
+      duplicateCount: duplicateCount ?? this.duplicateCount,
+      statusMessage: statusMessage ?? this.statusMessage,
+      isCancelled: isCancelled ?? this.isCancelled,
+      isComplete: isComplete ?? this.isComplete,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+    );
+  }
+}
+
 /// Notifier for performing import operations.
 class ImportNotifier extends StateNotifier<ImportState> {
   final Ref _ref;
+  
+  /// Current import progress.
+  ImportProgress _progress = const ImportProgress();
+  
+  /// Whether a cancel request has been made.
+  bool _cancelRequested = false;
 
   ImportNotifier(this._ref) : super(const ImportState());
+
+  /// Get current progress.
+  ImportProgress get progress => _progress;
+  
+  /// Request cancellation of the current import.
+  void cancelImport() {
+    _cancelRequested = true;
+  }
+  
+  /// Reset the cancel flag.
+  void _resetCancel() {
+    _cancelRequested = false;
+  }
+  
+  /// Check if cancellation was requested.
+  bool get isCancelled => _cancelRequested;
 
   Future<ImportBatch> performImport({
     required ImporterBase importer,
@@ -226,8 +345,15 @@ class ImportNotifier extends StateNotifier<ImportState> {
     required Uint8List content,
     required ImportConfig config,
     required String filename,
+    void Function(ImportProgress)? onProgress,
   }) async {
+    _resetCancel();
     state = const ImportState(isLoading: true);
+    _progress = ImportProgress(
+      startTime: DateTime.now(),
+      statusMessage: '正在解析文件...',
+    );
+    onProgress?.call(_progress);
 
     try {
       // Merge default category mappings with provided config
@@ -238,23 +364,117 @@ class ImportNotifier extends StateNotifier<ImportState> {
         },
       );
 
+      // Parse the file first
       final result = await importer.parse(
         content: content,
         config: mergedConfig,
       );
+      
+      // Update progress with total rows
+      final totalRows = result.transactions.length;
+      _progress = _progress.copyWith(
+        totalRows: totalRows,
+        statusMessage: '准备导入 $totalRows 条交易...',
+      );
+      onProgress?.call(_progress);
+      
+      // Check for cancellation
+      if (_cancelRequested) {
+        _progress = _progress.copyWith(
+          isCancelled: true,
+          endTime: DateTime.now(),
+          statusMessage: '导入已取消',
+        );
+        onProgress?.call(_progress);
+        throw Exception('Import cancelled by user');
+      }
 
       final useCase = _ref.read(importTransactionsProvider);
       
-      final batch = await useCase.import(
-        sourceId: importer.sourceId,
-        transactions: result.transactions.map(_mapToCoreParsedTransaction).toList(),
-        filename: filename,
-        skipDuplicates: mergedConfig.skipDuplicates,
-      );
+      // For large files, simulate progress updates
+      // Note: The actual import is done in batch, so we show parsing progress
+      if (totalRows > 100) {
+        // Import in smaller batches for progress updates
+        const batchSize = 50;
+        var importedCount = 0;
+        final allTransactions = result.transactions;
+        ImportBatch? finalBatch;
+        
+        for (var i = 0; i < allTransactions.length; i += batchSize) {
+          if (_cancelRequested) {
+            _progress = _progress.copyWith(
+              isCancelled: true,
+              endTime: DateTime.now(),
+              statusMessage: '导入已取消 (已导入 $importedCount 条)',
+            );
+            onProgress?.call(_progress);
+            throw Exception('Import cancelled by user');
+          }
+          
+          final end = (i + batchSize < allTransactions.length) 
+              ? i + batchSize 
+              : allTransactions.length;
+          final batch = allTransactions.sublist(i, end);
+          
+          _progress = _progress.copyWith(
+            currentRow: end,
+            successCount: importedCount,
+            statusMessage: '正在处理第 $end / $totalRows 条...',
+          );
+          onProgress?.call(_progress);
+          
+          // Import this batch
+          final batchResult = await useCase.import(
+            sourceId: importer.sourceId,
+            transactions: batch.map(_mapToCoreParsedTransaction).toList(),
+            filename: filename,
+            skipDuplicates: mergedConfig.skipDuplicates,
+          );
+          
+          importedCount += batchResult.successCount;
+          finalBatch = batchResult;
+        }
+        
+        _progress = _progress.copyWith(
+          currentRow: totalRows,
+          successCount: importedCount,
+          isComplete: true,
+          endTime: DateTime.now(),
+          statusMessage: '导入完成',
+        );
+        onProgress?.call(_progress);
+        
+        state = ImportState(batch: finalBatch);
+        return finalBatch!;
+      } else {
+        // Small file, import directly
+        final batch = await useCase.import(
+          sourceId: importer.sourceId,
+          transactions: result.transactions.map(_mapToCoreParsedTransaction).toList(),
+          filename: filename,
+          skipDuplicates: mergedConfig.skipDuplicates,
+        );
+        
+        _progress = _progress.copyWith(
+          currentRow: totalRows,
+          successCount: batch.successCount,
+          duplicateCount: batch.duplicateCount,
+          isComplete: true,
+          endTime: DateTime.now(),
+          statusMessage: '导入完成',
+        );
+        onProgress?.call(_progress);
 
-      state = ImportState(batch: batch);
-      return batch;
+        state = ImportState(batch: batch);
+        return batch;
+      }
     } catch (e) {
+      _progress = _progress.copyWith(
+        isComplete: true,
+        endTime: DateTime.now(),
+        statusMessage: '导入失败: $e',
+      );
+      onProgress?.call(_progress);
       state = ImportState(error: e.toString());
       rethrow;
     }
@@ -263,6 +483,11 @@ class ImportNotifier extends StateNotifier<ImportState> {
 
 final importNotifierProvider = StateNotifierProvider<ImportNotifier, ImportState>((ref) {
   return ImportNotifier(ref);
+});
+
+/// Provider for import progress state.
+final importProgressProvider = StateProvider<ImportProgress>((ref) {
+  return const ImportProgress();
 });
 
 /// Simple TransactionRepository implementation for import.
