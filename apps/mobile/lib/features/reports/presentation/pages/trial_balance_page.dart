@@ -138,7 +138,7 @@ class _TrialBalancePageState extends ConsumerState<TrialBalancePage>
                 }
                 return _buildContent(context, trialBalance);
               },
-              loading: () => LoadingStateWidget.page(
+              loading: () => const LoadingStateWidget(
                 message: '加载中...',
               ),
               error: (error, stack) => ErrorStateWidget.fromError(
