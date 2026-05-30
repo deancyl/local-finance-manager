@@ -49,6 +49,8 @@ import '../../features/sync/presentation/pages/sync_login_page.dart';
 import '../../features/sync/presentation/pages/device_pairing_page.dart';
 import '../../features/sync/presentation/pages/offline_queue_page.dart';
 import '../../features/sync/data/sync_feature_flag.dart';
+import '../../features/onboarding/presentation/pages/onboarding_page.dart';
+import '../../features/onboarding/data/onboarding_provider.dart';
 import '../presentation/pages/home_page.dart';
 import '../presentation/pages/main_shell.dart';
 
@@ -96,6 +98,12 @@ bool _shouldShowLockScreen(SecuritySettings security) {
   return security.isPasswordEnabled || security.isPinEnabled || security.isBiometricEnabled;
 }
 
+/// Check if onboarding should be shown
+bool _shouldShowOnboarding(Ref ref) {
+  final onboardingCompleted = ref.read(onboardingProvider);
+  return !onboardingCompleted;
+}
+
 /// Provider for GoRouter with security-aware redirects
 final goRouterProvider = Provider<GoRouter>((ref) {
   return _createRouter(ref);
@@ -114,6 +122,16 @@ GoRouter _createRouter(Ref ref) {
     initialLocation: '/home',
     refreshListenable: _lockStateNotifier,
     redirect: (context, state) {
+      // Check onboarding first (before security)
+      if (_shouldShowOnboarding(ref) && state.matchedLocation != '/onboarding') {
+        return '/onboarding';
+      }
+      
+      // If on onboarding but already completed, go to home
+      if (state.matchedLocation == '/onboarding' && !_shouldShowOnboarding(ref)) {
+        return '/home';
+      }
+      
       final security = ref.read(securityProvider);
       
       // If security is enabled and app is not unlocked, show lock screen
@@ -130,6 +148,12 @@ GoRouter _createRouter(Ref ref) {
       return null;
     },
     routes: [
+      // Onboarding route (outside shell for full-screen)
+      GoRoute(
+        path: '/onboarding',
+        name: 'onboarding',
+        builder: (context, state) => const OnboardingPage(),
+      ),
       // Lock screen route (outside shell for full-screen)
       GoRoute(
         path: '/lock',
