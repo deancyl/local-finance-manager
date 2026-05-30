@@ -11,16 +11,49 @@ import 'package:decimal/decimal.dart';
 import 'export_service.dart';
 import '../../print/data/print_service.dart';
 
+/// Progress callback for PDF export operations
+/// 
+/// [current] - Current item being processed
+/// [total] - Total items to process
+/// [message] - Human-readable progress message
+typedef PdfExportProgressCallback = void Function(int current, int total, String message);
+
+/// Cancellation token for PDF export operations
+class PdfExportCancellationToken {
+  bool _isCancelled = false;
+  
+  bool get isCancelled => _isCancelled;
+  
+  void cancel() {
+    _isCancelled = true;
+  }
+  
+  void reset() {
+    _isCancelled = false;
+  }
+}
+
 /// PDF export service for financial reports.
 ///
 /// Generates PDF reports with:
 /// - Income/Expense Summary
 /// - Category Breakdown
 /// - Monthly Trend Chart
+/// 
+/// For large datasets (>1000 transactions), uses:
+/// - Paginated PDF generation for memory efficiency
+/// - Progress reporting for UI feedback
+/// - Cancellation support for user control
 class PdfExportService {
   final db.LocalFinanceDatabase _db;
 
   PdfExportService(this._db);
+  
+  /// Maximum transactions per PDF page for pagination
+  static const int _transactionsPerPage = 50;
+  
+  /// Threshold for showing progress indicator
+  static const int _progressThreshold = 1000;
 
   /// Date formats
   static final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
@@ -28,15 +61,33 @@ class PdfExportService {
   static final DateFormat _displayFormat = DateFormat('yyyy-MM-dd');
 
   /// Exports financial report to PDF format.
+  /// 
+  /// For large datasets (>1000 transactions):
+  /// - Shows progress via [progressCallback]
+  /// - Supports cancellation via [cancellationToken]
+  /// - Uses paginated transaction tables for memory efficiency
+  /// 
+  /// [progressCallback] - Optional callback for progress updates
+  /// [cancellationToken] - Optional token to cancel the export
   Future<PdfExportResult> exportToPDF({
     required ExportFilters filters,
     String? customPath,
+    PdfExportProgressCallback? progressCallback,
+    PdfExportCancellationToken? cancellationToken,
   }) async {
     // Fetch transactions with splits
     final transactionsWithSplits = await _fetchFilteredTransactions(filters);
 
     if (transactionsWithSplits.isEmpty) {
       throw ExportException('No transactions to export');
+    }
+    
+    final totalCount = transactionsWithSplits.length;
+    final showProgress = totalCount > _progressThreshold;
+    
+    // Report initial progress
+    if (showProgress && progressCallback != null) {
+      progressCallback(0, totalCount, '准备导出 $totalCount 条交易记录...');
     }
 
     // Fetch reference data
@@ -49,6 +100,15 @@ class PdfExportService {
     final commodityMap = {for (var c in commodities) c.id: c};
 
     // Calculate summary data
+    if (showProgress && progressCallback != null) {
+      progressCallback(totalCount ~/ 4, totalCount, '正在计算汇总数据...');
+    }
+    
+    // Check for cancellation
+    if (cancellationToken?.isCancelled ?? false) {
+      throw ExportException('PDF导出已取消');
+    }
+    
     final summary = _calculateSummary(transactionsWithSplits, categoryMap);
     final categoryBreakdown = _calculateCategoryBreakdown(
       transactionsWithSplits,
@@ -56,7 +116,11 @@ class PdfExportService {
     );
     final monthlyTrend = _calculateMonthlyTrend(transactionsWithSplits);
 
-    // Generate PDF
+    if (showProgress && progressCallback != null) {
+      progressCallback(totalCount ~/ 2, totalCount, '正在生成PDF...');
+    }
+
+    // Generate PDF with pagination for large datasets
     final pdfBytes = await _generatePdf(
       filters: filters,
       summary: summary,
@@ -66,6 +130,9 @@ class PdfExportService {
       accountMap: accountMap,
       categoryMap: categoryMap,
       commodityMap: commodityMap,
+      progressCallback: showProgress ? progressCallback : null,
+      cancellationToken: cancellationToken,
+      totalCount: totalCount,
     );
 
     // Save file
@@ -84,7 +151,7 @@ class PdfExportService {
     );
   }
 
-  /// Generates the PDF document.
+  /// Generates the PDF document with pagination for large datasets.
   Future<Uint8List> _generatePdf({
     required ExportFilters filters,
     required Map<String, double> summary,
@@ -94,8 +161,12 @@ class PdfExportService {
     required Map<String, db.Account> accountMap,
     required Map<String, db.Category> categoryMap,
     required Map<String, db.Commodity> commodityMap,
+    PdfExportProgressCallback? progressCallback,
+    PdfExportCancellationToken? cancellationToken,
+    int? totalCount,
   }) async {
     final pdf = pw.Document();
+    final showProgress = progressCallback != null && totalCount != null;
 
     // Determine date range text
     String dateRangeText;
@@ -108,6 +179,24 @@ class PdfExportService {
       dateRangeText = 'Until ${_displayFormat.format(filters.endDate!)}';
     } else {
       dateRangeText = 'All Time';
+    }
+
+    // Build transaction pages with pagination for memory efficiency
+    final transactionPages = _paginateTransactions(
+      transactionsWithSplits,
+      accountMap,
+      categoryMap,
+      commodityMap,
+    );
+    
+    // Report progress during page generation
+    if (showProgress) {
+      progressCallback(totalCount! * 3 ~/ 4, totalCount, '正在生成PDF页面...');
+    }
+    
+    // Check for cancellation
+    if (cancellationToken?.isCancelled ?? false) {
+      throw ExportException('PDF导出已取消');
     }
 
     pdf.addPage(
@@ -188,21 +277,17 @@ class PdfExportService {
               pw.SizedBox(height: 24),
             ],
 
-            // Transaction Details Section
+            // Transaction Details Section with pagination
             pw.Text(
-              'Transaction Details',
+              'Transaction Details (${transactionsWithSplits.length} transactions)',
               style: pw.TextStyle(
                 fontSize: 16,
                 fontWeight: pw.FontWeight.bold,
               ),
             ),
             pw.SizedBox(height: 12),
-            ..._buildTransactionRows(
-              transactionsWithSplits,
-              accountMap,
-              categoryMap,
-              commodityMap,
-            ),
+            // First page of transactions
+            ...transactionPages.first,
           ];
         },
         footer: (pw.Context context) {
@@ -221,7 +306,127 @@ class PdfExportService {
       ),
     );
 
+    // Add additional transaction pages if needed
+    for (var i = 1; i < transactionPages.length; i++) {
+      // Check for cancellation
+      if (cancellationToken?.isCancelled ?? false) {
+        throw ExportException('PDF导出已取消');
+      }
+      
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(40),
+          build: (pw.Context context) {
+            return [
+              pw.Text(
+                'Transaction Details (continued - Page ${i + 1})',
+                style: pw.TextStyle(
+                  fontSize: 16,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 12),
+              ...transactionPages[i],
+            ];
+          },
+          footer: (pw.Context context) {
+            return pw.Container(
+              alignment: pw.Alignment.centerRight,
+              margin: const pw.EdgeInsets.only(top: 20),
+              child: pw.Text(
+                'Page ${context.pageNumber} of ${context.pagesCount}',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  color: PdfColors.grey500,
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
     return pdf.save();
+  }
+  
+  /// Paginates transactions into pages for memory-efficient PDF generation.
+  /// 
+  /// Returns a list of widget lists, where each inner list represents
+  /// a page of transaction tables.
+  List<List<pw.Widget>> _paginateTransactions(
+    List<(db.Transaction, List<db.Split>)> transactionsWithSplits,
+    Map<String, db.Account> accountMap,
+    Map<String, db.Category> categoryMap,
+    Map<String, db.Commodity> commodityMap,
+  ) {
+    final pages = <List<pw.Widget>>[];
+    var currentPageWidgets = <pw.Widget>[];
+    var currentTransactionCount = 0;
+    
+    // Group transactions into pages
+    for (final (transaction, splits) in transactionsWithSplits) {
+      for (final split in splits) {
+        final account = accountMap[split.accountId];
+        final category = split.categoryId != null ? categoryMap[split.categoryId] : null;
+        final amount = split.valueNum / split.valueDenom.toDouble();
+        final date = DateTime.fromMillisecondsSinceEpoch(transaction.postDate);
+        
+        // Build a single transaction row widget
+        currentPageWidgets.add(
+          pw.Table(
+            border: pw.TableBorder.all(color: PdfColors.grey300),
+            columnWidths: {
+              0: const pw.FlexColumnWidth(2), // Date
+              1: const pw.FlexColumnWidth(3), // Description
+              2: const pw.FlexColumnWidth(2), // Category
+              3: const pw.FlexColumnWidth(2), // Account
+              4: const pw.FlexColumnWidth(2), // Amount
+            },
+            children: [
+              pw.TableRow(
+                children: [
+                  _buildTableCell(_dateFormat.format(date)),
+                  _buildTableCell(transaction.description ?? ''),
+                  _buildTableCell(category?.name ?? ''),
+                  _buildTableCell(account?.name ?? ''),
+                  _buildTableCell(
+                    amount >= 0 ? '+${amount.toStringAsFixed(2)}' : amount.toStringAsFixed(2),
+                    textColor: amount >= 0 ? PdfColors.green700 : PdfColors.red700,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+        
+        currentTransactionCount++;
+        
+        // Start a new page after reaching threshold
+        if (currentTransactionCount >= _transactionsPerPage) {
+          pages.add(currentPageWidgets);
+          currentPageWidgets = <pw.Widget>[];
+          currentTransactionCount = 0;
+        }
+      }
+    }
+    
+    // Add remaining transactions
+    if (currentPageWidgets.isNotEmpty) {
+      pages.add(currentPageWidgets);
+    }
+    
+    // Ensure at least one page exists
+    if (pages.isEmpty) {
+      pages.add([
+        pw.Text(
+          'No transactions to display',
+          style: pw.TextStyle(fontSize: 12, color: PdfColors.grey500),
+        ),
+      ]);
+    }
+    
+    return pages;
   }
 
   /// Builds the summary table.

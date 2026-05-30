@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:archive/archive.dart';
 import 'package:uuid/uuid.dart' as uuid_pkg;
 import 'package:intl/intl.dart';
+import 'package:crypto/crypto.dart';
 
 import 'package:database/database.dart';
 import '../../accounts/data/account_provider.dart';
@@ -183,6 +184,9 @@ class BackupService {
       final sizeBytes = await backupFile.length();
       final checksum = await _calculateChecksum(compressed);
       
+      // Save checksum to separate file for verification
+      await _saveChecksumFile(backupFile.path, checksum);
+      
       return BackupMetadata(
         id: backupId,
         filePath: backupFile.path,
@@ -199,6 +203,10 @@ class BackupService {
       await dbFile.copy(filePath);
       
       final sizeBytes = await File(filePath).length();
+      final checksum = await _calculateFileChecksum(File(filePath));
+      
+      // Save checksum to separate file for verification
+      await _saveChecksumFile(filePath, checksum);
       
       return BackupMetadata(
         id: backupId,
@@ -219,6 +227,12 @@ class BackupService {
     
     if (!await backupFile.exists()) {
       throw Exception('Backup file not found');
+    }
+    
+    // Validate checksum before restore
+    final isValid = await validateChecksum(backupFilePath);
+    if (!isValid) {
+      throw Exception('Backup checksum validation failed - file may be corrupted');
     }
 
     final dbPath = await _getDatabasePath();
@@ -360,12 +374,54 @@ class BackupService {
   }
 
   Future<String> _calculateChecksum(List<int> bytes) async {
-    // Simple checksum - just use a hash of the length and first/last bytes
-    if (bytes.isEmpty) return '00000000';
-    final first = bytes.first;
-    final last = bytes.last;
-    final length = bytes.length;
-    return '${length.toRadixString(16).padLeft(4, '0')}${first.toRadixString(16).padLeft(2, '0')}${last.toRadixString(16).padLeft(2, '0')}';
+    // Calculate SHA-256 checksum for data integrity verification
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+  
+  /// Calculate SHA-256 checksum from file
+  Future<String> _calculateFileChecksum(File file) async {
+    final bytes = await file.readAsBytes();
+    return _calculateChecksum(bytes);
+  }
+  
+  /// Save checksum to a separate .checksum file
+  Future<void> _saveChecksumFile(String backupFilePath, String checksum) async {
+    final checksumFile = File('$backupFilePath.checksum');
+    await checksumFile.writeAsString(checksum);
+  }
+  
+  /// Read checksum from .checksum file
+  Future<String?> _readChecksumFile(String backupFilePath) async {
+    final checksumFile = File('$backupFilePath.checksum');
+    if (await checksumFile.exists()) {
+      return await checksumFile.readAsString();
+    }
+    return null;
+  }
+  
+  /// Validate backup checksum against stored checksum
+  Future<bool> validateChecksum(String backupFilePath) async {
+    try {
+      final backupFile = File(backupFilePath);
+      if (!await backupFile.exists()) {
+        return false;
+      }
+      
+      // Read stored checksum
+      final storedChecksum = await _readChecksumFile(backupFilePath);
+      if (storedChecksum == null) {
+        // No checksum file exists - backup created before v0.3.198
+        return true;
+      }
+      
+      // Calculate current checksum
+      final currentChecksum = await _calculateFileChecksum(backupFile);
+      
+      return storedChecksum == currentChecksum;
+    } catch (e) {
+      return false;
+    }
   }
 }
 

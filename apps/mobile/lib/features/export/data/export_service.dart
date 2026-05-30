@@ -36,6 +36,30 @@ class ExportFilters {
       accountId != null;
 }
 
+/// Progress callback for export operations
+/// 
+/// [current] - Current item being processed
+/// [total] - Total items to process
+/// [message] - Human-readable progress message
+typedef ExportProgressCallback = void Function(int current, int total, String message);
+
+/// Export cancellation token
+/// 
+/// Set [isCancelled] to true to abort the export operation.
+class ExportCancellationToken {
+  bool _isCancelled = false;
+  
+  bool get isCancelled => _isCancelled;
+  
+  void cancel() {
+    _isCancelled = true;
+  }
+  
+  void reset() {
+    _isCancelled = false;
+  }
+}
+
 /// Export result containing file path and statistics
 class ExportResult {
   final String filePath;
@@ -55,6 +79,20 @@ class ExportResult {
   });
 }
 
+/// Progress callback for export operations
+typedef ExportProgressCallback = void Function(int current, int total, String status);
+
+/// Export cancellation token
+class ExportCancellationToken {
+  bool _isCancelled = false;
+  
+  bool get isCancelled => _isCancelled;
+  
+  void cancel() {
+    _isCancelled = true;
+  }
+}
+
 /// Service for exporting data to CSV and JSON formats
 class ExportService {
   final db.LocalFinanceDatabase _db;
@@ -69,6 +107,8 @@ class ExportService {
   Future<ExportResult> exportTransactionsToCSV({
     required ExportFilters filters,
     String? customPath,
+    ExportProgressCallback? onProgress,
+    ExportCancellationToken? cancellationToken,
   }) async {
     // Fetch transactions with splits
     final transactionsWithSplits = await _fetchFilteredTransactions(filters);
@@ -76,6 +116,10 @@ class ExportService {
     if (transactionsWithSplits.isEmpty) {
       throw ExportException('没有可导出的交易记录');
     }
+
+    // Report initial progress
+    final totalCount = transactionsWithSplits.length;
+    onProgress?.call(0, totalCount, '准备导出 $totalCount 条交易记录...');
 
     // Build CSV rows
     final rows = <List<String>>[];
@@ -103,8 +147,14 @@ class ExportService {
     final categoryMap = {for (var c in categories) c.id: c};
     final commodityMap = {for (var c in commodities) c.id: c};
 
-    // Data rows
+    // Data rows with progress reporting
+    var processedCount = 0;
     for (final (transaction, splits) in transactionsWithSplits) {
+      // Check for cancellation
+      if (cancellationToken?.isCancelled ?? false) {
+        throw ExportException('导出已取消');
+      }
+      
       for (final split in splits) {
         final account = accountMap[split.accountId];
         final category = split.categoryId != null ? categoryMap[split.categoryId] : null;
@@ -126,7 +176,21 @@ class ExportService {
           transaction.externalId ?? '',
         ]);
       }
+      
+      processedCount++;
+      
+      // Report progress every 100 transactions for performance
+      if (processedCount % 100 == 0) {
+        onProgress?.call(
+          processedCount, 
+          totalCount, 
+          '正在导出 $processedCount / $totalCount 条交易记录',
+        );
+      }
     }
+
+    // Report final progress before saving
+    onProgress?.call(totalCount, totalCount, '正在保存文件...');
 
     // Convert to CSV string
     final csvString = const ListToCsvConverter().convert(rows);
@@ -150,9 +214,17 @@ class ExportService {
   }
 
   /// Exports transactions to JSON format
+  /// 
+  /// Shows progress for large exports (>1000 transactions).
+  /// Progress message format: "Exporting X of Y transactions"
+  /// 
+  /// [progressCallback] - Optional callback for progress updates
+  /// [cancellationToken] - Optional token to cancel the export
   Future<ExportResult> exportTransactionsToJSON({
     required ExportFilters filters,
     String? customPath,
+    ExportProgressCallback? progressCallback,
+    ExportCancellationToken? cancellationToken,
   }) async {
     // Fetch transactions with splits
     final transactionsWithSplits = await _fetchFilteredTransactions(filters);
@@ -161,14 +233,71 @@ class ExportService {
       throw ExportException('没有可导出的交易记录');
     }
 
+    final totalCount = transactionsWithSplits.length;
+    final showProgress = totalCount > 1000;
+    
+    // Report initial progress
+    if (showProgress && progressCallback != null) {
+      progressCallback(0, totalCount, '准备导出 $totalCount 条交易记录...');
+    }
+
     // Fetch accounts and categories for reference
     final accounts = await _db.select(_db.accounts).get();
     final categories = await _db.select(_db.categories).get();
     final commodities = await _db.select(_db.commodities).get();
 
-    // Build JSON structure
+    // Build JSON structure with progress reporting
+    final transactionJsonList = <Map<String, dynamic>>[];
+    var processedCount = 0;
+    
+    for (final (transaction, splits) in transactionsWithSplits) {
+      // Check for cancellation
+      if (cancellationToken?.isCancelled ?? false) {
+        throw ExportException('导出已取消');
+      }
+      
+      transactionJsonList.add({
+        'id': transaction.id,
+        'description': transaction.description,
+        'postDate': transaction.postDate,
+        'enterDate': transaction.enterDate,
+        'currencyId': transaction.currencyId,
+        'referenceNum': transaction.referenceNum,
+        'notes': transaction.notes,
+        'externalId': transaction.externalId,
+        'isDoubleEntry': transaction.isDoubleEntry,
+        'splits': splits.map((s) => <String, dynamic>{
+          'id': s.id,
+          'accountId': s.accountId,
+          'categoryId': s.categoryId,
+          'memo': s.memo,
+          'valueNum': s.valueNum,
+          'valueDenom': s.valueDenom,
+          'quantityNum': s.quantityNum,
+          'quantityDenom': s.quantityDenom,
+          'reconcileState': s.reconcileState,
+        }).toList(),
+      });
+      
+      processedCount++;
+      
+      // Report progress every 100 transactions
+      if (showProgress && progressCallback != null && processedCount % 100 == 0) {
+        progressCallback(
+          processedCount, 
+          totalCount, 
+          '正在导出 $processedCount / $totalCount 条交易记录',
+        );
+      }
+    }
+
+    // Report final progress
+    if (showProgress && progressCallback != null) {
+      progressCallback(totalCount, totalCount, '正在保存文件...');
+    }
+
     final jsonData = {
-      'version': '0.3.95',
+      'version': '0.3.198',
       'exportedAt': DateTime.now().toIso8601String(),
       'exportType': 'transactions',
       'filters': {
@@ -177,31 +306,7 @@ class ExportService {
         'categoryId': filters.categoryId,
         'accountId': filters.accountId,
       },
-      'transactions': transactionsWithSplits.map((tuple) {
-        final (transaction, splits) = tuple;
-        return {
-          'id': transaction.id,
-          'description': transaction.description,
-          'postDate': transaction.postDate,
-          'enterDate': transaction.enterDate,
-          'currencyId': transaction.currencyId,
-          'referenceNum': transaction.referenceNum,
-          'notes': transaction.notes,
-          'externalId': transaction.externalId,
-          'isDoubleEntry': transaction.isDoubleEntry,
-          'splits': splits.map((s) => <String, dynamic>{
-            'id': s.id,
-            'accountId': s.accountId,
-            'categoryId': s.categoryId,
-            'memo': s.memo,
-            'valueNum': s.valueNum,
-            'valueDenom': s.valueDenom,
-            'quantityNum': s.quantityNum,
-            'quantityDenom': s.quantityDenom,
-            'reconcileState': s.reconcileState,
-          }).toList(),
-        };
-      }).toList(),
+      'transactions': transactionJsonList,
       'accounts': accounts.map((a) => <String, dynamic>{
         'id': a.id,
         'name': a.name,
@@ -326,7 +431,18 @@ class ExportService {
   }
 
 /// Exports full backup (all data including attachments)
-  Future<ExportResult> exportFullBackup({String? customPath, bool includeAttachments = true}) async {
+  /// 
+  /// Shows progress for large exports (>1000 transactions).
+  /// Progress message format: "Exporting X of Y transactions"
+  /// 
+  /// [progressCallback] - Optional callback for progress updates
+  /// [cancellationToken] - Optional token to cancel the export
+  Future<ExportResult> exportFullBackup({
+    String? customPath, 
+    bool includeAttachments = true,
+    ExportProgressCallback? progressCallback,
+    ExportCancellationToken? cancellationToken,
+  }) async {
     // Fetch all data
     final transactions = await (_db.select(_db.transactions)
           ..where((t) => t.deletedAt.isNull()))
@@ -337,6 +453,14 @@ class ExportService {
     final commodities = await _db.select(_db.commodities).get();
     final budgets = await _db.select(_db.budgets).get();
     final attachments = await _db.select(_db.attachments).get();
+
+    final totalCount = transactions.length;
+    final showProgress = totalCount > 1000;
+    
+    // Report initial progress
+    if (showProgress && progressCallback != null) {
+      progressCallback(0, totalCount, '准备导出完整备份 ($totalCount 条交易记录)...');
+    }
 
     // Build splits map
     final splitsByTransaction = <String, List<db.Split>>{};
@@ -350,8 +474,83 @@ class ExportService {
       attachmentsByTransaction.putIfAbsent(attachment.transactionId, () => []).add(attachment);
     }
 
+    // Build transaction list with progress reporting
+    final transactionJsonList = <Map<String, dynamic>>[];
+    var processedCount = 0;
+    
+    for (final t in transactions) {
+      // Check for cancellation
+      if (cancellationToken?.isCancelled ?? false) {
+        throw ExportException('导出已取消');
+      }
+      
+      final transactionSplits = splitsByTransaction[t.id] ?? [];
+      final transactionAttachments = attachmentsByTransaction[t.id] ?? [];
+      transactionJsonList.add(<String, dynamic>{
+        'id': t.id,
+        'description': t.description,
+        'postDate': t.postDate,
+        'enterDate': t.enterDate,
+        'currencyId': t.currencyId,
+        'referenceNum': t.referenceNum,
+        'notes': t.notes,
+        'importBatchId': t.importBatchId,
+        'externalId': t.externalId,
+        'isDoubleEntry': t.isDoubleEntry,
+        'idempotencyKey': t.idempotencyKey,
+        'version': t.version,
+        'createdAt': t.createdAt,
+        'updatedAt': t.updatedAt,
+        'splits': transactionSplits.map((s) => <String, dynamic>{
+          'id': s.id,
+          'accountId': s.accountId,
+          'categoryId': s.categoryId,
+          'memo': s.memo,
+          'valueNum': s.valueNum,
+          'valueDenom': s.valueDenom,
+          'quantityNum': s.quantityNum,
+          'quantityDenom': s.quantityDenom,
+          'reconcileState': s.reconcileState,
+          'reconcileDate': s.reconcileDate,
+          'version': s.version,
+          'createdAt': s.createdAt,
+        }).toList(),
+        'attachments': transactionAttachments.map((a) => <String, dynamic>{
+          'id': a.id,
+          'fileName': a.fileName,
+          'filePath': a.filePath,
+          'fileType': a.fileType,
+          'fileSize': a.fileSize,
+          'thumbnailPath': a.thumbnailPath,
+          'thumbnailWidth': a.thumbnailWidth,
+          'thumbnailHeight': a.thumbnailHeight,
+          'fileHash': a.fileHash,
+          'description': a.description,
+          'sortOrder': a.sortOrder,
+          'createdAt': a.createdAt,
+          'updatedAt': a.updatedAt,
+        }).toList(),
+      });
+      
+      processedCount++;
+      
+      // Report progress every 100 transactions
+      if (showProgress && progressCallback != null && processedCount % 100 == 0) {
+        progressCallback(
+          processedCount, 
+          totalCount, 
+          '正在导出 $processedCount / $totalCount 条交易记录',
+        );
+      }
+    }
+
+    // Report final progress
+    if (showProgress && progressCallback != null) {
+      progressCallback(totalCount, totalCount, '正在保存备份文件...');
+    }
+
     final jsonData = {
-      'version': '0.3.95',
+      'version': '0.3.198',
       'exportedAt': DateTime.now().toIso8601String(),
       'exportType': 'full',
       'commodities': commodities.map((c) => <String, dynamic>{
@@ -389,55 +588,7 @@ class ExportService {
         'updatedAt': c.updatedAt.toIso8601String(),
         'deletedAt': c.deletedAt?.toIso8601String(),
       }).toList(),
-      'transactions': transactions.map((t) {
-        final transactionSplits = splitsByTransaction[t.id] ?? [];
-        final transactionAttachments = attachmentsByTransaction[t.id] ?? [];
-        return <String, dynamic>{
-          'id': t.id,
-          'description': t.description,
-          'postDate': t.postDate,
-          'enterDate': t.enterDate,
-          'currencyId': t.currencyId,
-          'referenceNum': t.referenceNum,
-          'notes': t.notes,
-          'importBatchId': t.importBatchId,
-          'externalId': t.externalId,
-          'isDoubleEntry': t.isDoubleEntry,
-          'idempotencyKey': t.idempotencyKey,
-          'version': t.version,
-          'createdAt': t.createdAt,
-          'updatedAt': t.updatedAt,
-          'splits': transactionSplits.map((s) => <String, dynamic>{
-            'id': s.id,
-            'accountId': s.accountId,
-            'categoryId': s.categoryId,
-            'memo': s.memo,
-            'valueNum': s.valueNum,
-            'valueDenom': s.valueDenom,
-            'quantityNum': s.quantityNum,
-            'quantityDenom': s.quantityDenom,
-            'reconcileState': s.reconcileState,
-            'reconcileDate': s.reconcileDate,
-            'version': s.version,
-            'createdAt': s.createdAt,
-          }).toList(),
-          'attachments': transactionAttachments.map((a) => <String, dynamic>{
-            'id': a.id,
-            'fileName': a.fileName,
-            'filePath': a.filePath,
-            'fileType': a.fileType,
-            'fileSize': a.fileSize,
-            'thumbnailPath': a.thumbnailPath,
-            'thumbnailWidth': a.thumbnailWidth,
-            'thumbnailHeight': a.thumbnailHeight,
-            'fileHash': a.fileHash,
-            'description': a.description,
-            'sortOrder': a.sortOrder,
-            'createdAt': a.createdAt,
-            'updatedAt': a.updatedAt,
-          }).toList(),
-        };
-      }).toList(),
+      'transactions': transactionJsonList,
       'budgets': budgets.map((b) => <String, dynamic>{
         'id': b.id,
         'name': b.name,

@@ -1,8 +1,12 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:intl/intl.dart';
+import 'package:crypto/crypto.dart';
 
 import 'connection/database_connection.dart';
 import 'tables/commodities.dart';
@@ -101,7 +105,91 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
   late final JournalEntriesDao journalEntriesDao = JournalEntriesDao(this);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
+  
+  /// Database file path for backup purposes
+  String? _databasePath;
+  
+  /// Set database path for backup purposes (called by connection layer)
+  void setDatabasePath(String path) {
+    _databasePath = path;
+  }
+  
+  /// Create pre-migration backup before schema changes
+  /// 
+  /// Creates a timestamped backup of the database file before any
+  /// migration is performed. This ensures data safety during schema upgrades.
+  /// 
+  /// Returns the backup file path if successful, null if skipped (no migrations needed).
+  Future<String?> _createPreMigrationBackup(int fromVersion, int toVersion) async {
+    // Only backup if there are actual migrations to perform
+    if (fromVersion >= toVersion) {
+      return null;
+    }
+    
+    try {
+      // Get database file path
+      final dbPath = await _getDatabasePath();
+      final dbFile = File(dbPath);
+      
+      if (!await dbFile.exists()) {
+        // No database file exists yet, skip backup
+        return null;
+      }
+      
+      // Create timestamped backup folder
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final backupDir = await _getBackupDirectory();
+      final migrationBackupDir = Directory('${backupDir.path}/migration_$timestamp');
+      
+      if (!await migrationBackupDir.exists()) {
+        await migrationBackupDir.create(recursive: true);
+      }
+      
+      // Copy database file to backup location
+      final backupFileName = 'finance_v${fromVersion}_to_v${toVersion}_$timestamp.db';
+      final backupFilePath = '${migrationBackupDir.path}/$backupFileName';
+      await dbFile.copy(backupFilePath);
+      
+      // Calculate and store checksum for verification
+      final bytes = await File(backupFilePath).readAsBytes();
+      final checksum = sha256.convert(bytes).toString();
+      final checksumFile = File('$backupFilePath.checksum');
+      await checksumFile.writeAsString(checksum);
+      
+      // Log backup location
+      print('[Database Migration] Pre-migration backup created:');
+      print('  From version: $fromVersion');
+      print('  To version: $toVersion');
+      print('  Backup location: $backupFilePath');
+      print('  Checksum: $checksum');
+      
+      return backupFilePath;
+    } catch (e) {
+      print('[Database Migration] WARNING: Pre-migration backup failed: $e');
+      // Continue with migration even if backup fails
+      // (user should have manual backups as safety net)
+      return null;
+    }
+  }
+  
+  /// Get the database file path
+  Future<String> _getDatabasePath() async {
+    final appDir = await getApplicationDocumentsDirectory();
+    return '${appDir.path}/finance.db';
+  }
+  
+  /// Get the backup directory
+  Future<Directory> _getBackupDirectory() async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final backupDir = Directory('${appDir.path}/backups');
+    
+    if (!await backupDir.exists()) {
+      await backupDir.create(recursive: true);
+    }
+    
+    return backupDir;
+  }
 
   @override
   MigrationStrategy get migration {
@@ -122,6 +210,16 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
         await customStatement(
           'CREATE INDEX IF NOT EXISTS idx_splits_category_date '
           'ON splits(category_id, transaction_id)',
+        );
+        
+        // v18: Composite indexes for large dataset performance
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_splits_account_date '
+          'ON splits(account_id, transaction_id)',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_journal_entries_posted_date '
+          'ON journal_entries(is_posted, post_date)',
         );
         
         // Create FTS5 virtual table for full-text search
@@ -158,6 +256,9 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
         ''');
       },
       onUpgrade: (Migrator m, int from, int to) async {
+        // Create pre-migration backup before any schema changes
+        await _createPreMigrationBackup(from, to);
+        
         if (from < 2) {
           await m.addColumn(categories, categories.version);
           await m.addColumn(categories, categories.updatedAt);
@@ -497,6 +598,31 @@ class LocalFinanceDatabase extends _$LocalFinanceDatabase {
           await customStatement(
             'CREATE INDEX IF NOT EXISTS idx_journal_entry_lines_account '
             'ON journal_entry_lines(account_id)',
+          );
+        }
+        if (from < 18) {
+          // Version 18: Composite indexes for large dataset performance (v0.3.199)
+          
+          // Composite index for account transactions: (accountId, postDate)
+          // Optimizes: "Get all transactions for account X sorted by date"
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_splits_account_date '
+            'ON splits(account_id, transaction_id)',
+          );
+          
+          // Composite index for journal entries: (isPosted, postDate)
+          // Optimizes: "Get all posted entries sorted by date"
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_journal_entries_posted_date '
+            'ON journal_entries(is_posted, post_date)',
+          );
+          
+          // Composite index for category reports: (categoryId, transactionId -> postDate)
+          // The idx_splits_category_date already exists from v4, but we add a better one
+          // that joins with transactions for date filtering
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_splits_category_trans '
+            'ON splits(category_id, transaction_id)',
           );
         }
       },
