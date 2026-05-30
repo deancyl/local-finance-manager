@@ -5,7 +5,6 @@ import 'package:drift/drift.dart' as drift;
 import 'package:database/database.dart';
 import '../../data/account_provider.dart';
 import '../../../core/presentation/widgets/accounting_help_icon.dart';
-import '../../../core/presentation/widgets/accounting_help_icon.dart';
 
 class AddAccountDialog extends ConsumerStatefulWidget {
   final Account? account;
