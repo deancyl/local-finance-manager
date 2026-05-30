@@ -7,9 +7,15 @@ import '../../data/websocket_provider.dart';
 import '../../data/offline_queue_service.dart';
 import '../../data/offline_queue_model.dart';
 
-/// Sync status indicator for AppBar.
+/// Sync status indicator for AppBar (v0.3.205).
 /// 
 /// Shows sync status icon with WebSocket connection status.
+/// Color coding:
+/// - Green: Connected and synced
+/// - Blue: Syncing in progress
+/// - Yellow: Reconnecting
+/// - Red: Error
+/// - Gray: Offline/Not configured
 class SyncStatusIndicator extends ConsumerWidget {
   const SyncStatusIndicator({super.key});
   
@@ -22,14 +28,26 @@ class SyncStatusIndicator extends ConsumerWidget {
     final queueSummary = ref.watch(queueSummaryProvider);
     
     final pendingCount = queueSummary.pendingCount + queueSummary.failedCount;
+    final isSyncing = status.when(
+      data: (s) => s == SyncStatus.connecting,
+      loading: () => false,
+      error: (_, __) => false,
+    );
     
     return Stack(
       alignment: Alignment.center,
       children: [
         IconButton(
-          icon: Icon(
-            _getIcon(status, websocketConnected, websocketAvailable),
-            color: _getColor(status, websocketConnected),
+          icon: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: isSyncing
+                ? _buildSyncingIcon(context)
+                : Icon(
+                    _getIcon(status, websocketConnected, websocketAvailable),
+                    key: ValueKey(_getIconKey(status, websocketConnected, websocketAvailable)),
+                    color: _getColor(context, status, websocketConnected),
+                    size: 24,
+                  ),
           ),
           onPressed: () => _showStatusSheet(context, ref),
           tooltip: _getTooltip(status, websocketConnected, websocketAvailable, pendingCount),
@@ -49,7 +67,7 @@ class SyncStatusIndicator extends ConsumerWidget {
               constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               child: Text(
                 '$pendingCount',
-                style: const TextStyle(fontSize: 10, color: Colors.white),
+                style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -58,40 +76,70 @@ class SyncStatusIndicator extends ConsumerWidget {
     );
   }
   
-  IconData _getIcon(AsyncValue<SyncStatus> status, bool websocketConnected, bool websocketAvailable) {
-    // If WebSocket is available and connected, show real-time sync indicator
-    if (websocketAvailable && websocketConnected) {
-      return Icons.sync;
-    }
-    
-    return status.when(
-      data: (s) => switch (s) {
-        SyncStatus.connected => Icons.cloud_done_outlined,
-        SyncStatus.connecting => Icons.cloud_sync_outlined,
-        SyncStatus.disconnected => Icons.cloud_off_outlined,
-        SyncStatus.notInitialized => Icons.cloud_off_outlined,
-        SyncStatus.error => Icons.error_outline,
-      },
-      loading: () => Icons.cloud_off_outlined,
-      error: (_, __) => Icons.error_outline,
+  /// Build animated syncing icon.
+  Widget _buildSyncingIcon(BuildContext context) {
+    return SizedBox(
+      width: 24,
+      height: 24,
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        valueColor: AlwaysStoppedAnimation<Color>(
+          Theme.of(context).colorScheme.primary,
+        ),
+      ),
     );
   }
   
-  Color _getColor(AsyncValue<SyncStatus> status, bool websocketConnected) {
-    if (websocketConnected) {
-      return Colors.green;
+  IconData _getIcon(AsyncValue<SyncStatus> status, bool websocketConnected, bool websocketAvailable) {
+    // If WebSocket is available and connected, show real-time sync indicator
+    if (websocketAvailable && websocketConnected) {
+      return Icons.sync_rounded;
     }
     
     return status.when(
       data: (s) => switch (s) {
-        SyncStatus.connected => Colors.green,
-        SyncStatus.connecting => Colors.orange,
-        SyncStatus.disconnected => Colors.grey,
-        SyncStatus.notInitialized => Colors.grey,
-        SyncStatus.error => Colors.red,
+        SyncStatus.connected => Icons.cloud_done_rounded,
+        SyncStatus.connecting => Icons.cloud_sync_rounded,
+        SyncStatus.disconnected => Icons.cloud_off_rounded,
+        SyncStatus.notInitialized => Icons.cloud_off_rounded,
+        SyncStatus.error => Icons.error_outline_rounded,
       },
-      loading: () => Colors.grey,
-      error: (_, __) => Colors.red,
+      loading: () => Icons.cloud_off_rounded,
+      error: (_, __) => Icons.error_outline_rounded,
+    );
+  }
+  
+  /// Get a unique key for the icon to enable proper AnimatedSwitcher transitions.
+  String _getIconKey(AsyncValue<SyncStatus> status, bool websocketConnected, bool websocketAvailable) {
+    if (websocketAvailable && websocketConnected) {
+      return 'websocket_connected';
+    }
+    
+    return status.when(
+      data: (s) => s.name,
+      loading: () => 'loading',
+      error: (_, __) => 'error',
+    );
+  }
+  
+  Color _getColor(BuildContext context, AsyncValue<SyncStatus> status, bool websocketConnected) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    // WebSocket connected - green (synced)
+    if (websocketConnected) {
+      return const Color(0xFF4CAF50); // Green
+    }
+    
+    return status.when(
+      data: (s) => switch (s) {
+        SyncStatus.connected => const Color(0xFF4CAF50), // Green
+        SyncStatus.connecting => const Color(0xFF2196F3), // Blue (syncing)
+        SyncStatus.disconnected => colorScheme.outline, // Gray
+        SyncStatus.notInitialized => colorScheme.outline, // Gray
+        SyncStatus.error => const Color(0xFFF44336), // Red
+      },
+      loading: () => colorScheme.outline,
+      error: (_, __) => const Color(0xFFF44336), // Red
     );
   }
   
