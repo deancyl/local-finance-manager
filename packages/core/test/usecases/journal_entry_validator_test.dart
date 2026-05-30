@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:core/src/usecases/journal_entry_validator.dart';
+import 'package:core/core.dart';
 import 'package:core/src/models/split.dart';
 import 'package:core/src/models/account.dart';
 

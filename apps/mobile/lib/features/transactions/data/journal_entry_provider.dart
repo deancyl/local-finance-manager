@@ -3,9 +3,27 @@ import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart' as uuid_pkg;
 
 import 'package:core/core.dart';
-import 'package:database/database.dart' hide Account;
+import 'package:database/database.dart' hide Account, ValidationResult;
 import 'package:finance_app/features/accounts/data/account_provider.dart';
 import 'package:finance_app/features/currency/data/currency_provider.dart';
+
+/// Local validation result for journal entry form validation.
+/// This is separate from the core ValidationResult used for split validation.
+class ValidationResult {
+  final bool isValid;
+  final String? errorMessage;
+
+  const ValidationResult._({
+    required this.isValid,
+    this.errorMessage,
+  });
+
+  /// Creates a valid result.
+  const ValidationResult.valid() : this._(isValid: true);
+
+  /// Creates an invalid result with an error message.
+  const ValidationResult.invalid(String message) : this._(isValid: false, errorMessage: message);
+}
 
 /// Represents a single split line in the journal entry editor.
 class SplitLine {

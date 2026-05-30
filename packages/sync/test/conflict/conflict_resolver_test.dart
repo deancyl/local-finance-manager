@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:sync/src/conflict/conflict_resolver.dart';
+import 'package:sync/sync.dart';
 
 void main() {
   group('ConflictResolutionStrategy', () {

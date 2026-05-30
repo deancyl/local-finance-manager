@@ -49,9 +49,8 @@ jobs:
       - name: Run analysis
         run: melos run analyze
       
-      # Tests disabled - pre-existing failures require deeper investigation
-      # - name: Run tests
-      #   run: melos run test
+      - name: Run tests
+        run: melos run test
 
   # Android build
   build-android:

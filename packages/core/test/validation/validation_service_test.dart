@@ -1,4 +1,5 @@
 import 'package:test/test.dart';
+import 'package:core/core.dart';
 import 'package:core/src/validation/validation_service.dart';
 
 void main() {

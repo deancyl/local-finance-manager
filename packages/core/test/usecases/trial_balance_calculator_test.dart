@@ -1,6 +1,5 @@
 import 'package:test/test.dart';
-import 'package:core/src/models/trial_balance.dart';
-import 'package:core/src/models/account.dart';
+import 'package:core/core.dart';
 import 'package:decimal/decimal.dart';
 
 // Mock data class to simulate AccountBalanceRaw from SplitsDao

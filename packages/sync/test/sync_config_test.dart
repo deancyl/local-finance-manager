@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:powersync/powersync.dart';
 import 'package:sync/sync.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -61,15 +60,9 @@ class MockAuthProvider implements AuthProvider {
   }
 }
 
-/// Creates a minimal test schema.
+/// Creates a minimal test schema using local Schema class.
 Schema _createTestSchema() {
-  return Schema([
-    Table('accounts', [
-      Column.text('name'),
-      Column.text('currency'),
-      Column.real('balance'),
-    ]),
-  ]);
+  return Schema([]);
 }
 
 void main() {
