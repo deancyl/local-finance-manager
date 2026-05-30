@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:database/database.dart' hide Account, AccountBalanceRaw;
 import 'package:core/core.dart';
 import '../../accounts/data/account_provider.dart';
+import 'report_cache.dart';
 
 // ============================================================
 // DATE RANGE STATE PROVIDERS
@@ -23,15 +24,24 @@ final trialBalanceProvider = AsyncNotifierProvider<TrialBalanceNotifier, TrialBa
   () => TrialBalanceNotifier(),
 );
 
-/// Notifier for managing trial balance state
+/// Notifier for managing trial balance state with caching (v0.3.199)
 class TrialBalanceNotifier extends AsyncNotifier<TrialBalance?> {
   late final LocalFinanceDatabase _db;
   late final TrialBalanceCalculator _calculator;
+  late final ReportCacheService _cache;
 
   @override
   TrialBalance? build() {
     _db = ref.watch(databaseProvider);
     _calculator = TrialBalanceCalculator();
+    _cache = ref.watch(reportCacheServiceProvider);
+    
+    // Listen for cache invalidation events
+    ref.listen<DateTime?>(cacheInvalidationNotifierProvider, (_, timestamp) {
+      if (timestamp != null) {
+        refresh();
+      }
+    });
     
     // Initial load
     _fetch();
@@ -39,10 +49,17 @@ class TrialBalanceNotifier extends AsyncNotifier<TrialBalance?> {
     return null;
   }
 
-  /// Fetch trial balance data from database
+  /// Fetch trial balance data from database with caching
   Future<TrialBalance> _fetch() async {
     final startDate = ref.read(trialBalanceStartDateProvider);
     final endDate = ref.read(trialBalanceEndDateProvider);
+
+    // Check cache first (v0.3.199)
+    final cached = _cache.getTrialBalance(startDate: startDate, endDate: endDate);
+    if (cached != null) {
+      state = AsyncValue.data(cached);
+      return cached;
+    }
 
     // Get all accounts
     final accountsData = await _db.accountsDao.getAll();
@@ -93,6 +110,13 @@ class TrialBalanceNotifier extends AsyncNotifier<TrialBalance?> {
     final trialBalance = await _calculator.calculate(
       accounts: accounts,
       balances: balances,
+      startDate: startDate,
+      endDate: endDate,
+    );
+
+    // Cache the result (v0.3.199)
+    _cache.cacheTrialBalance(
+      trialBalance,
       startDate: startDate,
       endDate: endDate,
     );

@@ -9,10 +9,49 @@ import 'package:finance_app/features/accounts/data/account_provider.dart';
 import 'package:finance_app/features/budgets/data/budget_notification_service.dart';
 import 'package:core/core.dart' show BudgetPeriod, BudgetPeriodCalculator;
 import 'package:finance_app/core/performance/memory_optimization.dart';
+import 'package:finance_app/features/reports/data/report_cache.dart';
 import 'transaction_filter.dart';
 
-/// Page size for pagination (optimized for memory v0.3.120)
-const int kPageSize = 20;
+/// Default page size for pagination (v0.3.199)
+const int kDefaultPageSize = 50;
+
+/// Available page size options
+const List<int> kPageSizeOptions = [25, 50, 100, 200];
+
+/// Provider for user-configurable page size preference
+final pageSizePreferenceProvider = StateNotifierProvider<PageSizePreferenceNotifier, int>((ref) {
+  return PageSizePreferenceNotifier();
+});
+
+/// Notifier for managing page size preference with persistence
+class PageSizePreferenceNotifier extends StateNotifier<int> {
+  static const _key = 'transaction_page_size';
+  
+  PageSizePreferenceNotifier() : super(kDefaultPageSize) {
+    _loadPreference();
+  }
+  
+  Future<void> _loadPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedSize = prefs.getInt(_key);
+    if (savedSize != null && kPageSizeOptions.contains(savedSize)) {
+      state = savedSize;
+    }
+  }
+  
+  Future<void> setPageSize(int size) async {
+    if (!kPageSizeOptions.contains(size)) return;
+    state = size;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_key, size);
+  }
+}
+
+/// Gets the current page size (respects user preference)
+int get _pageSize {
+  // Use a simple provider access pattern for synchronous reads
+  return kDefaultPageSize;
+}
 
 final transactionsProvider = StreamProvider<List<Transaction>>((ref) {
   final db = ref.watch(databaseProvider);
@@ -259,6 +298,11 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
 
   TransactionNotifier(this._db, this._ref) : super(const AsyncValue.data(null));
 
+  /// Invalidate report cache after transaction changes (v0.3.199)
+  void _invalidateReportCache() {
+    _ref.read(cacheInvalidationNotifierProvider.notifier).onTransactionChanged();
+  }
+
   Future<String?> createTransaction({
     required String accountId,
     required double amount,
@@ -305,6 +349,9 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
 
       state = const AsyncValue.data(null);
       _retryCount = 0; // Reset retry count on success (v0.3.120)
+      
+      // Invalidate report cache (v0.3.199)
+      _invalidateReportCache();
       
       // Check budget alerts after successful transaction creation
       if (categoryId != null) {
@@ -425,6 +472,8 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
       });
 
       state = const AsyncValue.data(null);
+      // Invalidate report cache (v0.3.199)
+      _invalidateReportCache();
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -439,6 +488,8 @@ class TransactionNotifier extends StateNotifier<AsyncValue<void>> {
         ),
       );
       state = const AsyncValue.data(null);
+      // Invalidate report cache (v0.3.199)
+      _invalidateReportCache();
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -556,17 +607,36 @@ class PaginationState {
 }
 
 /// Notifier for managing paginated transactions with infinite scroll
-/// Enhanced with error recovery (v0.3.120)
+/// Enhanced with error recovery (v0.3.120) and configurable page size (v0.3.199)
 class PaginatedTransactionsNotifier extends StateNotifier<PaginationState> {
   final LocalFinanceDatabase _db;
   final Ref _ref;
   TransactionFilter _filter;
+  int _pageSize;
   int _retryCount = 0;
   static const int _maxRetries = 3;
 
-  PaginatedTransactionsNotifier(this._db, this._ref, {TransactionFilter? filter})
-      : _filter = filter ?? const TransactionFilter(),
-        super(const PaginationState());
+  PaginatedTransactionsNotifier(
+    this._db,
+    this._ref,
+    {TransactionFilter? filter, int? pageSize}
+  ) : _filter = filter ?? const TransactionFilter(),
+       _pageSize = pageSize ?? kDefaultPageSize,
+       super(const PaginationState());
+
+  /// Updates the page size and resets pagination
+  void updatePageSize(int newPageSize) {
+    if (_pageSize != newPageSize && kPageSizeOptions.contains(newPageSize)) {
+      _pageSize = newPageSize;
+      // Reset and reload with new page size
+      state = const PaginationState();
+      _retryCount = 0;
+      loadInitial();
+    }
+  }
+
+  /// Gets the current page size
+  int get pageSize => _pageSize;
 
   /// Updates the filter and resets pagination
   void updateFilter(TransactionFilter filter) {
@@ -590,7 +660,7 @@ class PaginatedTransactionsNotifier extends StateNotifier<PaginationState> {
 
     try {
       final items = await _db.transactionsDao.getFilteredTransactionsPaginated(
-        limit: kPageSize,
+        limit: _pageSize,
         offset: 0,
         startDate: _filter.startDate,
         endDate: _filter.endDate,
@@ -603,7 +673,7 @@ class PaginatedTransactionsNotifier extends StateNotifier<PaginationState> {
 
       state = PaginationState(
         currentPage: 0,
-        hasMore: items.length == kPageSize,
+        hasMore: items.length == _pageSize,
         isLoading: false,
         items: items,
       );
@@ -622,10 +692,10 @@ class PaginatedTransactionsNotifier extends StateNotifier<PaginationState> {
 
     try {
       final nextPage = state.currentPage + 1;
-      final offset = nextPage * kPageSize;
+      final offset = nextPage * _pageSize;
 
       final newItems = await _db.transactionsDao.getFilteredTransactionsPaginated(
-        limit: kPageSize,
+        limit: _pageSize,
         offset: offset,
         startDate: _filter.startDate,
         endDate: _filter.endDate,
@@ -638,7 +708,7 @@ class PaginatedTransactionsNotifier extends StateNotifier<PaginationState> {
 
       state = state.copyWith(
         currentPage: nextPage,
-        hasMore: newItems.length == kPageSize,
+        hasMore: newItems.length == _pageSize,
         isLoading: false,
         items: [...state.items, ...newItems],
       );
@@ -678,7 +748,8 @@ class PaginatedTransactionsNotifier extends StateNotifier<PaginationState> {
 /// Provider for paginated transactions state
 final paginatedTransactionsProvider = StateNotifierProvider<PaginatedTransactionsNotifier, PaginationState>((ref) {
   final db = ref.watch(databaseProvider);
-  return PaginatedTransactionsNotifier(db, ref);
+  final pageSize = ref.watch(pageSizePreferenceProvider);
+  return PaginatedTransactionsNotifier(db, ref, pageSize: pageSize);
 });
 
 /// Provider for filtered and paginated transactions.
@@ -687,8 +758,9 @@ final filteredPaginatedTransactionsProvider = StateNotifierProvider.autoDispose
     <PaginatedTransactionsNotifier, PaginationState>((ref) {
   final db = ref.watch(databaseProvider);
   final filter = ref.watch(transactionFilterProvider);
+  final pageSize = ref.watch(pageSizePreferenceProvider);
   
-  final notifier = PaginatedTransactionsNotifier(db, ref, filter: filter);
+  final notifier = PaginatedTransactionsNotifier(db, ref, filter: filter, pageSize: pageSize);
   
   // Load initial data when provider is first created
   Future.microtask(() => notifier.loadInitial());

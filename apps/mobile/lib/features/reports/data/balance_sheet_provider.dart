@@ -5,6 +5,7 @@ import 'package:database/database.dart' hide Account, AccountBalanceRaw, Liquidi
 import 'package:core/core.dart';
 import '../../accounts/data/account_provider.dart';
 import 'currency_conversion_service.dart';
+import 'report_cache.dart';
 
 // ============================================================
 // CALCULATION SOURCE STATE PROVIDER
@@ -46,17 +47,26 @@ final balanceSheetComparisonProvider = AsyncNotifierProvider<BalanceSheetCompari
   () => BalanceSheetComparisonNotifier(),
 );
 
-/// Notifier for managing balance sheet state
+/// Notifier for managing balance sheet state with caching (v0.3.199)
 class BalanceSheetNotifier extends AsyncNotifier<BalanceSheet?> {
   late final LocalFinanceDatabase _db;
   late final BalanceSheetCalculator _calculator;
   late final CurrencyConversionService _currencyService;
+  late final ReportCacheService _cache;
 
   @override
   BalanceSheet? build() {
     _db = ref.watch(databaseProvider);
     _calculator = BalanceSheetCalculator();
     _currencyService = ref.watch(currencyConversionServiceProvider);
+    _cache = ref.watch(reportCacheServiceProvider);
+    
+    // Listen for cache invalidation events
+    ref.listen<DateTime?>(cacheInvalidationNotifierProvider, (_, timestamp) {
+      if (timestamp != null) {
+        refresh();
+      }
+    });
     
     // Listen to calculation source changes
     ref.listen<BalanceSheetDataSource>(balanceSheetCalculationSourceProvider, (_, __) {
@@ -74,11 +84,18 @@ class BalanceSheetNotifier extends AsyncNotifier<BalanceSheet?> {
     return null;
   }
 
-  /// Fetch balance sheet data from database using BalanceSheetDao
+  /// Fetch balance sheet data from database using BalanceSheetDao with caching
   Future<BalanceSheet> _fetch() async {
     final asOfDate = ref.read(balanceSheetAsOfDateProvider);
     final targetCurrency = ref.read(reportCurrencyProvider);
     final calculationSource = ref.read(balanceSheetCalculationSourceProvider);
+
+    // Check cache first (v0.3.199)
+    final cached = _cache.getBalanceSheet(asOfDate: asOfDate);
+    if (cached != null && calculationSource == BalanceSheetDataSource.singleEntry) {
+      state = AsyncValue.data(cached);
+      return cached;
+    }
 
     // Use double-entry calculation if selected
     if (calculationSource == BalanceSheetDataSource.doubleEntry) {
@@ -275,6 +292,9 @@ class BalanceSheetNotifier extends AsyncNotifier<BalanceSheet?> {
           ? BalanceSheetValidationStatus.balanced 
           : BalanceSheetValidationStatus.unbalanced,
     );
+
+    // Cache the result (v0.3.199)
+    _cache.cacheBalanceSheet(result, asOfDate: asOfDate);
 
     // Update state
     state = AsyncValue.data(result);

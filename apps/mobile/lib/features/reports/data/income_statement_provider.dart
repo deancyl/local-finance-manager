@@ -4,6 +4,7 @@ import 'package:decimal/decimal.dart';
 import 'package:database/database.dart' hide Account, AccountBalanceRaw;
 import 'package:core/core.dart';
 import '../../accounts/data/account_provider.dart';
+import 'report_cache.dart';
 
 // ============================================================
 // DATE RANGE STATE PROVIDERS
@@ -33,15 +34,24 @@ final incomeStatementProvider = AsyncNotifierProvider<IncomeStatementNotifier, I
   () => IncomeStatementNotifier(),
 );
 
-/// Notifier for managing income statement state
+/// Notifier for managing income statement state with caching (v0.3.199)
 class IncomeStatementNotifier extends AsyncNotifier<IncomeStatementWithComparison?> {
   late final LocalFinanceDatabase _db;
   late final IncomeStatementCalculator _calculator;
+  late final ReportCacheService _cache;
 
   @override
   IncomeStatementWithComparison? build() {
     _db = ref.watch(databaseProvider);
     _calculator = IncomeStatementCalculator();
+    _cache = ref.watch(reportCacheServiceProvider);
+    
+    // Listen for cache invalidation events
+    ref.listen<DateTime?>(cacheInvalidationNotifierProvider, (_, timestamp) {
+      if (timestamp != null) {
+        refresh();
+      }
+    });
     
     // Initial load
     _fetch();
@@ -49,11 +59,28 @@ class IncomeStatementNotifier extends AsyncNotifier<IncomeStatementWithCompariso
     return null;
   }
 
-  /// Fetch income statement data from database
+  /// Fetch income statement data from database with caching
   Future<IncomeStatementWithComparison> _fetch() async {
     final startDate = ref.read(incomeStatementStartDateProvider);
     final endDate = ref.read(incomeStatementEndDateProvider);
     final comparisonType = ref.read(incomeStatementComparisonTypeProvider);
+
+    // Check cache first (v0.3.199) - only cache non-comparison requests
+    if (comparisonType == PeriodComparisonType.none) {
+      final cached = _cache.getIncomeStatement(startDate: startDate, endDate: endDate);
+      if (cached != null) {
+        state = AsyncValue.data(IncomeStatementWithComparison(
+          current: cached,
+          previous: null,
+          comparisonType: comparisonType,
+        ));
+        return IncomeStatementWithComparison(
+          current: cached,
+          previous: null,
+          comparisonType: comparisonType,
+        );
+      }
+    }
 
     // Get all accounts
     final accountsData = await _db.accountsDao.getAll();
@@ -101,6 +128,15 @@ class IncomeStatementNotifier extends AsyncNotifier<IncomeStatementWithCompariso
       startDate: startDate ?? DateTime(1970, 1, 1),
       endDate: endDate ?? DateTime.now(),
     );
+
+    // Cache the current statement (v0.3.199)
+    if (comparisonType == PeriodComparisonType.none) {
+      _cache.cacheIncomeStatement(
+        currentStatement,
+        startDate: startDate,
+        endDate: endDate,
+      );
+    }
 
     // Calculate comparison period if needed
     IncomeStatement? previousStatement;
