@@ -35,7 +35,7 @@ Future<void> _performBudgetCheck() async {
     final db = await _openDatabase();
     
     // Get all active budgets
-    final budgets = await db.budgetsDao.getAllActive();
+    final budgets = await db.budgetsDao.getActive();
     final now = DateTime.now();
     
     // Initialize notifications
