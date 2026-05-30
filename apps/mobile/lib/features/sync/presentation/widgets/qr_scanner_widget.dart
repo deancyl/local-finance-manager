@@ -96,9 +96,12 @@ class _QRScannerWidgetState extends State<QRScannerWidget> {
     try {
       final json = jsonDecode(data) as Map<String, dynamic>;
       
-      // Validate QR payload
-      if (json['v'] != 1) {
-        _showError('无效的二维码版本');
+      // Validate QR payload - support both old (v:1) and new (type:finance_app_pairing) formats
+      final isLegacyFormat = json.containsKey('v') && json['v'] == 1;
+      final isNewFormat = json['type'] == 'finance_app_pairing';
+      
+      if (!isLegacyFormat && !isNewFormat) {
+        _showError('无效的二维码格式');
         return;
       }
       

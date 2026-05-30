@@ -6,6 +6,17 @@ import 'package:qr_flutter/qr_flutter.dart';
 /// QR code display widget for device pairing.
 /// 
 /// Shows QR code with pairing token and server URL.
+/// 
+/// QR payload format:
+/// ```json
+/// {
+///   "type": "finance_app_pairing",
+///   "token": "<JWT>",
+///   "serverUrl": "https://sync.example.com",
+///   "deviceId": "<UUID>",
+///   "ts": "<timestamp>"
+/// }
+/// ```
 class QRDisplayWidget extends StatelessWidget {
   /// The server URL for pairing.
   final String serverUrl;
@@ -253,11 +264,12 @@ class QRDisplayWidget extends StatelessWidget {
     return Theme.of(context).colorScheme.primary;
   }
 
+  /// Builds the QR payload according to the finance_app_pairing format.
   String _buildQRPayload() {
     final payload = {
-      'v': 1,
-      'serverUrl': serverUrl,
+      'type': 'finance_app_pairing',
       'token': pairingToken,
+      'serverUrl': serverUrl,
       'deviceId': deviceId,
       'ts': DateTime.now().millisecondsSinceEpoch,
     };
