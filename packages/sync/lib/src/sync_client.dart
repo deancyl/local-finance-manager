@@ -10,12 +10,29 @@ import 'connector/backend_connector.dart';
 import 'encryption/encryption_service.dart';
 import 'models/sync_models.dart';
 import 'sync_config.dart';
+import 'websocket/sync_websocket.dart';
+import 'websocket/notification_models.dart';
 
 /// Note: PowerSync integration is currently disabled due to API compatibility issues.
 /// This stub implementation allows the app to compile while sync functionality
 /// is being reworked for the current PowerSync SDK version.
 /// 
 /// TODO: Re-integrate PowerSync when API compatibility is resolved.
+
+/// WebSocket connection state.
+enum WebSocketState {
+  /// Not connected.
+  disconnected,
+  
+  /// Currently connecting.
+  connecting,
+  
+  /// Connected and receiving notifications.
+  connected,
+  
+  /// Error state.
+  error,
+}
 
 /// Main sync client that provides sync functionality stub.
 /// 
@@ -44,14 +61,36 @@ class SyncClient {
   
   /// Whether the client has been initialized.
   bool _initialized = false;
+  
+  /// WebSocket client for real-time notifications.
+  SyncWebSocket? _webSocket;
+  
+  /// Current WebSocket connection state.
+  WebSocketState _webSocketState = WebSocketState.disconnected;
+  
+  /// Stream controller for WebSocket state changes.
+  final StreamController<WebSocketState> _webSocketStateController =
+      StreamController<WebSocketState>.broadcast();
+  
+  /// Stream subscription for WebSocket notifications.
+  StreamSubscription<SyncNotification>? _notificationSubscription;
 
   SyncClient({
     required this.config,
     this.encryption,
   });
-
+  
   /// Current sync status.
   SyncStatus get status => _status;
+  
+  /// Current WebSocket connection state.
+  WebSocketState get webSocketState => _webSocketState;
+  
+  /// Stream of WebSocket state changes.
+  Stream<WebSocketState> get webSocketStateChanges => _webSocketStateController.stream;
+  
+  /// Whether WebSocket is connected.
+  bool get isWebSocketConnected => _webSocketState == WebSocketState.connected;
   
   /// Last successful sync time.
   DateTime? get lastSyncTime => _lastSyncTime;
@@ -98,6 +137,95 @@ class SyncClient {
       rethrow;
     }
   }
+  
+  /// Initialize WebSocket for real-time notifications.
+  /// 
+  /// Requires [jwtToken] for authentication.
+  /// Call this after user authentication to enable real-time sync notifications.
+  Future<void> initializeWebSocket({
+    required String serverUrl,
+    required String jwtToken,
+  }) async {
+    _checkInitialized();
+    
+    if (_webSocket != null && _webSocket!.isConnected) {
+      _log.info('WebSocket already connected');
+      return;
+    }
+    
+    _log.info('Initializing WebSocket for real-time notifications');
+    _updateWebSocketState(WebSocketState.connecting);
+    
+    try {
+      _webSocket = SyncWebSocket(
+        serverUrl: serverUrl,
+        jwtToken: jwtToken,
+      );
+      
+      // Listen for notifications
+      _notificationSubscription = _webSocket!.notifications.listen(
+        _handleNotification,
+        onError: (error) {
+          _log.severe('WebSocket notification error: $error');
+          _updateWebSocketState(WebSocketState.error);
+        },
+      );
+      
+      // Connect to server
+      await _webSocket!.connect();
+      _updateWebSocketState(WebSocketState.connected);
+      _log.info('WebSocket connected successfully');
+    } catch (e, stackTrace) {
+      _log.severe('Failed to initialize WebSocket', e, stackTrace);
+      _updateWebSocketState(WebSocketState.error);
+      rethrow;
+    }
+  }
+  
+  /// Handle incoming WebSocket notification.
+  void _handleNotification(SyncNotification notification) {
+    _log.info('Received notification: ${notification.type}');
+    
+    switch (notification.type) {
+      case NotificationType.syncComplete:
+        _lastSyncTime = notification.timestamp;
+        _log.info('Sync completed at ${notification.timestamp}');
+        break;
+      case NotificationType.conflictDetected:
+        _log.warning('Conflict detected in ${notification.tableName}');
+        break;
+      case NotificationType.newDeviceRegistered:
+        _log.info('New device registered');
+        break;
+      case NotificationType.deviceRemoved:
+        _log.info('Device removed');
+        break;
+      case NotificationType.connected:
+        _log.fine('WebSocket connection confirmed');
+        break;
+    }
+  }
+  
+  /// Disconnect WebSocket.
+  Future<void> disconnectWebSocket() async {
+    if (_webSocket == null) return;
+    
+    _log.info('Disconnecting WebSocket');
+    await _notificationSubscription?.cancel();
+    _notificationSubscription = null;
+    await _webSocket?.disconnect();
+    _webSocket = null;
+    _updateWebSocketState(WebSocketState.disconnected);
+    _log.info('WebSocket disconnected');
+  }
+  
+  /// Update WebSocket state and notify listeners.
+  void _updateWebSocketState(WebSocketState newState) {
+    if (_webSocketState != newState) {
+      _webSocketState = newState;
+      _webSocketStateController.add(newState);
+    }
+  }
 
   /// Stub - returns a simple query executor.
   QueryExecutor createDriftConnection() {
@@ -128,10 +256,12 @@ class SyncClient {
     _log.warning('Sync triggered but PowerSync is disabled');
   }
 
-  /// Stub - closes stream controller.
+  /// Close sync client and disconnect WebSocket.
   Future<void> close() async {
     _log.info('Closing SyncClient stub');
-    _statusController.close();
+    await disconnectWebSocket();
+    await _statusController.close();
+    await _webSocketStateController.close();
     _initialized = false;
     _updateStatus(SyncStatus.notInitialized);
   }

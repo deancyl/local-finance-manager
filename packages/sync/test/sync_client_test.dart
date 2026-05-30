@@ -3,15 +3,10 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:powersync/powersync.dart';
 import 'package:sync/sync.dart';
 
 // Mock classes
 class MockSyncEncryption extends Mock implements SyncEncryption {}
-
-class MockPowerSyncDatabase extends Mock implements PowerSyncDatabase {}
-
-class MockFinanceAppConnector extends Mock implements FinanceAppConnector {}
 
 // Fake SyncEncryption for testing
 class FakeSyncEncryption implements SyncEncryption {
@@ -30,21 +25,6 @@ class FakeSyncEncryption implements SyncEncryption {
   Future<void> rotateKey() async {}
 }
 
-// Test schema
-final testSchema = Schema([
-  Table('accounts', columns: [
-    Column.text('id'),
-    Column.text('name'),
-    Column.integer('balance'),
-  ]),
-  Table('transactions', columns: [
-    Column.text('id'),
-    Column.text('accountId'),
-    Column.real('amount'),
-    Column.text('description'),
-  ]),
-]);
-
 void main() {
   group('SyncClient', () {
     late SyncConfig config;
@@ -52,9 +32,9 @@ void main() {
 
     setUp(() {
       config = SyncConfig(
-        schema: testSchema,
         serverUrl: 'https://test.sync.example.com',
         databaseName: 'test_finance.db',
+        authProvider: _MockAuthProvider(),
         userId: 'test-user',
         deviceId: 'test-device',
       );
@@ -66,13 +46,13 @@ void main() {
     });
 
     group('initialization', () {
-      test('initialize creates database', () async {
+      test('initialize creates database stub', () async {
         // Note: This test requires a proper Flutter test environment
         // with path_provider working. In a real test, you'd use
         // a test database path or mock the dependencies.
         
         // For now, we test the configuration is correct
-        expect(client.config, equals(config));
+        expect(client.config.serverUrl, equals('https://test.sync.example.com'));
         expect(client.status, equals(SyncStatus.notInitialized));
         expect(client.isInitialized, isFalse);
       });
@@ -163,8 +143,8 @@ void main() {
 
       test('default config values', () {
         final defaultConfig = SyncConfig(
-          schema: testSchema,
           serverUrl: 'https://default.example.com',
+          authProvider: _MockAuthProvider(),
         );
         
         expect(defaultConfig.databaseName, equals('finance.db'));
@@ -322,7 +302,6 @@ void main() {
     setUp(() {
       connector = FinanceAppConnector(
         serverUrl: 'https://test.example.com',
-        userId: 'test-user',
       );
     });
 
@@ -338,12 +317,41 @@ void main() {
     test('setToken stores token', () {
       connector.setToken('test-token');
       // Token is stored internally
+      expect(connector.currentToken, equals('test-token'));
     });
 
     test('clearToken removes token', () {
       connector.setToken('test-token');
       connector.clearToken();
-      // Token should be cleared
+      expect(connector.currentToken, isNull);
     });
   });
+}
+
+/// Mock AuthProvider for testing
+class _MockAuthProvider implements AuthProvider {
+  @override
+  Future<String?> getToken() async => 'test-token';
+  
+  @override
+  Future<String?> getUserId() async => 'test-user';
+  
+  @override
+  Future<bool> isAuthenticated() async => true;
+  
+  @override
+  Future<void> refreshToken() async {}
+  
+  @override
+  Future<AuthResult> login(String email, String password) async {
+    return AuthResult.success(userId: 'test-user', token: 'test-token');
+  }
+  
+  @override
+  Future<AuthResult> register(String email, String password) async {
+    return AuthResult.success(userId: 'new-user', token: 'new-token');
+  }
+  
+  @override
+  Future<void> logout() async {}
 }

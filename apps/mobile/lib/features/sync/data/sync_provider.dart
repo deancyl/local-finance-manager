@@ -43,6 +43,27 @@ final syncStatusProvider = StreamProvider<SyncStatus>((ref) {
   return client.watchStatus();
 });
 
+/// WebSocket connection state stream provider.
+/// 
+/// Emits WebSocket connection state changes in real-time.
+final webSocketStateProvider = StreamProvider<WebSocketState>((ref) {
+  final client = ref.watch(syncClientProvider);
+  if (client == null) {
+    return Stream.value(WebSocketState.disconnected);
+  }
+  return client.webSocketStateChanges;
+});
+
+/// Whether WebSocket is connected.
+final isWebSocketConnectedProvider = Provider<bool>((ref) {
+  final stateAsync = ref.watch(webSocketStateProvider);
+  return stateAsync.when(
+    data: (state) => state == WebSocketState.connected,
+    loading: () => false,
+    error: (_, __) => false,
+  );
+});
+
 /// Sync progress provider.
 /// 
 /// Provides current sync progress information.
@@ -83,6 +104,43 @@ class SyncNotifier extends StateNotifier<AsyncValue<void>> {
       
       await client.connect();
       state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+  
+  /// Initialize WebSocket for real-time notifications.
+  /// 
+  /// Requires server URL and JWT token from authentication.
+  Future<void> initializeWebSocket({
+    required String serverUrl,
+    required String jwtToken,
+  }) async {
+    state = const AsyncValue.loading();
+    
+    try {
+      final client = _ref.read(syncClientProvider);
+      if (client == null) {
+        throw StateError('Sync client not configured');
+      }
+      
+      await client.initializeWebSocket(
+        serverUrl: serverUrl,
+        jwtToken: jwtToken,
+      );
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+  
+  /// Disconnect WebSocket.
+  Future<void> disconnectWebSocket() async {
+    try {
+      final client = _ref.read(syncClientProvider);
+      if (client == null) return;
+      
+      await client.disconnectWebSocket();
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
