@@ -79,20 +79,6 @@ class ExportResult {
   });
 }
 
-/// Progress callback for export operations
-typedef ExportProgressCallback = void Function(int current, int total, String status);
-
-/// Export cancellation token
-class ExportCancellationToken {
-  bool _isCancelled = false;
-  
-  bool get isCancelled => _isCancelled;
-  
-  void cancel() {
-    _isCancelled = true;
-  }
-}
-
 /// Service for exporting data to CSV and JSON formats
 class ExportService {
   final db.LocalFinanceDatabase _db;

@@ -222,11 +222,11 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
   }
 
   Widget _buildNoResultsState(BuildContext context) {
-    return const EmptyStateWidget.accounts(hasSearch: true);
+    return EmptyStateWidget.accounts(hasSearch: true);
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return const EmptyStateWidget.accounts();
+    return EmptyStateWidget.accounts();
   }
 
   Widget _buildAccountTree(BuildContext context, WidgetRef ref, Map<String, List<AccountTreeNode>> hierarchy) {

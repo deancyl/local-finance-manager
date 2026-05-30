@@ -101,45 +101,6 @@ class _ImportPageState extends ConsumerState<ImportPage> {
     return _buildPreview();
   }
 
-    if (_error != null) {
-      return ErrorStateWidget.file(
-        message: _error,
-        onRetry: _pickFile,
-        retryText: '选择其他文件',
-      );
-    }
-
-    if (_fileContent == null) {
-      return _buildSelectFile();
-    }
-
-    return _buildPreview();
-  }
-    
-    if (_isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('正在解析文件...'),
-          ],
-        ),
-      );
-    }
-
-    if (_error != null) {
-      return _buildError();
-    }
-
-    if (_fileContent == null) {
-      return _buildSelectFile();
-    }
-
-    return _buildPreview();
-  }
-
   Widget _buildSelectFile() {
     final accountsAsync = ref.watch(accountsProvider);
     final defaultAccount = ref.watch(defaultAssetAccountProvider);
