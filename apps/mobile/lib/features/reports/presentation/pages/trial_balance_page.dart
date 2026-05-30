@@ -12,6 +12,12 @@ import '../../../export/data/export_provider.dart';
 import '../../../print/data/print_provider.dart';
 import '../../../accounts/data/account_provider.dart';
 import '../mixins/drill_down_mixin.dart';
+import '../../../../core/widgets/loading_state_widget.dart';
+import '../../../../core/widgets/empty_state_widget.dart';
+import '../../../../core/widgets/error_state_widget.dart';
+import '../../../../core/widgets/loading_state_widget.dart';
+import '../../../../core/widgets/empty_state_widget.dart';
+import '../../../../core/widgets/error_state_widget.dart';
 
 /// Trial balance report page with date range filtering.
 ///
@@ -126,13 +132,23 @@ class _TrialBalancePageState extends ConsumerState<TrialBalancePage>
           Expanded(
             child: trialBalanceAsync.when(
               data: (trialBalance) {
-                if (trialBalance == null) {
-                  return _buildEmptyState(context);
+                if (trialBalance == null || trialBalance.accounts.isEmpty) {
+                  return EmptyStateWidget.reports(
+                    onRetry: _handleRefresh,
+                  );
                 }
                 return _buildContent(context, trialBalance);
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => _buildErrorState(context, error),
+              loading: () => const LoadingStateWidget.page(
+                message: '加载中...',
+              ),
+              error: (error, stack) => ErrorStateWidget.fromError(
+                error: error,
+                stackTrace: stack,
+                onRetry: _handleRefresh,
+              ),
+            ),
+          ),
             ),
           ),
         ],
@@ -315,74 +331,13 @@ class _TrialBalancePageState extends ConsumerState<TrialBalancePage>
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.account_balance_wallet_outlined,
-            size: 64,
-            color: theme.colorScheme.outline,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '暂无账户数据',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '请先添加账户和交易记录',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.outline,
-            ),
-          ),
-        ],
-      ),
-    );
+    return const EmptyStateWidget.reports();
   }
 
   Widget _buildErrorState(BuildContext context, Object error) {
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: theme.colorScheme.error,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '加载失败',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.error,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error.toString(),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _handleRefresh,
-              icon: const Icon(Icons.refresh),
-              label: const Text('重试'),
-            ),
-          ],
-        ),
-      ),
+    return ErrorStateWidget(
+      message: error.toString(),
+      onRetry: _handleRefresh,
     );
   }
 }

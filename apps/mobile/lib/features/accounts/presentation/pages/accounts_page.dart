@@ -7,6 +7,12 @@ import '../../data/account_provider.dart';
 import '../widgets/account_tree_card.dart';
 import '../widgets/add_account_dialog.dart';
 import '../widgets/move_account_dialog.dart';
+import '../../../../core/widgets/loading_state_widget.dart';
+import '../../../../core/widgets/empty_state_widget.dart';
+import '../../../../core/widgets/error_state_widget.dart';
+import '../../../core/widgets/loading_state_widget.dart';
+import '../../../core/widgets/empty_state_widget.dart';
+import '../../../core/widgets/error_state_widget.dart';
 
 class AccountsPage extends ConsumerStatefulWidget {
   const AccountsPage({super.key});
@@ -65,15 +71,20 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             child: accountsAsync.when(
               data: (accounts) {
                 if (accounts.isEmpty) {
-                  return _buildEmptyState(context);
+                  return const EmptyStateWidget.accounts();
                 }
                 if (hierarchy.isEmpty && (searchQuery.isNotEmpty || typeFilter != null)) {
-                  return _buildNoResultsState(context);
+                  return EmptyStateWidget.accounts(hasSearch: true);
                 }
                 return _buildAccountTree(context, ref, hierarchy);
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(child: Text('错误: $error')),
+              loading: () => const LoadingStateWidget(message: '加载账户...'),
+              error: (error, _) => ErrorStateWidget(
+                message: '错误: $error',
+                onRetry: () => ref.refresh(accountsProvider),
+              ),
+            ),
+          ),
             ),
           ),
         ],
@@ -216,61 +227,11 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
   }
 
   Widget _buildNoResultsState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.search_off,
-            size: 64,
-            color: Theme.of(context).colorScheme.outline,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '未找到匹配的账户',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '尝试调整搜索条件或筛选器',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-          ),
-        ],
-      ),
-    );
+    return const EmptyStateWidget.accounts(hasSearch: true);
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.account_balance_wallet_outlined,
-            size: 64,
-            color: Theme.of(context).colorScheme.outline,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '暂无账户',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '点击右下角按钮添加账户',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-          ),
-        ],
-      ),
-    );
+    return const EmptyStateWidget.accounts();
   }
 
   Widget _buildAccountTree(BuildContext context, WidgetRef ref, Map<String, List<AccountTreeNode>> hierarchy) {

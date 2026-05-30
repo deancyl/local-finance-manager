@@ -1,0 +1,250 @@
+{
+  "@@locale": "zh",
+  "@@last_modified": "2025-05-30T00:00:00.000Z",
+  
+  "appTitle": "本地金融管家",
+  
+  "journalEntryList": "凭证列表",
+  "journalEntryNew": "新建凭证",
+  "searchJournal": "搜索凭证号、摘要...",
+  "all": "全部",
+  "posted": "已过账",
+  "draft": "草稿",
+  "debit": "借方",
+  "credit": "贷方",
+  "lines": "条",
+  "noJournalEntries": "暂无凭证记录",
+  "noMatchingEntries": "未找到匹配的凭证",
+  "tryAdjustingFilters": "尝试调整筛选条件",
+  "createFirstEntry": "点击下方按钮创建新凭证",
+  "clearFilters": "清除筛选",
+  "selectDateRange": "选择日期范围",
+  "clearFiltersTooltip": "清除筛选",
+  
+  "trialBalance": "试算平衡表",
+  "balanceSheet": "资产负债表",
+  "incomeStatement": "利润表",
+  "dateRange": "日期范围",
+  "startDate": "开始日期",
+  "endDate": "结束日期",
+  "export": "导出",
+  "exportReport": "导出{reportName}",
+  "noAccountData": "暂无账户数据",
+  "pleaseAddAccounts": "请先添加账户和交易记录",
+  "loadFailed": "加载失败",
+  "retry": "重试",
+  
+  "import": "导入账单",
+  "importTransactions": "导入账单",
+  "importHistory": "导入历史",
+  "clear": "清除",
+  "parsingFile": "正在解析文件...",
+  "importFromInstitutions": "导入金融机构账单",
+  "supportedFormats": "支持支付宝、微信支付、工商银行、建设银行、中国银行等导出的CSV、XLS、XLSX文件",
+  "importToAccount": "导入到账户",
+  "selectFile": "选择文件",
+  "supportedSources": "支持的来源",
+  "alipay": "支付宝",
+  "wechatPay": "微信支付",
+  "icbc": "工商银行",
+  "ccb": "建设银行",
+  "boc": "中国银行",
+  "fileParsed": "文件已解析",
+  "recordsCount": "{count} 条记录",
+  "mapped": "已映射",
+  "noDataToImport": "没有可导入的数据",
+  "fieldMapping": "字段映射",
+  "editFieldMapping": "编辑字段映射",
+  "reselect": "重新选择",
+  "importCount": "导入 {count} 条",
+  "parseFailed": "解析失败",
+  "selectOtherFile": "选择其他文件",
+  "importSuccess": "导入成功",
+  "importComplete": "导入完成",
+  "successImported": "✓ 成功导入: {count} 条",
+  "skippedDuplicates": "⊗ 跳过重复: {count} 条",
+  "importErrors": "✗ 导入失败: {count} 条",
+  "done": "完成",
+  
+  "accounts": "账户管理",
+  "hierarchyView": "层级视图",
+  "searchAccounts": "搜索账户...",
+  "noAccounts": "暂无账户",
+  "addAccountHint": "点击右下角按钮添加账户",
+  "noMatchingAccounts": "未找到匹配的账户",
+  "adjustSearchHint": "尝试调整搜索条件或筛选器",
+  "assetAccounts": "资产账户",
+  "liabilityAccounts": "负债账户",
+  "incomeAccounts": "收入账户",
+  "expenseAccounts": "支出账户",
+  "edit": "编辑",
+  "moveTo": "移动到...",
+  "addChildAccount": "添加子账户",
+  "delete": "删除",
+  "deleteAccount": "删除账户",
+  "confirmDeleteAccount": "确定要删除账户 \"{name}\" 吗？",
+  "cancel": "取消",
+  "accountDeleted": "账户已删除",
+  "cannotDeleteAccount": "无法删除账户",
+  "containsTransactions": "包含 {count} 笔交易记录",
+  "containsChildren": "包含 {count} 个子账户",
+  "deleteOrMoveFirst": "如需删除此账户，请先：",
+  "deleteOrMoveTransactions": "删除或移动所有交易记录",
+  "deleteOrMoveChildren": "删除或移动所有子账户",
+  "ok": "确定",
+  
+  "loading": "加载中...",
+  "error": "错误",
+  "errorPrefix": "错误: {message}",
+  "pleaseLoadData": "请先加载数据",
+  "exportSuccess": "导出成功：{count} 个账户",
+  "exportFailed": "导出失败: {error}",
+  "share": "分享",
+  "createAccountFirst": "请先创建一个账户",
+  "unsupportedFormat": "不支持的文件格式。\n支持：支付宝、微信支付、工商银行、建设银行、中国银行的CSV、XLS、XLSX文件",
+  
+  "entryPosted": "凭证已过账",
+  "@entryPosted": {
+    "description": "Entry posted success message"
+  },
+  
+  "entryDeleted": "凭证已删除",
+  "@entryDeleted": {
+    "description": "Entry deleted success message"
+  },
+  
+  "deleteEntry": "删除凭证",
+  "@deleteEntry": {
+    "description": "Delete entry dialog title"
+  },
+  
+  "confirmDeleteEntry": "确定要删除凭证 {number} 吗？\\n此操作不可撤销。",
+  "@confirmDeleteEntry": {
+    "description": "Delete entry confirmation",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "networkError": "网络连接失败",
+  "@networkError": {
+    "description": "Network error title"
+  },
+  
+  "checkNetworkRetry": "请检查网络连接后重试",
+  "@checkNetworkRetry": {
+    "description": "Network error hint"
+  },
+  
+  "databaseError": "数据库错误",
+  "@databaseError": {
+    "description": "Database error title"
+  },
+  
+  "cannotReadData": "无法读取数据",
+  "@cannotReadData": {
+    "description": "Generic data read error"
+  },
+  
+  "permissionDenied": "权限不足",
+  "@permissionDenied": {
+    "description": "Permission denied title"
+  },
+  
+  "grantPermission": "请授予必要的权限",
+  "@grantPermission": {
+    "description": "Permission denied hint"
+  },
+  
+  "notFound": "未找到内容",
+  "@notFound": {
+    "description": "Not found error title"
+  },
+  
+  "resourceNotExist": "请求的资源不存在",
+  "@resourceNotExist": {
+    "description": "Resource not found message"
+  },
+  
+  "somethingWrong": "出错了",
+  "@somethingWrong": {
+    "description": "Generic error title"
+  },
+  
+  "parseFailed": "解析失败",
+  "@parseFailed": {
+    "description": "Parse error title"
+  },
+  
+  "noTransactions": "暂无交易记录",
+  "@noTransactions": {
+    "description": "No transactions empty state"
+  },
+  
+  "addFirstTransaction": "添加您的第一笔交易",
+  "@addFirstTransaction": {
+    "description": "Hint for empty transactions"
+  },
+  
+  "noMatchingTransactions": "未找到匹配的交易",
+  "@noMatchingTransactions": {
+    "description": "No matching transactions found"
+  },
+  
+  "noCategories": "暂无分类",
+  "@noCategories": {
+    "description": "No categories empty state"
+  },
+  
+  "addCategory": "添加分类",
+  "@addCategory": {
+    "description": "Add category button"
+  },
+  
+  "noBudgets": "暂无预算",
+  "@noBudgets": {
+    "description": "No budgets empty state"
+  },
+  
+  "createBudget": "创建预算",
+  "@createBudget": {
+    "description": "Create budget button"
+  },
+  
+  "controlSpending": "设置预算来控制支出",
+  "@controlSpending": {
+    "description": "Budget hint"
+  },
+  
+  "noTags": "暂无标签",
+  "@noTags": {
+    "description": "No tags empty state"
+  },
+  
+  "addTag": "添加标签",
+  "@addTag": {
+    "description": "Add tag button"
+  },
+  
+  "organizeTransactions": "创建标签来组织交易",
+  "@organizeTransactions": {
+    "description": "Tag hint"
+  },
+  
+  "noData": "暂无数据",
+  "@noData": {
+    "description": "Generic empty state title"
+  },
+  
+  "fileError": "文件错误",
+  "@fileError": {
+    "description": "File error title"
+  },
+  
+  "selectOtherFile": "选择其他文件",
+  "@selectOtherFile": {
+    "description": "Select other file button"
+  }
+}

@@ -6,6 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:database/database.dart';
 import 'package:finance_app/features/journal/data/journal_list_provider.dart';
 import 'package:finance_app/features/journal/presentation/widgets/journal_entry_detail_sheet.dart';
+import '../../../core/widgets/loading_state_widget.dart';
+import '../../../core/widgets/empty_state_widget.dart';
+import 'package:finance_app/core/widgets/loading_state_widget.dart';
+import 'package:finance_app/core/widgets/empty_state_widget.dart';
+import 'package:finance_app/core/widgets/error_state_widget.dart';
 
 /// Journal Entry List Page.
 ///
@@ -189,6 +194,19 @@ class _JournalEntryListPageState extends ConsumerState<JournalEntryListPage> {
     JournalListPaginationState paginationState,
     JournalListFilter filter,
   ) {
+    // Show error state if there's an error and no items
+    if (paginationState.error != null && paginationState.items.isEmpty) {
+      return ErrorStateWidget(
+        message: paginationState.error,
+        onRetry: () => ref.read(journalListProvider.notifier).loadInitial(),
+      );
+    }
+
+    // Show loading state for initial load
+    if (paginationState.items.isEmpty && paginationState.isLoading) {
+      return const LoadingStateWidget(message: '加载凭证...');
+    }
+
     return Column(
       children: [
         // Status filter chips
@@ -327,40 +345,9 @@ class _JournalEntryListPageState extends ConsumerState<JournalEntryListPage> {
   }
 
   Widget _buildEmptyState(BuildContext context, JournalListFilter filter) {
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            filter.isNotEmpty ? Icons.search_off : Icons.receipt_long_outlined,
-            size: 64,
-            color: theme.colorScheme.outline,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            filter.isNotEmpty ? '未找到匹配的凭证' : '暂无凭证记录',
-            style: theme.textTheme.titleLarge?.copyWith(
-              color: theme.colorScheme.outline,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            filter.isNotEmpty ? '尝试调整筛选条件' : '点击下方按钮创建新凭证',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.outline,
-            ),
-          ),
-          if (filter.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            FilledButton.tonal(
-              onPressed: _clearFilters,
-              child: const Text('清除筛选'),
-            ),
-          ],
-        ],
-      ),
+    return EmptyStateWidget.journalEntries(
+      hasFilters: filter.isNotEmpty,
+      onClearFilters: filter.isNotEmpty ? _clearFilters : null,
     );
   }
 
@@ -397,10 +384,10 @@ class _JournalEntryListPageState extends ConsumerState<JournalEntryListPage> {
       padding: const EdgeInsets.all(16),
       child: Center(
         child: isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
+            ? const LoadingStateWidget(
+                message: '加载更多...',
+                indicatorSize: 24,
+                strokeWidth: 2,
               )
             : const SizedBox.shrink(),
       ),

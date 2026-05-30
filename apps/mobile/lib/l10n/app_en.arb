@@ -1,0 +1,564 @@
+{
+  "@@locale": "en",
+  "@@last_modified": "2025-05-30T00:00:00.000Z",
+  
+  "appTitle": "Finance Manager",
+  "@appTitle": {
+    "description": "Application title"
+  },
+  
+  "journalEntryList": "Journal Entries",
+  "@journalEntryList": {
+    "description": "Journal entry list page title"
+  },
+  
+  "journalEntryNew": "New Entry",
+  "@journalEntryNew": {
+    "description": "New journal entry button"
+  },
+  
+  "searchJournal": "Search entry number, description...",
+  "@searchJournal": {
+    "description": "Search placeholder for journal entries"
+  },
+  
+  "all": "All",
+  "@all": {
+    "description": "Filter option: all"
+  },
+  
+  "posted": "Posted",
+  "@posted": {
+    "description": "Journal entry status: posted"
+  },
+  
+  "draft": "Draft",
+  "@draft": {
+    "description": "Journal entry status: draft"
+  },
+  
+  "debit": "Debit",
+  "@debit": {
+    "description": "Debit side label"
+  },
+  
+  "credit": "Credit",
+  "@credit": {
+    "description": "Credit side label"
+  },
+  
+  "lines": "lines",
+  "@lines": {
+    "description": "Number of journal entry lines"
+  },
+  
+  "noJournalEntries": "No journal entries",
+  "@noJournalEntries": {
+    "description": "Empty state message for journal entries"
+  },
+  
+  "noMatchingEntries": "No matching entries found",
+  "@noMatchingEntries": {
+    "description": "Empty state when search yields no results"
+  },
+  
+  "tryAdjustingFilters": "Try adjusting your filters",
+  "@tryAdjustingFilters": {
+    "description": "Hint for empty search results"
+  },
+  
+  "createFirstEntry": "Tap the button below to create your first entry",
+  "@createFirstEntry": {
+    "description": "Hint for empty journal entries list"
+  },
+  
+  "clearFilters": "Clear Filters",
+  "@clearFilters": {
+    "description": "Button to clear filters"
+  },
+  
+  "selectDateRange": "Select Date Range",
+  "@selectDateRange": {
+    "description": "Tooltip for date range picker"
+  },
+  
+  "clearFiltersTooltip": "Clear Filters",
+  "@clearFiltersTooltip": {
+    "description": "Tooltip for clear filters button"
+  },
+  
+  "trialBalance": "Trial Balance",
+  "@trialBalance": {
+    "description": "Trial balance report title"
+  },
+  
+  "balanceSheet": "Balance Sheet",
+  "@balanceSheet": {
+    "description": "Balance sheet report title"
+  },
+  
+  "incomeStatement": "Income Statement",
+  "@incomeStatement": {
+    "description": "Income statement report title"
+  },
+  
+  "dateRange": "Date Range",
+  "@dateRange": {
+    "description": "Date range section label"
+  },
+  
+  "startDate": "Start Date",
+  "@startDate": {
+    "description": "Start date label"
+  },
+  
+  "endDate": "End Date",
+  "@endDate": {
+    "description": "End date label"
+  },
+  
+  "export": "Export",
+  "@export": {
+    "description": "Export button"
+  },
+  
+  "exportReport": "Export {reportName}",
+  "@exportReport": {
+    "description": "Export report title",
+    "placeholders": {
+      "reportName": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "noAccountData": "No account data available",
+  "@noAccountData": {
+    "description": "Empty state for reports"
+  },
+  
+  "pleaseAddAccounts": "Please add accounts and transactions first",
+  "@pleaseAddAccounts": {
+    "description": "Hint for empty reports"
+  },
+  
+  "loadFailed": "Load Failed",
+  "@loadFailed": {
+    "description": "Error state title"
+  },
+  
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button"
+  },
+  
+  "import": "Import",
+  "@import": {
+    "description": "Import page title"
+  },
+  
+  "importTransactions": "Import Transactions",
+  "@importTransactions": {
+    "description": "Import transactions page title"
+  },
+  
+  "importHistory": "Import History",
+  "@importHistory": {
+    "description": "Import history button"
+  },
+  
+  "clear": "Clear",
+  "@clear": {
+    "description": "Clear button"
+  },
+  
+  "parsingFile": "Parsing file...",
+  "@parsingFile": {
+    "description": "Loading message when parsing file"
+  },
+  
+  "importFromInstitutions": "Import financial institution statements",
+  "@importFromInstitutions": {
+    "description": "Import page description"
+  },
+  
+  "supportedFormats": "Supports Alipay, WeChat Pay, ICBC, CCB, BOC CSV, XLS, XLSX files",
+  "@supportedFormats": {
+    "description": "Supported formats description"
+  },
+  
+  "importToAccount": "Import to Account",
+  "@importToAccount": {
+    "description": "Account selector label"
+  },
+  
+  "selectFile": "Select File",
+  "@selectFile": {
+    "description": "Select file button"
+  },
+  
+  "supportedSources": "Supported Sources",
+  "@supportedSources": {
+    "description": "Supported sources section title"
+  },
+  
+  "alipay": "Alipay",
+  "@alipay": {
+    "description": "Alipay source name"
+  },
+  
+  "wechatPay": "WeChat Pay",
+  "@wechatPay": {
+    "description": "WeChat Pay source name"
+  },
+  
+  "icbc": "ICBC",
+  "@icbc": {
+    "description": "ICBC bank name"
+  },
+  
+  "ccb": "CCB",
+  "@ccb": {
+    "description": "CCB bank name"
+  },
+  
+  "boc": "BOC",
+  "@boc": {
+    "description": "BOC bank name"
+  },
+  
+  "fileParsed": "File Parsed",
+  "@fileParsed": {
+    "description": "File parsed success message"
+  },
+  
+  "recordsCount": "{count} records",
+  "@recordsCount": {
+    "description": "Number of records found",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  
+  "mapped": "Mapped",
+  "@mapped": {
+    "description": "Field mapping status"
+  },
+  
+  "noDataToImport": "No data to import",
+  "@noDataToImport": {
+    "description": "Empty preview state"
+  },
+  
+  "fieldMapping": "Field Mapping",
+  "@fieldMapping": {
+    "description": "Field mapping button"
+  },
+  
+  "editFieldMapping": "Edit Field Mapping",
+  "@editFieldMapping": {
+    "description": "Edit field mapping button"
+  },
+  
+  "reselect": "Reselect",
+  "@reselect": {
+    "description": "Reselect file button"
+  },
+  
+  "importCount": "Import {count}",
+  "@importCount": {
+    "description": "Import button with count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  
+  "parseFailed": "Parse Failed",
+  "@parseFailed": {
+    "description": "Parse error title"
+  },
+  
+  "selectOtherFile": "Select Other File",
+  "@selectOtherFile": {
+    "description": "Select other file button"
+  },
+  
+  "importSuccess": "Import Successful",
+  "@importSuccess": {
+    "description": "Import success dialog title"
+  },
+  
+  "importComplete": "Import Complete",
+  "@importComplete": {
+    "description": "Import complete dialog title"
+  },
+  
+  "successImported": "Successfully imported: {count}",
+  "@successImported": {
+    "description": "Success count message",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  
+  "skippedDuplicates": "Skipped duplicates: {count}",
+  "@skippedDuplicates": {
+    "description": "Skipped duplicates message",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  
+  "importErrors": "Import errors: {count}",
+  "@importErrors": {
+    "description": "Error count message",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  
+  "done": "Done",
+  "@done": {
+    "description": "Done button"
+  },
+  
+  "accounts": "Accounts",
+  "@accounts": {
+    "description": "Accounts page title"
+  },
+  
+  "hierarchyView": "Hierarchy View",
+  "@hierarchyView": {
+    "description": "Hierarchy view tooltip"
+  },
+  
+  "searchAccounts": "Search accounts...",
+  "@searchAccounts": {
+    "description": "Search accounts placeholder"
+  },
+  
+  "noAccounts": "No accounts",
+  "@noAccounts": {
+    "description": "Empty state for accounts"
+  },
+  
+  "addAccountHint": "Tap the button below to add an account",
+  "@addAccountHint": {
+    "description": "Hint for empty accounts"
+  },
+  
+  "noMatchingAccounts": "No matching accounts found",
+  "@noMatchingAccounts": {
+    "description": "Empty state for account search"
+  },
+  
+  "adjustSearchHint": "Try adjusting your search or filters",
+  "@adjustSearchHint": {
+    "description": "Hint for empty search results"
+  },
+  
+  "assetAccounts": "Asset Accounts",
+  "@assetAccounts": {
+    "description": "Asset accounts section"
+  },
+  
+  "liabilityAccounts": "Liability Accounts",
+  "@liabilityAccounts": {
+    "description": "Liability accounts section"
+  },
+  
+  "incomeAccounts": "Income Accounts",
+  "@incomeAccounts": {
+    "description": "Income accounts section"
+  },
+  
+  "expenseAccounts": "Expense Accounts",
+  "@expenseAccounts": {
+    "description": "Expense accounts section"
+  },
+  
+  "edit": "Edit",
+  "@edit": {
+    "description": "Edit action"
+  },
+  
+  "moveTo": "Move to...",
+  "@moveTo": {
+    "description": "Move action"
+  },
+  
+  "addChildAccount": "Add Child Account",
+  "@addChildAccount": {
+    "description": "Add child account action"
+  },
+  
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete action"
+  },
+  
+  "deleteAccount": "Delete Account",
+  "@deleteAccount": {
+    "description": "Delete account dialog title"
+  },
+  
+  "confirmDeleteAccount": "Are you sure you want to delete \"{name}\"?",
+  "@confirmDeleteAccount": {
+    "description": "Delete account confirmation",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button"
+  },
+  
+  "accountDeleted": "Account deleted",
+  "@accountDeleted": {
+    "description": "Account deleted message"
+  },
+  
+  "cannotDeleteAccount": "Cannot Delete Account",
+  "@cannotDeleteAccount": {
+    "description": "Cannot delete account dialog title"
+  },
+  
+  "containsTransactions": "Contains {count} transactions",
+  "@containsTransactions": {
+    "description": "Reason: contains transactions",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  
+  "containsChildren": "Contains {count} child accounts",
+  "@containsChildren": {
+    "description": "Reason: contains child accounts",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  
+  "deleteOrMoveFirst": "Please first:",
+  "@deleteOrMoveFirst": {
+    "description": "Hint before delete instructions"
+  },
+  
+  "deleteOrMoveTransactions": "Delete or move all transactions",
+  "@deleteOrMoveTransactions": {
+    "description": "Delete instruction for transactions"
+  },
+  
+  "deleteOrMoveChildren": "Delete or move all child accounts",
+  "@deleteOrMoveChildren": {
+    "description": "Delete instruction for child accounts"
+  },
+  
+  "ok": "OK",
+  "@ok": {
+    "description": "OK button"
+  },
+  
+  "loading": "Loading...",
+  "@loading": {
+    "description": "Generic loading message"
+  },
+  
+  "error": "Error",
+  "@error": {
+    "description": "Generic error title"
+  },
+  
+  "errorPrefix": "Error: {message}",
+  "@errorPrefix": {
+    "description": "Error with message",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "pleaseLoadData": "Please load data first",
+  "@pleaseLoadData": {
+    "description": "Hint to load data before export"
+  },
+  
+  "exportSuccess": "Export successful: {count} accounts",
+  "@exportSuccess": {
+    "description": "Export success message",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  
+  "exportFailed": "Export failed: {error}",
+  "@exportFailed": {
+    "description": "Export failed message",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "share": "Share",
+  "@share": {
+    "description": "Share button"
+  },
+  
+  "createAccountFirst": "Please create an account first",
+  "@createAccountFirst": {
+    "description": "Error when no account exists for import"
+  },
+  
+  "unsupportedFormat": "Unsupported file format.\nSupported: Alipay, WeChat Pay, ICBC, CCB, BOC CSV, XLS, XLSX files",
+  "@unsupportedFormat": {
+    "description": "Error for unsupported file format"
+  },
+  
+  "entryPosted": "Entry posted",
+  "@entryPosted": {
+    "description": "Entry posted success message"
+  },
+  
+  "entryDeleted": "Entry deleted",
+  "@entryDeleted": {
+    "description": "Entry deleted success message"
+  },
+  
+  "deleteEntry": "Delete Entry",
+  "@deleteEntry": {
+    "description": "Delete entry dialog title"
+  },
+  
+  "confirmDeleteEntry": "Are you sure you want to delete entry {number}?\nThis action cannot be undone.",
+  "@confirmDeleteEntry": {
+    "description": "Delete entry confirmation",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  }
+}
