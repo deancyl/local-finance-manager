@@ -150,6 +150,46 @@ flutter build web --release
 flutter build windows --release
 ```
 
+### Release Build Notes
+
+#### Android Release Builds
+- **ProGuard**: Enabled with custom rules in `apps/mobile/android/app/proguard-rules.pro`
+- **SQLCipher/Drift**: Native libraries are bundled via `sqlite3_flutter_libs` and `drift_flutter`
+- **Signing**: Currently uses debug signing config. For production, configure proper signing:
+  ```gradle
+  // In apps/mobile/android/app/build.gradle
+  signingConfigs {
+      release {
+          storeFile file('release-keystore.jks')
+          storePassword 'your-store-password'
+          keyAlias 'your-key-alias'
+          keyPassword 'your-key-password'
+      }
+  }
+  buildTypes {
+      release {
+          signingConfig signingConfigs.release
+      }
+  }
+  ```
+
+#### Windows Release Builds
+- **Native Libraries**: SQLite libraries bundled via `sqlite3_flutter_libs`
+- **Build Output**: `apps/mobile/build/windows/x64/runner/Release/`
+- **Distribution**: Package as ZIP for distribution
+
+#### SQLCipher Encryption
+- Uses `drift_flutter` with bundled SQLite libraries
+- Encryption is handled at the database connection layer
+- Works in both debug and release modes
+- No additional configuration needed for release builds
+
+#### CI Release Workflow
+- Triggered on tag push (`v*`) or manual dispatch
+- Builds all platforms (Android, Windows, Web)
+- Quality gates run before builds (analyze, test)
+- Artifacts uploaded to GitHub Releases
+
 ## Database Schema
 
 ### Core Tables
