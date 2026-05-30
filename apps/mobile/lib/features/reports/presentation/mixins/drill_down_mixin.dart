@@ -8,7 +8,7 @@ import '../../../../core/router/app_router.dart' show DrillDownArgs;
 ///
 /// Allows users to tap on account balances in reports to see the
 /// underlying transactions for that account within a specified date range.
-mixin DrillDownMixin on Widget {
+mixin DrillDownMixin {
   /// Navigate to transactions page filtered by account.
   ///
   /// Parameters:
