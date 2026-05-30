@@ -20,8 +20,9 @@ import '../../../export/data/export_service.dart';
 
 class TransactionsPage extends ConsumerStatefulWidget {
   final TransactionFilter? initialFilter;
+  final String? accountName; // Account name for app bar subtitle when drilling down
   
-  const TransactionsPage({super.key, this.initialFilter});
+  const TransactionsPage({super.key, this.initialFilter, this.accountName});
 
   @override
   ConsumerState<TransactionsPage> createState() => _TransactionsPageState();
@@ -66,6 +67,20 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
     }
   }
 
+  /// Get account name from account ID for subtitle display
+  Future<String> _getAccountName(String? accountId) async {
+    if (accountId == null) return '';
+    final accountsAsync = ref.read(accountsProvider);
+    return accountsAsync.when(
+      data: (accounts) {
+        final account = accounts.where((a) => a.id == accountId).firstOrNull;
+        return account?.name ?? '';
+      },
+      loading: () => '',
+      error: (_, __) => '',
+    );
+  }
+
   void _updateSearchQuery(String query) {
     final currentFilter = ref.read(transactionFilterProvider);
     final newFilter = currentFilter.copyWith(
@@ -106,7 +121,27 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                   _updateSearchQuery(query);
                 },
               )
-            : const Text('交易记录'),
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('交易记录'),
+                  if (widget.accountName != null || filter.accountId != null)
+                    FutureBuilder<String>(
+                      future: _getAccountName(filter.accountId),
+                      builder: (context, snapshot) {
+                        final name = widget.accountName ?? snapshot.data;
+                        if (name == null) return const SizedBox.shrink();
+                        return Text(
+                          '账户: $name',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
         actions: [
           if (_isSearching)
             IconButton(

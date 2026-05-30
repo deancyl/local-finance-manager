@@ -14,12 +14,18 @@ class IncomeStatementSectionWidget extends StatefulWidget {
   final IncomeStatementSection section;
   final bool isRevenue;
   final bool initiallyExpanded;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final void Function(String accountId, String accountName)? onDrillDown;
 
   const IncomeStatementSectionWidget({
     super.key,
     required this.section,
     required this.isRevenue,
     this.initiallyExpanded = true,
+    this.startDate,
+    this.endDate,
+    this.onDrillDown,
   });
 
   @override
@@ -185,6 +191,11 @@ class _IncomeStatementSectionWidgetState
               ? () => setState(() {
                     _expandedItems[item.accountId] = !isExpanded;
                   })
+              : widget.onDrillDown != null
+                  ? () => widget.onDrillDown!(item.accountId, item.accountName)
+                  : null,
+          onLongPress: hasChildren && widget.onDrillDown != null
+              ? () => widget.onDrillDown!(item.accountId, item.accountName)
               : null,
           child: Padding(
             padding: EdgeInsets.only(
@@ -203,6 +214,13 @@ class _IncomeStatementSectionWidgetState
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 4),
+                ] else if (widget.onDrillDown != null) ...[
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 14,
+                    color: color.withOpacity(0.5),
+                  ),
+                  const SizedBox(width: 8),
                 ] else ...[
                   const SizedBox(width: 22),
                 ],

@@ -14,12 +14,16 @@ class BalanceSheetSectionWidget extends StatefulWidget {
   final BalanceSheetSection section;
   final AccountType sectionType;
   final bool initiallyExpanded;
+  final DateTime? asOfDate;
+  final void Function(String accountId, String accountName)? onDrillDown;
 
   const BalanceSheetSectionWidget({
     super.key,
     required this.section,
     required this.sectionType,
     this.initiallyExpanded = true,
+    this.asOfDate,
+    this.onDrillDown,
   });
 
   @override
@@ -213,6 +217,11 @@ class _BalanceSheetSectionWidgetState extends State<BalanceSheetSectionWidget> {
               ? () => setState(() {
                     _expandedItems[item.accountId] = !isExpanded;
                   })
+              : widget.onDrillDown != null
+                  ? () => widget.onDrillDown!(item.accountId, item.accountName)
+                  : null,
+          onLongPress: hasChildren && widget.onDrillDown != null
+              ? () => widget.onDrillDown!(item.accountId, item.accountName)
               : null,
           child: Padding(
             padding: EdgeInsets.only(
@@ -231,6 +240,13 @@ class _BalanceSheetSectionWidgetState extends State<BalanceSheetSectionWidget> {
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 4),
+                ] else if (widget.onDrillDown != null) ...[
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 14,
+                    color: _getSectionColor(Theme.of(context)).withOpacity(0.5),
+                  ),
+                  const SizedBox(width: 8),
                 ] else ...[
                   const SizedBox(width: 22),
                 ],

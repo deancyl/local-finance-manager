@@ -11,6 +11,7 @@ import '../../../export/data/export_service.dart';
 import '../../../export/data/export_provider.dart';
 import '../../../print/data/print_service.dart';
 import '../../../print/data/print_provider.dart';
+import '../mixins/drill_down_mixin.dart';
 
 /// Income statement report page with date range filtering and period comparison.
 ///
@@ -23,7 +24,8 @@ class IncomeStatementPage extends ConsumerStatefulWidget {
   ConsumerState<IncomeStatementPage> createState() => _IncomeStatementPageState();
 }
 
-class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage> {
+class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage>
+    with DrillDownMixin {
   DateTime? _startDate;
   DateTime? _endDate;
   PeriodComparisonType _comparisonType = PeriodComparisonType.none;
@@ -504,6 +506,17 @@ class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage> {
               section: incomeStatement.revenues,
               isRevenue: true,
               initiallyExpanded: true,
+              startDate: _startDate,
+              endDate: _endDate,
+              onDrillDown: (accountId, accountName) {
+                navigateToTransactions(
+                  context,
+                  accountId: accountId,
+                  accountName: accountName,
+                  startDate: _startDate,
+                  endDate: _endDate,
+                );
+              },
             ),
 
             // Expenses section
@@ -511,6 +524,17 @@ class _IncomeStatementPageState extends ConsumerState<IncomeStatementPage> {
               section: incomeStatement.expenses,
               isRevenue: false,
               initiallyExpanded: true,
+              startDate: _startDate,
+              endDate: _endDate,
+              onDrillDown: (accountId, accountName) {
+                navigateToTransactions(
+                  context,
+                  accountId: accountId,
+                  accountName: accountName,
+                  startDate: _startDate,
+                  endDate: _endDate,
+                );
+              },
             ),
 
             const SizedBox(height: 12),

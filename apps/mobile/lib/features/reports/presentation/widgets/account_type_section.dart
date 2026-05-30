@@ -11,12 +11,18 @@ class AccountTypeSection extends StatefulWidget {
   final AccountType accountType;
   final List<AccountBalance> accounts;
   final bool initiallyExpanded;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final void Function(String accountId, String accountName)? onDrillDown;
 
   const AccountTypeSection({
     super.key,
     required this.accountType,
     required this.accounts,
     this.initiallyExpanded = true,
+    this.startDate,
+    this.endDate,
+    this.onDrillDown,
   });
 
   @override
@@ -188,6 +194,9 @@ class _AccountTypeSectionState extends State<AccountTypeSection> {
               ? () => setState(() {
                 _expandedAccounts[account.accountId] = !isExpanded;
               })
+              : null,
+          onTapDrillDown: widget.onDrillDown != null
+              ? () => widget.onDrillDown!(account.accountId, account.accountName)
               : null,
         ),
         if (hasChildren && isExpanded)

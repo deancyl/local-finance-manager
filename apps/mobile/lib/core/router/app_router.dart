@@ -52,6 +52,28 @@ import '../../features/sync/data/sync_feature_flag.dart';
 import '../presentation/pages/home_page.dart';
 import '../presentation/pages/main_shell.dart';
 
+/// Arguments for drill-down navigation to transactions page
+class DrillDownArgs {
+  final TransactionFilter filter;
+  final String? accountName;
+  
+  const DrillDownArgs({required this.filter, this.accountName});
+  
+  factory DrillDownArgs.fromJson(Map<String, dynamic> json) {
+    return DrillDownArgs(
+      filter: TransactionFilter.fromJson(json['filter'] as Map<String, dynamic>),
+      accountName: json['accountName'] as String?,
+    );
+  }
+  
+  Map<String, dynamic> toJson() {
+    return {
+      'filter': filter.toJson(),
+      'accountName': accountName,
+    };
+  }
+}
+
 /// Global flag to track if app is unlocked
 /// Set to true after successful authentication on lock screen
 bool _isAppUnlocked = false;
@@ -135,8 +157,19 @@ GoRouter _createRouter(Ref ref) {
             path: '/transactions',
             name: 'transactions',
             builder: (context, state) {
-              final filter = state.extra as TransactionFilter?;
-              return TransactionsPage(initialFilter: filter);
+              // Support both TransactionFilter and DrillDownArgs for backward compatibility
+              TransactionFilter? filter;
+              String? accountName;
+              
+              final extra = state.extra;
+              if (extra is DrillDownArgs) {
+                filter = extra.filter;
+                accountName = extra.accountName;
+              } else if (extra is TransactionFilter) {
+                filter = extra;
+              }
+              
+              return TransactionsPage(initialFilter: filter, accountName: accountName);
             },
           ),
           GoRoute(

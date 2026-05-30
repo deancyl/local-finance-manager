@@ -11,6 +11,7 @@ class AccountBalanceRow extends StatelessWidget {
   final int depth;
   final bool isExpanded;
   final VoidCallback? onToggleExpand;
+  final VoidCallback? onTapDrillDown;
   final bool showChildren;
 
   const AccountBalanceRow({
@@ -19,6 +20,7 @@ class AccountBalanceRow extends StatelessWidget {
     this.depth = 0,
     this.isExpanded = false,
     this.onToggleExpand,
+    this.onTapDrillDown,
     this.showChildren = true,
   });
 
@@ -29,7 +31,12 @@ class AccountBalanceRow extends StatelessWidget {
     final indent = depth * 20.0;
 
     return InkWell(
-      onTap: hasChildren ? onToggleExpand : null,
+      onTap: hasChildren 
+          ? onToggleExpand 
+          : onTapDrillDown,
+      onLongPress: hasChildren && onTapDrillDown != null
+          ? onTapDrillDown
+          : null,
       child: Padding(
         padding: EdgeInsets.only(
           left: indent + 12,
@@ -39,7 +46,7 @@ class AccountBalanceRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Expand/collapse icon for parent accounts
+            // Expand/collapse icon for parent accounts OR drill-down icon for leaf accounts
             if (hasChildren) ...[
               Icon(
                 isExpanded ? Icons.expand_less : Icons.expand_more,
@@ -47,6 +54,13 @@ class AccountBalanceRow extends StatelessWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: 4),
+            ] else if (onTapDrillDown != null) ...[
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: theme.colorScheme.primary.withOpacity(0.5),
+              ),
+              const SizedBox(width: 8),
             ] else ...[
               const SizedBox(width: 24),
             ],

@@ -13,6 +13,7 @@ import '../../../export/data/export_service.dart';
 import '../../../export/data/export_provider.dart';
 import '../../../print/data/print_service.dart';
 import '../../../print/data/print_provider.dart';
+import '../mixins/drill_down_mixin.dart';
 
 /// Balance sheet report page with as-of date selection.
 ///
@@ -28,7 +29,8 @@ class BalanceSheetPage extends ConsumerStatefulWidget {
   ConsumerState<BalanceSheetPage> createState() => _BalanceSheetPageState();
 }
 
-class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
+class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage>
+    with DrillDownMixin {
   late DateTime _asOfDate;
 
   @override
@@ -390,6 +392,16 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
                 section: balanceSheet.assets,
                 sectionType: AccountType.asset,
                 initiallyExpanded: true,
+                asOfDate: _asOfDate,
+                onDrillDown: (accountId, accountName) {
+                  navigateToTransactions(
+                    context,
+                    accountId: accountId,
+                    accountName: accountName,
+                    startDate: null,
+                    endDate: _asOfDate,
+                  );
+                },
               ),
             
             // Liabilities section
@@ -398,6 +410,16 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
                 section: balanceSheet.liabilities,
                 sectionType: AccountType.liability,
                 initiallyExpanded: true,
+                asOfDate: _asOfDate,
+                onDrillDown: (accountId, accountName) {
+                  navigateToTransactions(
+                    context,
+                    accountId: accountId,
+                    accountName: accountName,
+                    startDate: null,
+                    endDate: _asOfDate,
+                  );
+                },
               ),
             
             // Equity section
@@ -406,6 +428,16 @@ class _BalanceSheetPageState extends ConsumerState<BalanceSheetPage> {
                 section: balanceSheet.equity,
                 sectionType: AccountType.equity,
                 initiallyExpanded: true,
+                asOfDate: _asOfDate,
+                onDrillDown: (accountId, accountName) {
+                  navigateToTransactions(
+                    context,
+                    accountId: accountId,
+                    accountName: accountName,
+                    startDate: null,
+                    endDate: _asOfDate,
+                  );
+                },
               ),
             
             const SizedBox(height: 12),

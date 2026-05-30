@@ -11,6 +11,7 @@ import '../../../export/data/export_service.dart';
 import '../../../export/data/export_provider.dart';
 import '../../../print/data/print_provider.dart';
 import '../../../accounts/data/account_provider.dart';
+import '../mixins/drill_down_mixin.dart';
 
 /// Trial balance report page with date range filtering.
 ///
@@ -23,7 +24,8 @@ class TrialBalancePage extends ConsumerStatefulWidget {
   ConsumerState<TrialBalancePage> createState() => _TrialBalancePageState();
 }
 
-class _TrialBalancePageState extends ConsumerState<TrialBalancePage> {
+class _TrialBalancePageState extends ConsumerState<TrialBalancePage> 
+    with DrillDownMixin {
   DateTime? _startDate;
   DateTime? _endDate;
 
@@ -288,6 +290,17 @@ class _TrialBalancePageState extends ConsumerState<TrialBalancePage> {
                 accountType: type,
                 accounts: accounts,
                 initiallyExpanded: true,
+                startDate: _startDate,
+                endDate: _endDate,
+                onDrillDown: (accountId, accountName) {
+                  navigateToTransactions(
+                    context,
+                    accountId: accountId,
+                    accountName: accountName,
+                    startDate: _startDate,
+                    endDate: _endDate,
+                  );
+                },
               );
             }),
             
