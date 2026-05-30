@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.4.0] - 2026-05-30
+
+### Added
+- **WebSocket Sync Notifications**: Real-time sync status updates
+  - Live sync progress indicators
+  - Automatic conflict notifications
+  - Device status monitoring
+- **QR Code Device Pairing**: Quick device setup via QR code
+  - Scan QR to automatically configure sync server
+  - Secure device registration flow
+- **Offline Queue Visualization**: See pending sync operations
+  - Queue status in sync UI
+  - Retry failed operations
+  - Manual sync triggers
+- **Sync Status Indicator**: App bar sync status badge
+  - Real-time sync state display
+  - Quick access to sync settings
+- **Multi-Device Sync Testing**: Comprehensive sync documentation
+  - Testing procedures for multiple devices
+  - Conflict resolution scenarios
+  - Performance benchmarks
+
+### Fixed
+- **Background Budget Checker**: Fixed database access in background isolate
+  - Previously threw `UnimplementedError` when trying to access database
+  - Now properly uses `LocalFinanceDatabase.forTesting(executor)` like recurring processor
+  - Budget alert background notifications now work correctly
+
+### Documentation
+- **Release Build Verification**: Updated DEVELOPMENT.md with accurate encryption information
+  - Clarified that SQLCipher is NOT used at database level
+  - Database uses application-level AES-256-GCM encryption via `packages/encryption`
+  - Added background services documentation for Android release builds
+- **Testing Documentation**: Added comprehensive sync testing guides
+- **README Updates**: Improved project documentation and feature overview
+
+### Version History
+- v0.3.201: Update README documentation
+- v0.3.202: Fix tests & enable CI testing
+- v0.3.203: WebSocket sync notifications
+- v0.3.204: QR code device pairing + Offline queue
+- v0.3.205: Sync status indicator
+- v0.3.206: Release build verification
+- v0.3.207: Multi-device sync testing docs
+
 ## [v0.3.206] - 2026-05-30
 
 ### Fixed
