@@ -82,8 +82,6 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
               ),
             ),
           ),
-            ),
-          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
