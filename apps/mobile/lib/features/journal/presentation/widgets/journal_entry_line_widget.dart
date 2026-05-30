@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:core/core.dart';
+import 'package:finance_app/core/presentation/widgets/accounting_help_icon.dart';
+
 import '../widgets/account_selector.dart';
-import '../../../core/presentation/widgets/accounting_help_icon.dart';
-import '../../../core/presentation/widgets/accounting_help_icon.dart';
 
 /// Widget for a single journal entry line in the editor.
 class JournalEntryLineWidget extends StatefulWidget {

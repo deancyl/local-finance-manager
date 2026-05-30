@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 
 import 'package:database/database.dart';
-import '../../data/account_provider.dart';
-import '../../../core/presentation/widgets/accounting_help_icon.dart';
+import 'package:finance_app/features/accounts/data/account_provider.dart';
+import 'package:finance_app/core/presentation/widgets/accounting_help_icon.dart';
 
 class AddAccountDialog extends ConsumerStatefulWidget {
   final Account? account;
