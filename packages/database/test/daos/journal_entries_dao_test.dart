@@ -362,6 +362,164 @@ void main() {
     });
   });
 
+  group('JournalEntriesDao Immutability Enforcement', () {
+    test('updateLines throws StateError for posted entry', () async {
+      await _createTestAccount(db, 'account-1', 'Account 1');
+      await _createTestAccount(db, 'account-2', 'Account 2');
+      await _createTestAccount(db, 'account-3', 'Account 3');
+
+      final lines = [
+        JournalEntryLineInput.debit(accountId: 'account-1', amount: 100),
+        JournalEntryLineInput.credit(accountId: 'account-2', amount: 100),
+      ];
+
+      final id = await db.journalEntriesDao.createJournalEntry(
+        description: 'Posted Entry',
+        postDate: DateTime.now(),
+        lines: lines,
+      );
+
+      await db.journalEntriesDao.postEntry(id);
+
+      // Try to update lines on posted entry
+      final newLines = [
+        JournalEntryLineInput.debit(accountId: 'account-1', amount: 200),
+        JournalEntryLineInput.credit(accountId: 'account-3', amount: 200),
+      ];
+
+      expect(
+        () async => await db.journalEntriesDao.updateLines(id, newLines),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('updateEntry throws StateError for posted entry', () async {
+      await _createTestAccount(db, 'account-1', 'Account 1');
+      await _createTestAccount(db, 'account-2', 'Account 2');
+
+      final lines = [
+        JournalEntryLineInput.debit(accountId: 'account-1', amount: 100),
+        JournalEntryLineInput.credit(accountId: 'account-2', amount: 100),
+      ];
+
+      final id = await db.journalEntriesDao.createJournalEntry(
+        description: 'Original Description',
+        postDate: DateTime.now(),
+        lines: lines,
+      );
+
+      await db.journalEntriesDao.postEntry(id);
+
+      // Try to update metadata on posted entry
+      expect(
+        () async => await db.journalEntriesDao.updateEntry(
+          id,
+          description: 'Updated Description',
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('deleteEntry throws StateError for posted entry', () async {
+      await _createTestAccount(db, 'account-1', 'Account 1');
+      await _createTestAccount(db, 'account-2', 'Account 2');
+
+      final lines = [
+        JournalEntryLineInput.debit(accountId: 'account-1', amount: 100),
+        JournalEntryLineInput.credit(accountId: 'account-2', amount: 100),
+      ];
+
+      final id = await db.journalEntriesDao.createJournalEntry(
+        description: 'Posted Entry',
+        postDate: DateTime.now(),
+        lines: lines,
+      );
+
+      await db.journalEntriesDao.postEntry(id);
+
+      // Try to delete posted entry
+      expect(
+        () async => await db.journalEntriesDao.deleteEntry(id),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('updateLines allows modification for unposted entry', () async {
+      await _createTestAccount(db, 'account-1', 'Account 1');
+      await _createTestAccount(db, 'account-2', 'Account 2');
+      await _createTestAccount(db, 'account-3', 'Account 3');
+
+      final originalLines = [
+        JournalEntryLineInput.debit(accountId: 'account-1', amount: 100),
+        JournalEntryLineInput.credit(accountId: 'account-2', amount: 100),
+      ];
+
+      final id = await db.journalEntriesDao.createJournalEntry(
+        description: 'Unposted Entry',
+        postDate: DateTime.now(),
+        lines: originalLines,
+      );
+
+      // Entry is not posted, so update should succeed
+      final newLines = [
+        JournalEntryLineInput.debit(accountId: 'account-1', amount: 200),
+        JournalEntryLineInput.credit(accountId: 'account-3', amount: 200),
+      ];
+
+      await db.journalEntriesDao.updateLines(id, newLines);
+
+      final entryWithLines = await db.journalEntriesDao.getJournalEntryWithLines(id);
+      expect(entryWithLines!.lines[0].debitNum, equals(200));
+    });
+
+    test('updateEntry allows modification for unposted entry', () async {
+      await _createTestAccount(db, 'account-1', 'Account 1');
+      await _createTestAccount(db, 'account-2', 'Account 2');
+
+      final lines = [
+        JournalEntryLineInput.debit(accountId: 'account-1', amount: 100),
+        JournalEntryLineInput.credit(accountId: 'account-2', amount: 100),
+      ];
+
+      final id = await db.journalEntriesDao.createJournalEntry(
+        description: 'Original Description',
+        postDate: DateTime.now(),
+        lines: lines,
+      );
+
+      // Entry is not posted, so update should succeed
+      await db.journalEntriesDao.updateEntry(
+        id,
+        description: 'Updated Description',
+      );
+
+      final entry = await db.journalEntriesDao.getById(id);
+      expect(entry!.description, equals('Updated Description'));
+    });
+
+    test('deleteEntry allows deletion for unposted entry', () async {
+      await _createTestAccount(db, 'account-1', 'Account 1');
+      await _createTestAccount(db, 'account-2', 'Account 2');
+
+      final lines = [
+        JournalEntryLineInput.debit(accountId: 'account-1', amount: 100),
+        JournalEntryLineInput.credit(accountId: 'account-2', amount: 100),
+      ];
+
+      final id = await db.journalEntriesDao.createJournalEntry(
+        description: 'Unposted Entry',
+        postDate: DateTime.now(),
+        lines: lines,
+      );
+
+      // Entry is not posted, so deletion should succeed
+      await db.journalEntriesDao.deleteEntry(id);
+
+      final entry = await db.journalEntriesDao.getById(id);
+      expect(entry, isNull);
+    });
+  });
+
   group('JournalEntriesDao Sequential Number Generation', () {
     test('generates sequential entry numbers', () async {
       await _createTestAccount(db, 'account-1', 'Account 1');

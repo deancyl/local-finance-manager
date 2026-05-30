@@ -138,6 +138,7 @@ class JournalEntriesDao extends DatabaseAccessor<LocalFinanceDatabase>
   }
 
   /// Updates a journal entry's metadata (not lines).
+  /// Throws StateError if entry is posted.
   Future<void> updateEntry(
     String id, {
     String? description,
@@ -145,6 +146,15 @@ class JournalEntriesDao extends DatabaseAccessor<LocalFinanceDatabase>
     DateTime? postDate,
     String? notes,
   }) async {
+    // Check if entry is posted
+    final entry = await getById(id);
+    if (entry == null) {
+      throw ArgumentError('Entry not found: $id');
+    }
+    if (entry.isPosted) {
+      throw StateError('Cannot modify posted entry: $id');
+    }
+
     final updates = JournalEntriesCompanion(
       id: Value(id),
       updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
@@ -164,10 +174,20 @@ class JournalEntriesDao extends DatabaseAccessor<LocalFinanceDatabase>
   /// 
   /// Deletes existing lines and inserts new ones.
   /// Validates balance before updating.
+  /// Throws StateError if entry is posted.
   Future<void> updateLines(
     String journalEntryId,
     List<JournalEntryLineInput> newLines,
   ) async {
+    // Check if entry is posted
+    final entry = await getById(journalEntryId);
+    if (entry == null) {
+      throw ArgumentError('Entry not found: $journalEntryId');
+    }
+    if (entry.isPosted) {
+      throw StateError('Cannot modify posted entry: $journalEntryId');
+    }
+
     // Validate balance
     final balance = _calculateBalance(newLines);
     if (!balance.isBalanced) {
@@ -214,7 +234,17 @@ class JournalEntriesDao extends DatabaseAccessor<LocalFinanceDatabase>
   }
 
   /// Deletes a journal entry and all its lines.
+  /// Throws StateError if entry is posted.
   Future<void> deleteEntry(String id) async {
+    // Check if entry is posted
+    final entry = await getById(id);
+    if (entry == null) {
+      throw ArgumentError('Entry not found: $id');
+    }
+    if (entry.isPosted) {
+      throw StateError('Cannot delete posted entry: $id');
+    }
+
     await transaction(() async {
       // Delete lines first
       await (delete(journalEntryLines)
