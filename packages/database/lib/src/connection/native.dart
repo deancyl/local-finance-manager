@@ -45,7 +45,7 @@ QueryExecutor connectToDatabase({
   );
 }
 
-bool _debugCheckHasCipher(CommonDatabase database) {
+bool _debugCheckHasCipher(Database database) {
   try {
     final result = database.select('PRAGMA cipher;');
     return result.isNotEmpty;
