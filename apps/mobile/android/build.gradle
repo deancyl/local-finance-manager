@@ -6,6 +6,22 @@ allprojects {
 }
 
 rootProject.buildDir = "../build"
+
+// Force consistent Android SDK versions across all subprojects
+subprojects {
+    afterEvaluate {
+        if (project.hasProperty('android')) {
+            project.android {
+                compileSdkVersion 35
+                buildToolsVersion "35.0.0"
+                defaultConfig {
+                    targetSdkVersion 35
+                }
+            }
+        }
+    }
+}
+
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
     

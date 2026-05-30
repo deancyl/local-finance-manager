@@ -6,6 +6,14 @@
 -keep class io.flutter.**  { *; }
 -keep class io.flutter.plugins.**  { *; }
 
+# Flutter Play Core (deferred components) - don't warn if missing
+-dontwarn com.google.android.play.core.**
+-dontwarn io.flutter.embedding.engine.deferredcomponents.**
+
+# Play Core (deferred components) - not used but referenced by Flutter
+-dontwarn com.google.android.play.core.**
+-dontwarn io.flutter.embedding.engine.deferredcomponents.**
+
 # SQLCipher / SQLite
 -keep class net.sqlcipher.** { *; }
 -keep class net.sqlcipher.database.** { *; }
