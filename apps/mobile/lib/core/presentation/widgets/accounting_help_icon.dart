@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../data/accounting_glossary.dart';
+import 'package:finance_app/core/presentation/data/accounting_glossary.dart';
 
 /// Help icon widget for accounting terminology.
 ///
