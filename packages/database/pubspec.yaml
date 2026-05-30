@@ -21,7 +21,6 @@ dependencies:
   encryption:
     path: ../encryption
   sqlite3: ^2.4.6
-  pointycastle: ^3.9.1
 
 dev_dependencies:
   flutter_test:
