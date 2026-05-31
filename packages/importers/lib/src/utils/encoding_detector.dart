@@ -191,8 +191,18 @@ class EncodingDetector {
     if (_hasBom(bytes, _utf16LeBom)) return utf16le;
     if (_hasBom(bytes, _utf16BeBom)) return utf16be;
 
-    // Try UTF-8 first
-    if (_isValidUtf8(bytes)) return utf8;
+    // Try UTF-8 first, but validate decoded content has Chinese characters
+    // This is critical for GBK files that might accidentally be valid UTF-8
+    // byte sequences but decode to garbage characters
+    if (_isValidUtf8(bytes)) {
+      final chineseCharRatio = _countChineseCharsUtf8(bytes);
+      // If decoded content contains meaningful Chinese characters, it's UTF-8
+      if (chineseCharRatio > 0.05) {
+        return utf8;
+      }
+      // Otherwise, even if valid UTF-8 bytes, prefer GBK for Chinese financial files
+      // because GBK-encoded Chinese might decode as valid UTF-8 but nonsense
+    }
 
     // Check for GBK/GB2312 patterns
     if (_looksLikeGbk(bytes)) return gbk;
@@ -244,20 +254,17 @@ class EncodingDetector {
           chineseCharRatio: chineseCharRatio,
         );
       }
-      return EncodingDetectionResult(
-        encoding: utf8,
-        confidence: 0.9,
-        hasBom: false,
-        source: 'Valid UTF-8',
-      );
+      // Valid UTF-8 but no Chinese characters - could be GBK file that
+      // accidentally decodes as valid UTF-8 (nonsense characters)
+      // Fall through to GBK detection
     }
 
     // Check for GBK patterns
     final gbkScore = _calculateGbkScore(bytes);
-    if (gbkScore > 0.15) {
+    if (gbkScore > 0.08) {
       return EncodingDetectionResult(
         encoding: gbk,
-        confidence: gbkScore.clamp(0.7, 0.95),
+        confidence: gbkScore.clamp(0.6, 0.95),
         hasBom: false,
         source: 'GBK patterns detected',
         gbkScore: gbkScore,
@@ -515,7 +522,7 @@ class EncodingDetector {
 
   /// Checks if bytes look like GBK encoded Chinese text.
   static bool _looksLikeGbk(Uint8List bytes) {
-    return _calculateGbkScore(bytes) > 0.1;
+    return _calculateGbkScore(bytes) > 0.08;
   }
 
   /// Decode UTF-16 LE.

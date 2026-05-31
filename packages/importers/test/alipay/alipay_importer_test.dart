@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:test/test.dart';
 import 'package:importers/importers.dart';
 import 'package:core/core.dart';
+import 'package:gbk_codec/gbk_codec.dart' as gbk_pkg;
 
 void main() {
   group('AlipayImporter', () {
@@ -266,6 +267,78 @@ void main() {
         expect(mappings['餐饮美食'], equals('food'));
         expect(mappings['交通出行'], equals('transport'));
         expect(mappings['购物'], equals('shopping'));
+      });
+    });
+
+    group('GBK encoding', () {
+      test('parses GBK-encoded Alipay CSV correctly', () async {
+        // Create GBK-encoded CSV content (支付宝默认使用GBK编码)
+        final csv = _createSampleAlipayCsv();
+        final gbkBytes = Uint8List.fromList(gbk_pkg.gbk.encode(csv));
+
+        final config = ImportConfig(
+          targetAccountId: 'test-account',
+          defaultCurrencyId: 'CNY',
+        );
+
+        final result = await importer.parse(
+          content: gbkBytes,
+          config: config,
+        );
+
+        expect(result.isSuccess, isTrue);
+        expect(result.transactions.length, equals(5));
+        expect(result.detectedEncoding.toLowerCase(), equals('gbk'));
+      });
+
+      test('canParse detects GBK-encoded Alipay CSV', () {
+        final csv = _createSampleAlipayCsv();
+        final gbkBytes = Uint8List.fromList(gbk_pkg.gbk.encode(csv));
+
+        expect(
+          importer.canParse(filename: 'alipay_export.csv', content: gbkBytes),
+          isTrue,
+        );
+      });
+
+      test('parses GBK-encoded CSV with Chinese headers', () async {
+        // Test specific case with Chinese headers that might fail UTF-8 detection
+        final csv = '''
+交易时间,交易分类,交易对方,商品说明,收/支,金额,收/付款方式,交易状态,交易订单号
+2026-05-19 12:00:00,餐饮美食,美团外卖,午餐,支出,-35.50,花呗,交易成功,20260519002
+''';
+        final gbkBytes = Uint8List.fromList(gbk_pkg.gbk.encode(csv));
+
+        final config = ImportConfig(
+          targetAccountId: 'test-account',
+          defaultCurrencyId: 'CNY',
+        );
+
+        final result = await importer.parse(
+          content: gbkBytes,
+          config: config,
+        );
+
+        expect(result.isSuccess, isTrue);
+        expect(result.transactions.length, equals(1));
+        expect(result.transactions.first.category, equals('food'));
+      });
+
+      test('encoding detector correctly identifies GBK', () {
+        final csv = _createSampleAlipayCsv();
+        final gbkBytes = Uint8List.fromList(gbk_pkg.gbk.encode(csv));
+
+        final detected = EncodingDetector.detect(gbkBytes);
+        expect(detected.toLowerCase(), equals('gbk'));
+      });
+
+      test('encoding detector with confidence for GBK', () {
+        final csv = _createSampleAlipayCsv();
+        final gbkBytes = Uint8List.fromList(gbk_pkg.gbk.encode(csv));
+
+        final result = EncodingDetector.detectWithConfidence(gbkBytes);
+        expect(result.encoding.toLowerCase(), equals('gbk'));
+        expect(result.confidence, greaterThan(0.5));
       });
     });
   });
