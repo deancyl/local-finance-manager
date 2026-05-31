@@ -2,6 +2,7 @@
 /// 
 /// Provides graceful error handling, retry mechanisms,
 /// and circuit breaker patterns for improved stability.
+library;
 
 import 'dart:async';
 import 'dart:math';
@@ -26,7 +27,7 @@ class RetryConfig {
     final delayMs = initialDelay.inMilliseconds *
         pow(backoffMultiplier, attempt - 1).toInt();
     return Duration(
-      milliseconds: delayMs.clamp(0, maxDelay.inMilliseconds) as int,
+      milliseconds: delayMs.clamp(0, maxDelay.inMilliseconds),
     );
   }
 }

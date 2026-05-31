@@ -22,7 +22,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Configure system UI overlay for Android (fixes white space at top)
-  await SystemChrome.setSystemUIOverlayStyle(
+  SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       systemNavigationBarColor: Colors.transparent,
