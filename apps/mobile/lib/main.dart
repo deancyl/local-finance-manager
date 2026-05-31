@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,6 +20,14 @@ import 'features/platform/data/platform_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Configure system UI overlay for Android (fixes white space at top)
+  await SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+    ),
+  );
   
   // Initialize SharedPreferences
   final sharedPreferences = await SharedPreferences.getInstance();
@@ -48,16 +57,42 @@ class FinanceApp extends ConsumerStatefulWidget {
   ConsumerState<FinanceApp> createState() => _FinanceAppState();
 }
 
-class _FinanceAppState extends ConsumerState<FinanceApp> {
+class _FinanceAppState extends ConsumerState<FinanceApp> with WidgetsBindingObserver {
   bool _securityChecked = false;
   
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _setupNotificationHandler();
     _processRecurringTransactions();
     _logPlatformInfo();
     _checkSecurityOnStartup();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    // Update system UI overlay when theme changes
+    _updateSystemUIOverlay();
+    super.didChangePlatformBrightness();
+  }
+
+  void _updateSystemUIOverlay() {
+    final brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+        statusBarIconBrightness: brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+        systemNavigationBarIconBrightness: brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+      ),
+    );
   }
 
   void _setupNotificationHandler() {
@@ -132,29 +167,43 @@ class _FinanceAppState extends ConsumerState<FinanceApp> {
       darkTheme = _applyBoldText(darkTheme);
     }
 
-    return MediaQuery(
-      // Apply text scaling if not using system setting
-      data: MediaQuery.of(context).copyWith(
-        textScaler: accessibilitySettings.useSystemTextScale
-            ? MediaQuery.of(context).textScaler
-            : TextScaler.linear(accessibilitySettings.textScaleFactor),
+    // Determine current theme brightness for system UI overlay
+    final materialThemeMode = ref.read(themeProvider.notifier).materialThemeMode;
+    final platformBrightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    final isDark = materialThemeMode == ThemeMode.dark || 
+                    (materialThemeMode == ThemeMode.system && platformBrightness == Brightness.dark);
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
       ),
-      child: MaterialApp.router(
-        title: '本地金融管家',
-        debugShowCheckedModeBanner: false,
-        theme: lightTheme,
-        darkTheme: darkTheme,
-        themeMode: ref.read(themeProvider.notifier).materialThemeMode,
-        locale: appLocale.locale,
-        supportedLocales: const [
-          Locale('zh', 'CN'),
-          Locale('zh', 'TW'),
-          Locale('en', 'US'),
-        ],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-        ],
-        routerConfig: router,
+      child: MediaQuery(
+        // Apply text scaling if not using system setting
+        data: MediaQuery.of(context).copyWith(
+          textScaler: accessibilitySettings.useSystemTextScale
+              ? MediaQuery.of(context).textScaler
+              : TextScaler.linear(accessibilitySettings.textScaleFactor),
+        ),
+        child: MaterialApp.router(
+          title: '本地金融管家',
+          debugShowCheckedModeBanner: false,
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: ref.read(themeProvider.notifier).materialThemeMode,
+          locale: appLocale.locale,
+          supportedLocales: const [
+            Locale('zh', 'CN'),
+            Locale('zh', 'TW'),
+            Locale('en', 'US'),
+          ],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+          ],
+          routerConfig: router,
+        ),
       ),
     );
   }
