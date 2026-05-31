@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'dart:isolate';
 import 'dart:ui';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
+import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:database/database.dart';
@@ -202,12 +201,14 @@ Future<void> _showReminderNotification(
 
 /// Open database connection for background task.
 Future<LocalFinanceDatabase> _openDatabase() async {
-  final dbFolder = await getApplicationDocumentsDirectory();
-  final file = File('${dbFolder.path}/finance.db');
-  
   // Note: For encrypted database, you'd need to handle the key retrieval
   // This is a simplified version - in production, use the actual encrypted database setup
-  final executor = NativeDatabase.createInBackground(file);
+  final executor = driftDatabase(
+    name: 'finance',
+    native: DriftNativeOptions(
+      databaseDirectory: getApplicationSupportDirectory,
+    ),
+  );
   
   return LocalFinanceDatabase.forTesting(executor);
 }
