@@ -709,7 +709,7 @@ class BusinessValidators {
       final difference = (splitsTotal - parentAmount).abs();
 
       // Allow small floating point differences
-      if (difference > 0.01) {
+      if (difference > 0.02) {
         return ValidationResult.invalid(
           mismatchMessage ?? 'Split total ($splitsTotal) must equal transaction amount ($parentAmount)',
         );

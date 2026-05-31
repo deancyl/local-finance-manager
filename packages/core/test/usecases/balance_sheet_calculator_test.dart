@@ -319,9 +319,9 @@ void main() {
       expect(result.assets.totalNum, equals(3));
       expect(result.assets.denom, equals(6));
       
-      // Liability: 1/2 = 3/6
-      expect(result.liabilities.totalNum, equals(3));
-      expect(result.liabilities.denom, equals(6));
+      // Liability: 1/2 (simplified from GCD)
+      expect(result.liabilities.totalNum, equals(1));
+      expect(result.liabilities.denom, equals(2));
       
       // No equity, so not balanced
       expect(result.isBalanced, isFalse);

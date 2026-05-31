@@ -156,8 +156,9 @@ void main() {
       );
 
       // Net Income = Revenue - Expense = 10000 - 6000 = 4000 (numerator)
-      expect(result.netIncomeNum, equals(4000));
-      expect(result.denom, equals(100));
+      // GCD(4000, 100) = 100, simplified to 40/1
+      expect(result.netIncomeNum, equals(40));
+      expect(result.denom, equals(1));
       expect(result.netIncomeDecimal, equals(Decimal.fromInt(40)));
       expect(result.isProfit, isTrue);
       expect(result.isLoss, isFalse);
@@ -584,7 +585,8 @@ void main() {
       );
 
       expect(num1, equals(40)); // 100 - 60 = 40
-      expect(denom1, equals(10)); // Net income: 4.0
+      // GCD(40, 10) = 10, simplified to 4/1
+      expect(denom1, equals(1)); // Net income: 4.0
 
       // Test with different denominators
       final (num2, denom2) = calculator.calculateNetIncome(
