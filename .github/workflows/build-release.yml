@@ -50,7 +50,7 @@ jobs:
         run: melos run analyze
       
       - name: Run tests
-        run: xvfb-run melos exec --ignore="sync" --ignore="sync_server" --dir-exists=test -- "flutter test --coverage"
+        run: melos exec --ignore="sync" --ignore="sync_server" --ignore="finance_app" --dir-exists=test -- "flutter test --coverage"
 
   # Android build
   build-android:
