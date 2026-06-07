@@ -69,7 +69,7 @@ finance-app/
 - [x] Mobile app sync UI
 - [x] Device management
 
-### v0.3.x Roadmap (进行中)
+### v0.3.x Roadmap ✅ 完成
 
 - [x] v0.3.120: Performance & Stability optimizations
   - [x] Lazy loading transaction list with pagination
@@ -85,14 +85,19 @@ finance-app/
   - [x] v0.3.198: Backup verification and migration safety
   - [x] v0.3.199: Performance indexes and caching
   - [x] v0.3.200: Loading states, error states, UI polish
-- [x] v0.3.206: Release build verification
-  - [x] Background budget checker database access fix
-  - [x] Documentation updated for encryption architecture
-- [ ] v0.3.201+: WebSocket real-time sync notifications
-- [ ] QR code device pairing
-- [ ] Sync status indicator in app bar
-- [ ] Offline queue visualization
-- [ ] Multi-device sync testing
+- [x] v0.3.201-v0.3.207: Sync Enhancement
+  - [x] v0.3.201: Update README documentation
+  - [x] v0.3.202: Fix tests & enable CI testing
+  - [x] v0.3.203: WebSocket real-time sync notifications
+  - [x] v0.3.204: QR code device pairing + Offline queue
+  - [x] v0.3.205: Sync status indicator
+  - [x] v0.3.206: Release build verification
+  - [x] v0.3.207: Multi-device sync testing docs
+- [x] v0.3.225-v0.3.230: Latest Optimizations
+  - [x] v0.3.225: Android status bar styling fix
+  - [x] v0.3.226: GBK encoding detection fix for Alipay
+  - [x] v0.3.227: Background processor migration to drift_flutter
+  - [x] v0.3.230: drift_flutter 0.2.7 bug workaround
 
 ### Phase 4: Double-Entry Bookkeeping ✅ 完成
 
